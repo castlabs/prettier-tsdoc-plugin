@@ -47,7 +47,7 @@ export interface TSDocCommentModel {
 }
 
 /**
- * Extract text content from TSDoc nodes, handling various node types.
+ * Extract text content from TSDoc nodes, handling various node types and preserving structure.
  */
 export function extractTextFromNode(node: any): string {
   if (!node) return '';
@@ -65,10 +65,12 @@ export function extractTextFromNode(node: any): string {
   }
 
   if (node.kind === 'Section' && node.nodes) {
-    return node.nodes.map(extractTextFromNode).join('');
+    // For sections, preserve line breaks between different elements
+    return node.nodes.map(extractTextFromNode).join('\n').replace(/\n+/g, '\n');
   }
 
   if (node.nodes) {
+    // For node collections, try to preserve structure
     return node.nodes.map(extractTextFromNode).join('');
   }
 

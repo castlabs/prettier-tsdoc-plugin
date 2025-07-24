@@ -341,6 +341,11 @@ function buildPrettierDoc(
 
   // Summary section
   if (model.summary) {
+    // Debug: log the raw summary content
+    if (process.env.PRETTIER_TSDOC_DEBUG === '1') {
+      console.log('Summary content:', JSON.stringify(model.summary.content));
+    }
+    
     const summaryContent = formatTextWithMarkdown(
       model.summary.content,
       options

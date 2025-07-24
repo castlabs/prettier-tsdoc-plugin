@@ -54,7 +54,8 @@ export function computeColumnWidths(tags: ParamTagInfo[]): number {
 
   return Math.max(
     ...tags.map((tag) => {
-      const prefix = `@${tag.tagName} ${tag.name}`;
+      const tagName = tag.tagName.startsWith('@') ? tag.tagName : `@${tag.tagName}`;
+      const prefix = `${tagName} ${tag.name}`;
       return prefix.length + (tag.description ? 3 : 0); // +3 for " - "
     })
   );
@@ -73,7 +74,8 @@ export function printAligned(
   const result: any[] = [];
 
   for (const tag of tags) {
-    const prefix = `@${tag.tagName} ${tag.name}`;
+    const tagName = tag.tagName.startsWith('@') ? tag.tagName : `@${tag.tagName}`;
+    const prefix = `${tagName} ${tag.name}`;
 
     if (tag.description) {
       // Calculate padding needed for alignment

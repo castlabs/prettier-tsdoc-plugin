@@ -3,7 +3,6 @@ import { TSDocParser } from '@microsoft/tsdoc';
 import { createTSDocConfiguration } from './parser-config.js';
 import { isTSDocCandidate } from './detection.js';
 import { formatTSDocComment } from './format.js';
-import { doc } from 'prettier';
 import parserTypescript from 'prettier/parser-typescript';
 import parserBabel from 'prettier/parser-babel';
 
@@ -38,108 +37,29 @@ function getTSDocParser(extraTags: string[] = []): TSDocParser {
 }
 
 /**
- * Preprocess source text to format TSDoc comments
- */
-function preprocessComments(text: string, options?: ParserOptions<any>): string {
-  // Skip preprocessing unless forceFormatTSDoc is enabled
-  if (!(options as any).forceFormatTSDoc) {
-    return text;
-  }
-  // Regular expression to match /** ... */ comments
-  const tsdocCommentRegex = /\/\*\*([\s\S]*?)\*\//g;
-  
-  return text.replace(tsdocCommentRegex, (match, commentContent) => {
-    try {
-      // Create a mock comment object for detection
-      const mockComment = { 
-        value: `*${commentContent}`,
-        type: 'CommentBlock'
-      };
-      
-      // Check if this is a TSDoc candidate
-      if (!isTSDocCandidate(mockComment, false)) {
-        return match; // Return original if not TSDoc
-      }
-      
-      // Get parser for formatting
-      const extraTags = (options as any)?.tsdoc?.extraTags || [];
-      const parser = getTSDocParser(extraTags);
-      
-      // Format the comment with minimal required options
-      const formattingOptions = {
-        printWidth: options?.printWidth || 80,
-        tabWidth: options?.tabWidth || 2,
-        useTabs: options?.useTabs || false,
-        ...options
-      };
-      const formattedDoc = formatTSDocComment(`*${commentContent}`, formattingOptions as ParserOptions<any>, parser);
-      
-      // Convert Doc to string (simplified approach)
-      return docToString(formattedDoc);
-      
-    } catch (error) {
-      // Return original comment if formatting fails
-      return match;
-    }
-  });
-}
-
-/**
- * Convert a Prettier Doc to string (simplified implementation)
- */
-function docToString(doc: Doc): string {
-  if (typeof doc === 'string') {
-    return doc;
-  }
-  
-  if (Array.isArray(doc)) {
-    return doc.map(docToString).join('');
-  }
-  
-  if (doc && typeof doc === 'object') {
-    // Handle common Prettier Doc types
-    if ((doc as any).type === 'concat' && (doc as any).parts) {
-      return (doc as any).parts.map(docToString).join('');
-    }
-    if ((doc as any).type === 'group' && (doc as any).contents) {
-      return docToString((doc as any).contents);
-    }
-    if ((doc as any).type === 'line' || (doc as any).type === 'hardline') {
-      return '\n';
-    }
-    // Handle other doc types
-    if ('contents' in doc) {
-      return docToString((doc as any).contents);
-    }
-    if ('parts' in doc) {
-      return (doc as any).parts.map(docToString).join('');
-    }
-  }
-  
-  // Fallback
-  return String(doc);
-}
-
-/**
  * Handle comment printing for TSDoc comments.
  */
 function printComment(
   commentPath: AstPath<any>,
   options: ParserOptions<any>
-): Doc {
+): string {
   const comment = commentPath.getValue();
 
+  // Debug logging
+  if (process.env.PRETTIER_TSDOC_DEBUG === '1') {
+    console.log('Comment received:', JSON.stringify(comment, null, 2));
+  }
+
+  // For block comments, we need to wrap with /** and */
+  const isBlockComment = comment.type === 'Block';
+  
   // Check if this is a TSDoc candidate
-  if (!isTSDocCandidate(comment, false)) {
-    // Return the original comment as-is
-    return comment.value
-      .split('\n')
-      .map((line: string, i: number) => {
-        if (i === 0) return `/*${line}`;
-        if (i === comment.value.split('\n').length - 1) return `${line}*/`;
-        return ` ${line}`;
-      })
-      .join('\n');
+  if (!isTSDocCandidate(comment, (options as any).forceFormatTSDoc || false)) {
+    // Return the original comment with proper wrapping
+    if (isBlockComment) {
+      return `/*${comment.value}*/`;
+    }
+    return comment.value;
   }
 
   try {
@@ -147,26 +67,93 @@ function printComment(
     const extraTags = (options as any).tsdoc?.extraTags || [];
     const parser = getTSDocParser(extraTags);
 
-    // Format the comment
-    return formatTSDocComment(comment.value, options, parser);
+    // Format the comment and convert to string
+    const formattedDoc = formatTSDocComment(comment.value, options, parser);
+    const formattedContent = docToString(formattedDoc);
+    
+    // For block comments, wrap with /** and */
+    if (isBlockComment) {
+      return `/*${formattedContent}*/`;
+    }
+    
+    return formattedContent;
   } catch (error) {
     // Gracefully handle formatting errors
-    if ((options as any).logger?.warn) {
-      (options as any).logger.warn(
+    if ((options as any).logger?.debug) {
+      (options as any).logger.debug(
         `TSDoc formatting failed: ${error instanceof Error ? error.message : String(error)}`
       );
     }
-    // Return original comment as fallback
-    return comment.value
-      .split('\n')
-      .map((line: string, i: number) => {
-        if (i === 0) return `/*${line}`;
-        if (i === comment.value.split('\n').length - 1) return `${line}*/`;
-        return ` ${line}`;
-      })
-      .join('\n');
+    // Return the original comment as fallback with proper wrapping
+    if (isBlockComment) {
+      return `/*${comment.value}*/`;
+    }
+    return comment.value;
   }
 }
+
+/**
+ * Convert Prettier Doc to string for comment printing
+ */
+function docToString(doc: any): string {
+  if (typeof doc === 'string') {
+    return doc;
+  }
+  
+  if (typeof doc === 'number') {
+    return String(doc);
+  }
+  
+  if (doc === null || doc === undefined) {
+    return '';
+  }
+  
+  if (Array.isArray(doc)) {
+    return doc.map(docToString).join('');
+  }
+  
+  if (doc && typeof doc === 'object') {
+    // Handle Prettier Doc builders
+    if (doc.type === 'concat' || (doc.parts && Array.isArray(doc.parts))) {
+      return doc.parts.map(docToString).join('');
+    }
+    if (doc.type === 'group' && doc.contents) {
+      return docToString(doc.contents);
+    }
+    if (doc.type === 'line' || doc.type === 'hardline') {
+      return '\n';
+    }
+    if (doc.type === 'softline') {
+      return ' ';
+    }
+    if (doc.type === 'fill' && doc.parts) {
+      return doc.parts.map(docToString).join(' ');
+    }
+    if (doc.type === 'break-parent' || doc.type === 'indent' || doc.type === 'dedent') {
+      return ''; // These are formatting control tokens, not content
+    }
+    if (doc.contents !== undefined) {
+      return docToString(doc.contents);
+    }
+    if (doc.parts !== undefined) {
+      return doc.parts.map(docToString).join('');
+    }
+    
+    // Last resort: check for common properties
+    if (doc.value !== undefined) {
+      return docToString(doc.value);
+    }
+    if (doc.text !== undefined) {
+      return docToString(doc.text);
+    }
+  }
+  
+  // Only return [object Object] if we truly can't extract anything
+  console.warn('Unable to convert doc to string:', doc);
+  return String(doc);
+}
+
+// Import estree plugin to extend its printer
 
 /**
  * Prettier plugin for TSDoc comment formatting.
@@ -174,8 +161,57 @@ function printComment(
  * This implementation detects TSDoc candidates, parses them, and formats
  * the summary and @remarks sections according to the specification.
  */
+/**
+ * Transform TSDoc comments in the source text before parsing
+ */
+function preprocessSource(text: string, options: ParserOptions<any>): string {
+  // Only run if forceFormatTSDoc is enabled
+  if (!(options as any).forceFormatTSDoc) {
+    return text;
+  }
+
+  // Match /** ... */ comments
+  const tsdocRegex = /\/\*\*([\s\S]*?)\*\//g;
+  
+  return text.replace(tsdocRegex, (match, commentContent) => {
+    try {
+      // Create mock comment object for detection (trim leading newline)
+      const trimmedContent = commentContent.replace(/^\s*/, '');
+      const mockComment = {
+        value: trimmedContent,
+        type: 'CommentBlock'
+      };
+      
+      // Check if this is a TSDoc candidate
+      if (!isTSDocCandidate(mockComment, true)) {
+        if (process.env.PRETTIER_TSDOC_DEBUG === '1') {
+          console.log('Not a TSDoc candidate:', JSON.stringify(mockComment.value.substring(0, 50)));
+        }
+        return match; // Return original if not TSDoc
+      }
+      
+      if (process.env.PRETTIER_TSDOC_DEBUG === '1') {
+        console.log('Processing TSDoc comment:', JSON.stringify(mockComment.value.substring(0, 50)));
+      }
+      
+      // Get parser
+      const extraTags = (options as any)?.tsdoc?.extraTags || [];
+      const parser = getTSDocParser(extraTags);
+      
+      // Format the comment
+      const formattedDoc = formatTSDocComment(commentContent, options, parser);
+      const formatted = docToString(formattedDoc);
+      
+      // Return the formatted comment (already includes /** and */)
+      return formatted;
+    } catch (error) {
+      // Return original on error
+      return match;
+    }
+  });
+}
+
 const plugin: Plugin = {
-  // Basic plugin structure - actual integration will be tested separately
   languages: [
     {
       name: 'TypeScript',
@@ -191,11 +227,11 @@ const plugin: Plugin = {
   parsers: {
     typescript: {
       ...parserTypescript.parsers.typescript,
-      preprocess: preprocessComments,
+      preprocess: preprocessSource,
     },
     babel: {
       ...parserBabel.parsers.babel,
-      preprocess: preprocessComments,
+      preprocess: preprocessSource,
     },
   },
   options: {
