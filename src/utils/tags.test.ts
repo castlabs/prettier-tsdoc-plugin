@@ -1,5 +1,12 @@
 import { expect, test, describe } from 'vitest';
-import { splitParamTag, computeColumnWidths, printAligned, formatReturnsTag, groupParameterTags, ParamTagInfo } from './tags.js';
+import {
+  splitParamTag,
+  computeColumnWidths,
+  printAligned,
+  formatReturnsTag,
+  groupParameterTags,
+  ParamTagInfo,
+} from './tags.js';
 
 describe('Tag Utilities', () => {
   test('splits parameter tag correctly', () => {
@@ -24,8 +31,18 @@ describe('Tag Utilities', () => {
 
   test('computes column widths correctly', () => {
     const tags: ParamTagInfo[] = [
-      { tagName: 'param', name: 'a', description: 'Short param', rawNode: null },
-      { tagName: 'param', name: 'veryLongParameterName', description: 'Long param', rawNode: null },
+      {
+        tagName: 'param',
+        name: 'a',
+        description: 'Short param',
+        rawNode: null,
+      },
+      {
+        tagName: 'param',
+        name: 'veryLongParameterName',
+        description: 'Long param',
+        rawNode: null,
+      },
       { tagName: 'param', name: 'b', description: '', rawNode: null }, // No description
     ];
 
@@ -36,8 +53,18 @@ describe('Tag Utilities', () => {
 
   test('prints aligned parameters', () => {
     const tags: ParamTagInfo[] = [
-      { tagName: 'param', name: 'a', description: 'Short param', rawNode: null },
-      { tagName: 'param', name: 'longName', description: 'Long param', rawNode: null },
+      {
+        tagName: 'param',
+        name: 'a',
+        description: 'Short param',
+        rawNode: null,
+      },
+      {
+        tagName: 'param',
+        name: 'longName',
+        description: 'Long param',
+        rawNode: null,
+      },
     ];
 
     const result = printAligned(tags, 80);
@@ -74,10 +101,30 @@ describe('Tag Utilities', () => {
 
   test('groups parameter tags by type', () => {
     const tags: ParamTagInfo[] = [
-      { tagName: 'param', name: 'a', description: 'First param', rawNode: null },
-      { tagName: 'param', name: 'b', description: 'Second param', rawNode: null },
-      { tagName: 'typeParam', name: 'T', description: 'Type param', rawNode: null },
-      { tagName: 'typeParam', name: 'U', description: 'Another type param', rawNode: null },
+      {
+        tagName: 'param',
+        name: 'a',
+        description: 'First param',
+        rawNode: null,
+      },
+      {
+        tagName: 'param',
+        name: 'b',
+        description: 'Second param',
+        rawNode: null,
+      },
+      {
+        tagName: 'typeParam',
+        name: 'T',
+        description: 'Type param',
+        rawNode: null,
+      },
+      {
+        tagName: 'typeParam',
+        name: 'U',
+        description: 'Another type param',
+        rawNode: null,
+      },
     ];
 
     const groups = groupParameterTags(tags);
@@ -91,7 +138,12 @@ describe('Tag Utilities', () => {
   test('handles extremely long parameter names', () => {
     const veryLongName = 'a'.repeat(100);
     const tags: ParamTagInfo[] = [
-      { tagName: 'param', name: veryLongName, description: 'Description', rawNode: null },
+      {
+        tagName: 'param',
+        name: veryLongName,
+        description: 'Description',
+        rawNode: null,
+      },
     ];
 
     // With a small effective width, should break to next line

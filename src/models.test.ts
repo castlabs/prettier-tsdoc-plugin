@@ -9,7 +9,7 @@ describe('Comment Models', () => {
       kind: 'PlainText',
       text: 'Hello world',
     };
-    
+
     expect(extractTextFromNode(node)).toBe('Hello world');
     expect(extractTextFromNode('direct string')).toBe('direct string');
     expect(extractTextFromNode(null)).toBe('');
@@ -23,17 +23,17 @@ describe('Comment Models', () => {
         { kind: 'PlainText', text: 'world' },
       ],
     };
-    
+
     expect(extractTextFromNode(node)).toBe('Hello world');
   });
 
   test('builds model from parsed comment with summary only', () => {
     const config = createTSDocConfiguration();
     const parser = new TSDocParser(config);
-    
+
     const context = parser.parseString('/** This is a summary. */');
     const model = buildCommentModel(context.docComment);
-    
+
     expect(model.summary).toBeDefined();
     expect(model.summary?.content).toContain('This is a summary');
     expect(model.remarks).toBeUndefined();
@@ -42,14 +42,14 @@ describe('Comment Models', () => {
   test('builds model from parsed comment with summary and remarks', () => {
     const config = createTSDocConfiguration();
     const parser = new TSDocParser(config);
-    
+
     const context = parser.parseString(`/**
  * This is a summary.
  * @remarks
  * These are remarks.
  */`);
     const model = buildCommentModel(context.docComment);
-    
+
     expect(model.summary).toBeDefined();
     expect(model.summary?.content).toContain('This is a summary');
     expect(model.remarks).toBeDefined();
@@ -59,13 +59,13 @@ describe('Comment Models', () => {
   test('builds model from remarks-only comment', () => {
     const config = createTSDocConfiguration();
     const parser = new TSDocParser(config);
-    
+
     const context = parser.parseString(`/**
  * @remarks
  * Only remarks here.
  */`);
     const model = buildCommentModel(context.docComment);
-    
+
     expect(model.summary).toBeUndefined();
     expect(model.remarks).toBeDefined();
     expect(model.remarks?.content).toContain('Only remarks here');
@@ -74,7 +74,7 @@ describe('Comment Models', () => {
   test('builds model with parameter tags', () => {
     const config = createTSDocConfiguration();
     const parser = new TSDocParser(config);
-    
+
     const context = parser.parseString(`/**
  * Function with parameters.
  * @param name - The name parameter
@@ -82,7 +82,7 @@ describe('Comment Models', () => {
  * @returns A greeting
  */`);
     const model = buildCommentModel(context.docComment);
-    
+
     expect(model.summary).toBeDefined();
     expect(model.params).toHaveLength(2);
     expect(model.params[0].name).toBe('name');
@@ -96,14 +96,14 @@ describe('Comment Models', () => {
   test('builds model with type parameters', () => {
     const config = createTSDocConfiguration();
     const parser = new TSDocParser(config);
-    
+
     const context = parser.parseString(`/**
  * Generic function.
  * @typeParam T - The first type parameter
  * @typeParam U - The second type parameter
  */`);
     const model = buildCommentModel(context.docComment);
-    
+
     expect(model.typeParams).toHaveLength(2);
     expect(model.typeParams[0].name).toBe('T');
     expect(model.typeParams[0].description).toBe('The first type parameter');

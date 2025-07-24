@@ -9,6 +9,7 @@ prefix so the files sort naturally. A phase is considered _done_ when:
 1. All TypeScript source code targeted by the phase compiles successfully via
    `npm run build`.
 2. The Vitest test-suite for the phase (`npm test`) passes.
+3. Run `npm run prettier` to make sure that files are properly formatted
 
 More information about the project can be found in:
 

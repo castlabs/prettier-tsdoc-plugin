@@ -7,7 +7,7 @@ describe('Integration Tests - Phase 2', () => {
   test('parser successfully processes complex tag soup without throwing', () => {
     const config = createTSDocConfiguration();
     const parser = new TSDocParser(config);
-    
+
     const complexComment = `/**
  * A complex function with many tags.
  * 
@@ -42,7 +42,7 @@ describe('Integration Tests - Phase 2', () => {
  * @returns A greeting with {@link SomeClass}
  `,
     };
-    
+
     // Plain block comment
     const plainComment = {
       type: 'CommentBlock',
@@ -56,7 +56,7 @@ describe('Integration Tests - Phase 2', () => {
   test('parsing with extended configuration includes TypeDoc tags', () => {
     const config = createTSDocConfiguration();
     const parser = new TSDocParser(config);
-    
+
     const commentWithExtendedTags = `/**
  * A function with extended tags.
  * @param value - Input value
@@ -66,7 +66,7 @@ describe('Integration Tests - Phase 2', () => {
  */`;
 
     const context = parser.parseString(commentWithExtendedTags);
-    
+
     // Should parse without errors
     expect(context.log.messages.length).toBe(0);
     expect(context.docComment).toBeDefined();

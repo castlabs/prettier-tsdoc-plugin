@@ -5,7 +5,7 @@ describe('Plugin Integration', () => {
   test('plugin loads and has required structure', async () => {
     // Import the compiled plugin from dist
     const plugin = await import('../dist/index.js');
-    
+
     expect(plugin.default).toBeDefined();
     expect(plugin.default).toHaveProperty('printers');
     expect(plugin.default).toHaveProperty('options');
@@ -14,7 +14,7 @@ describe('Plugin Integration', () => {
 
   test('formatting files without doc comments produces identical output', async () => {
     const plugin = await import('../dist/index.js');
-    
+
     const code = `function add(a: number, b: number) {
   return a + b;
 }
@@ -27,7 +27,7 @@ console.log(result);`;
       plugins: [plugin.default],
     });
 
-    // Since our plugin doesn't transform yet, 
+    // Since our plugin doesn't transform yet,
     // the output should be identical to standard Prettier formatting
     const standardFormatted = await format(code, {
       parser: 'typescript',
@@ -38,7 +38,7 @@ console.log(result);`;
 
   test('formatting files with TSDoc comments preserves content (no transformation yet)', async () => {
     const plugin = await import('../dist/index.js');
-    
+
     const code = `/**
  * Adds two numbers together.
  * @param a - The first number
@@ -69,7 +69,7 @@ function add(a: number, b: number) {
 
   test('plugin handles malformed TSDoc gracefully', async () => {
     const plugin = await import('../dist/index.js');
-    
+
     const code = `/**
  * This has malformed TSDoc
  * @param {unclosed brace

@@ -51,27 +51,27 @@ export interface TSDocCommentModel {
  */
 export function extractTextFromNode(node: any): string {
   if (!node) return '';
-  
+
   if (typeof node === 'string') {
     return node;
   }
-  
+
   if (node.kind === 'PlainText') {
     return node.text || '';
   }
-  
+
   if (node.kind === 'Paragraph' && node.nodes) {
     return node.nodes.map(extractTextFromNode).join('');
   }
-  
+
   if (node.kind === 'Section' && node.nodes) {
     return node.nodes.map(extractTextFromNode).join('');
   }
-  
+
   if (node.nodes) {
     return node.nodes.map(extractTextFromNode).join('');
   }
-  
+
   return node.text || node.content || '';
 }
 
@@ -84,7 +84,7 @@ export function buildCommentModel(docComment: any): TSDocCommentModel {
     typeParams: [],
     otherTags: [],
   };
-  
+
   // Extract summary from the summary section
   if (docComment.summarySection) {
     const summaryText = extractTextFromNode(docComment.summarySection);
@@ -95,10 +95,12 @@ export function buildCommentModel(docComment: any): TSDocCommentModel {
       };
     }
   }
-  
+
   // Extract remarks from the remarksBlock property
   if (docComment.remarksBlock) {
-    const remarksText = extractTextFromNode(docComment.remarksBlock._content || docComment.remarksBlock.content);
+    const remarksText = extractTextFromNode(
+      docComment.remarksBlock._content || docComment.remarksBlock.content
+    );
     if (remarksText.trim()) {
       model.remarks = {
         type: 'remarks',
@@ -106,7 +108,7 @@ export function buildCommentModel(docComment: any): TSDocCommentModel {
       };
     }
   }
-  
+
   // Extract @param tags
   if (docComment.params) {
     for (const param of docComment.params.blocks) {
@@ -121,8 +123,8 @@ export function buildCommentModel(docComment: any): TSDocCommentModel {
       }
     }
   }
-  
-  // Extract @typeParam tags  
+
+  // Extract @typeParam tags
   if (docComment.typeParams) {
     for (const typeParam of docComment.typeParams.blocks) {
       if (typeParam.parameterName) {
@@ -136,10 +138,12 @@ export function buildCommentModel(docComment: any): TSDocCommentModel {
       }
     }
   }
-  
+
   // Extract @returns tag
   if (docComment.returnsBlock) {
-    const returnsText = extractTextFromNode(docComment.returnsBlock._content || docComment.returnsBlock.content);
+    const returnsText = extractTextFromNode(
+      docComment.returnsBlock._content || docComment.returnsBlock.content
+    );
     if (returnsText.trim()) {
       model.returns = {
         type: 'returns',
@@ -149,7 +153,7 @@ export function buildCommentModel(docComment: any): TSDocCommentModel {
       };
     }
   }
-  
+
   // Extract other custom blocks (for modifier/release tags, etc)
   if (docComment.customBlocks) {
     for (const block of docComment.customBlocks) {
@@ -163,6 +167,6 @@ export function buildCommentModel(docComment: any): TSDocCommentModel {
       }
     }
   }
-  
+
   return model;
 }

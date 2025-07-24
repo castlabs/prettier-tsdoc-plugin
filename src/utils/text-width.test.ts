@@ -1,5 +1,10 @@
 import { expect, test, describe } from 'vitest';
-import { effectiveWidth, formatTextContent, createCommentLine, createEmptyCommentLine } from './text-width.js';
+import {
+  effectiveWidth,
+  formatTextContent,
+  createCommentLine,
+  createEmptyCommentLine,
+} from './text-width.js';
 
 describe('Text Width Utilities', () => {
   test('calculates effective width correctly', () => {
@@ -11,7 +16,7 @@ describe('Text Width Utilities', () => {
 
     // With no indentation, effective width = 80 - 3 (for "* ") = 77
     expect(effectiveWidth(options, 0)).toBe(77);
-    
+
     // With indentation level 1 (2 spaces), effective width = 80 - 2 - 3 = 75
     expect(effectiveWidth(options, 1)).toBe(75);
   });
@@ -42,7 +47,7 @@ describe('Text Width Utilities', () => {
 
     // With spaces: 80 - (1 * 4) - 3 = 73
     expect(effectiveWidth(spacesOptions, 1)).toBe(73);
-    
+
     // With tabs: 80 - 1 - 3 = 76
     expect(effectiveWidth(tabsOptions, 1)).toBe(76);
   });
@@ -50,7 +55,7 @@ describe('Text Width Utilities', () => {
   test('formats text content', () => {
     const result = formatTextContent('This is some text');
     expect(result).toBeDefined();
-    
+
     const emptyResult = formatTextContent('   ');
     expect(emptyResult).toBeNull();
   });
@@ -58,7 +63,7 @@ describe('Text Width Utilities', () => {
   test('creates comment lines', () => {
     const line = createCommentLine('content');
     expect(line).toEqual(['* ', 'content']);
-    
+
     const emptyLine = createCommentLine(null);
     expect(emptyLine).toBe('* ');
   });

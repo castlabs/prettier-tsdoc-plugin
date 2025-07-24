@@ -5,9 +5,10 @@ describe('isTSDocCandidate', () => {
   test('detects TSDoc block with @param and inline {@link}', () => {
     const comment = {
       type: 'CommentBlock',
-      value: '*\n * This is a function.\n * @param name The name parameter\n * @returns A greeting with {@link SomeClass}\n ',
+      value:
+        '*\n * This is a function.\n * @param name The name parameter\n * @returns A greeting with {@link SomeClass}\n ',
     };
-    
+
     expect(isTSDocCandidate(comment)).toBe(true);
   });
 
@@ -16,7 +17,7 @@ describe('isTSDocCandidate', () => {
       type: 'CommentBlock',
       value: ' plain comment ',
     };
-    
+
     expect(isTSDocCandidate(comment)).toBe(false);
   });
 
@@ -25,7 +26,7 @@ describe('isTSDocCandidate', () => {
       type: 'CommentBlock',
       value: '* single line comment *',
     };
-    
+
     expect(isTSDocCandidate(comment)).toBe(false);
   });
 
@@ -34,7 +35,7 @@ describe('isTSDocCandidate', () => {
       type: 'CommentLine',
       value: ' not a block comment',
     };
-    
+
     expect(isTSDocCandidate(comment)).toBe(false);
   });
 
@@ -43,7 +44,7 @@ describe('isTSDocCandidate', () => {
       type: 'CommentBlock',
       value: '!\n * License header\n * Copyright 2023\n ',
     };
-    
+
     expect(isTSDocCandidate(comment)).toBe(false);
   });
 
@@ -52,7 +53,7 @@ describe('isTSDocCandidate', () => {
       type: 'CommentBlock',
       value: '*\n * See {@link MyClass} for details.\n ',
     };
-    
+
     expect(isTSDocCandidate(comment)).toBe(true);
   });
 
@@ -61,7 +62,7 @@ describe('isTSDocCandidate', () => {
       type: 'CommentBlock',
       value: '*\n * @deprecated Use newFunction instead\n ',
     };
-    
+
     expect(isTSDocCandidate(comment)).toBe(true);
   });
 
@@ -70,7 +71,7 @@ describe('isTSDocCandidate', () => {
       type: 'CommentBlock',
       value: '*\n * This is a simple description.\n * With multiple lines.\n ',
     };
-    
+
     expect(isTSDocCandidate(comment)).toBe(true);
   });
 
@@ -79,7 +80,7 @@ describe('isTSDocCandidate', () => {
       type: 'CommentBlock',
       value: '*\n * \n ', // Empty content
     };
-    
+
     expect(isTSDocCandidate(comment, false)).toBe(false);
     expect(isTSDocCandidate(comment, true)).toBe(true);
   });
@@ -89,7 +90,7 @@ describe('isTSDocCandidate', () => {
       type: 'CommentBlock',
       value: '*\n * \n * \n ',
     };
-    
+
     expect(isTSDocCandidate(comment)).toBe(false);
   });
 });

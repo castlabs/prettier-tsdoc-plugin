@@ -10,45 +10,45 @@ export interface TSDocPluginOptions {
    * - 'none': No additional indentation
    */
   fencedIndent?: 'space' | 'none';
-  
+
   /**
-   * Whether to force format all /** comments as TSDoc, 
+   * Whether to force format all /** comments as TSDoc,
    * even if they don't contain recognizable TSDoc elements.
    */
   forceFormatTSDoc?: boolean;
-  
+
   /**
    * Whether to normalize tag order based on conventional patterns.
    */
   normalizeTagOrder?: boolean;
-  
+
   /**
    * Whether to deduplicate release tags (@public, @beta, @alpha, etc).
    */
   dedupeReleaseTags?: boolean;
-  
+
   /**
    * Whether to split modifiers (@public, @readonly) to separate lines.
    */
   splitModifiers?: boolean;
-  
+
   /**
    * Whether to enforce single sentence summaries.
    */
   singleSentenceSummary?: boolean;
-  
+
   /**
    * Additional custom tags to recognize during parsing.
    */
   extraTags?: string[];
-  
+
   /**
    * Tag spelling normalization mapping.
    * Keys are input tags, values are normalized output tags.
    * Example: { "@return": "@returns", "@prop": "@property" }
    */
   normalizeTags?: Record<string, string>;
-  
+
   /**
    * Strategy for handling release tag deduplication.
    * - 'keep-first': Keep the first occurrence
@@ -63,7 +63,7 @@ export interface TSDocPluginOptions {
 export const BUILTIN_TAG_NORMALIZATIONS: Record<string, string> = {
   '@return': '@returns',
   '@prop': '@property',
-  // @default -> @defaultValue only when expandDefault is true, 
+  // @default -> @defaultValue only when expandDefault is true,
   // but we default to keeping @default as per spec
 };
 
@@ -72,10 +72,10 @@ export const BUILTIN_TAG_NORMALIZATIONS: Record<string, string> = {
  */
 export const RELEASE_TAGS = new Set([
   '@public',
-  '@beta', 
+  '@beta',
   '@alpha',
   '@internal',
-  '@experimental'
+  '@experimental',
 ]);
 
 /**
@@ -84,13 +84,13 @@ export const RELEASE_TAGS = new Set([
 export const MODIFIER_TAGS = new Set([
   '@public',
   '@beta',
-  '@alpha', 
+  '@alpha',
   '@internal',
   '@experimental',
   '@readonly',
   '@override',
   '@sealed',
-  '@virtual'
+  '@virtual',
 ]);
 
 export const DEFAULT_OPTIONS: Required<TSDocPluginOptions> = {
@@ -108,9 +108,11 @@ export const DEFAULT_OPTIONS: Required<TSDocPluginOptions> = {
 /**
  * Merge user options with defaults.
  */
-export function resolveOptions(userOptions: any = {}): Required<TSDocPluginOptions> {
+export function resolveOptions(
+  userOptions: any = {}
+): Required<TSDocPluginOptions> {
   const tsdocOptions = userOptions.tsdoc || {};
-  
+
   return {
     ...DEFAULT_OPTIONS,
     ...tsdocOptions,
@@ -120,7 +122,9 @@ export function resolveOptions(userOptions: any = {}): Required<TSDocPluginOptio
 /**
  * Get the complete tag normalization mapping (built-in + user-supplied).
  */
-export function getTagNormalizations(options: TSDocPluginOptions): Record<string, string> {
+export function getTagNormalizations(
+  options: TSDocPluginOptions
+): Record<string, string> {
   return {
     ...BUILTIN_TAG_NORMALIZATIONS,
     ...(options.normalizeTags || {}),
@@ -130,7 +134,10 @@ export function getTagNormalizations(options: TSDocPluginOptions): Record<string
 /**
  * Normalize a tag name based on the normalization mapping.
  */
-export function normalizeTagName(tagName: string, options: TSDocPluginOptions): string {
+export function normalizeTagName(
+  tagName: string,
+  options: TSDocPluginOptions
+): string {
   const normalizations = getTagNormalizations(options);
   return normalizations[tagName] || tagName;
 }

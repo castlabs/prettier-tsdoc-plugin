@@ -8,17 +8,20 @@ const { fill, line, softline } = builders;
  * Calculate the effective width available for comment content.
  * This accounts for the comment prefix (indentation + "* ").
  */
-export function effectiveWidth(options: ParserOptions<any>, indentLevel: number = 0): number {
+export function effectiveWidth(
+  options: ParserOptions<any>,
+  indentLevel: number = 0
+): number {
   const printWidth = options.printWidth || 80;
   const tabWidth = options.tabWidth || 2;
   const useTabs = options.useTabs || false;
-  
+
   // Calculate the width of the indent
   const indentWidth = useTabs ? indentLevel : indentLevel * tabWidth;
-  
+
   // Account for "* " prefix (3 characters: "/**" or " * ")
   const prefixWidth = indentWidth + 3;
-  
+
   return Math.max(printWidth - prefixWidth, 20); // Minimum width of 20
 }
 
@@ -34,7 +37,7 @@ export function wrapText(text: string): any {
   // Split text into words, preserving multiple spaces as significant
   const words: string[] = [];
   const parts = text.split(/(\s+)/);
-  
+
   for (let i = 0; i < parts.length; i++) {
     const part = parts[i];
     if (part.trim()) {
@@ -45,7 +48,7 @@ export function wrapText(text: string): any {
       words.push(' ');
     }
   }
-  
+
   return words.length > 0 ? fill(words) : '';
 }
 
@@ -73,18 +76,18 @@ export function formatTextContent(text: string, options?: any): any {
   if (!text.trim()) {
     return null;
   }
-  
+
   // Check if content contains fenced code blocks or complex markdown
   if (text.includes('```') || text.includes('\n- ') || text.includes('\n1. ')) {
     // Handle as markdown content - preserve more structure
     return formatMarkdownContent(text, options);
   }
-  
+
   // Simple text - normalize whitespace and wrap
   const normalizedText = text
-    .replace(/\s+/g, ' ')  // Collapse multiple spaces
+    .replace(/\s+/g, ' ') // Collapse multiple spaces
     .trim();
-    
+
   return wrapText(normalizedText);
 }
 
@@ -96,16 +99,20 @@ function formatMarkdownContent(text: string, options?: any): any {
   // Split by lines and handle each type
   const lines = text.split('\n');
   const result: any[] = [];
-  
+
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i].trim();
-    
+
     if (!line) {
       // Empty line - preserve as line break
       continue;
     }
-    
-    if (line.startsWith('- ') || line.startsWith('* ') || line.startsWith('+ ')) {
+
+    if (
+      line.startsWith('- ') ||
+      line.startsWith('* ') ||
+      line.startsWith('+ ')
+    ) {
       // List item - format as list
       result.push(line);
       if (i < lines.length - 1) {
@@ -119,6 +126,6 @@ function formatMarkdownContent(text: string, options?: any): any {
       }
     }
   }
-  
+
   return result.length > 0 ? result : wrapText(text.trim());
 }

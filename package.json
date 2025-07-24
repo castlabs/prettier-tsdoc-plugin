@@ -11,6 +11,7 @@
   },
   "scripts": {
     "build": "tsc",
+    "prettier": "prettier --write .",
     "test": "vitest --run",
     "test:watch": "vitest",
     "benchmark": "npm run build && node benchmarks/format-performance.js",

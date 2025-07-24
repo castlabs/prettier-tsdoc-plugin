@@ -51,9 +51,9 @@ export function splitParamTag(node: any): { name: string; desc: string } {
  */
 export function computeColumnWidths(tags: ParamTagInfo[]): number {
   if (tags.length === 0) return 0;
-  
+
   return Math.max(
-    ...tags.map(tag => {
+    ...tags.map((tag) => {
       const prefix = `@${tag.tagName} ${tag.name}`;
       return prefix.length + (tag.description ? 3 : 0); // +3 for " - "
     })
@@ -63,7 +63,10 @@ export function computeColumnWidths(tags: ParamTagInfo[]): number {
 /**
  * Format parameter tags with proper alignment.
  */
-export function printAligned(tags: ParamTagInfo[], effectiveWidth: number): any[] {
+export function printAligned(
+  tags: ParamTagInfo[],
+  effectiveWidth: number
+): any[] {
   if (tags.length === 0) return [];
 
   const maxWidth = computeColumnWidths(tags);
@@ -71,21 +74,28 @@ export function printAligned(tags: ParamTagInfo[], effectiveWidth: number): any[
 
   for (const tag of tags) {
     const prefix = `@${tag.tagName} ${tag.name}`;
-    
+
     if (tag.description) {
       // Calculate padding needed for alignment
       const currentWidth = prefix.length;
       const paddingNeeded = Math.max(1, maxWidth - currentWidth - 3); // -3 for " - "
       const padding = ' '.repeat(paddingNeeded);
-      
+
       // Check if the header would exceed effective width
       if (currentWidth + 3 > effectiveWidth) {
         // Break header and description onto separate lines
         result.push(createCommentLine(`${prefix} -`));
-        result.push(createCommentLine(`  ${formatTextContent(tag.description)}`));
+        result.push(
+          createCommentLine(`  ${formatTextContent(tag.description)}`)
+        );
       } else {
         // Normal aligned format
-        const content = [prefix, padding, '- ', formatTextContent(tag.description)];
+        const content = [
+          prefix,
+          padding,
+          '- ',
+          formatTextContent(tag.description),
+        ];
         result.push(createCommentLine(content));
       }
     } else {
@@ -102,7 +112,7 @@ export function printAligned(tags: ParamTagInfo[], effectiveWidth: number): any[
  */
 export function formatReturnsTag(node: any): any {
   const description = extractTextFromNode(node.content || node).trim();
-  
+
   if (description) {
     return createCommentLine(['@returns ', formatTextContent(description)]);
   } else {
