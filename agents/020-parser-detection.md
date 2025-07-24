@@ -1,5 +1,7 @@
 # Phase 020 – Comment Detection & TSDoc Parsing
 
+## Status: ✅ COMPLETED
+
 ## Goal
 
 Detect candidate multi-line `/** … */` comments inside the Prettier print

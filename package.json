@@ -6,16 +6,21 @@
   "author": "",
   "type": "module",
   "main": "dist/index.js",
+  "exports": {
+    ".": "./dist/index.js"
+  },
   "scripts": {
     "build": "tsc",
     "test": "vitest --run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "lint": "echo 'Linting not implemented yet'"
   },
   "dependencies": {
     "@microsoft/tsdoc": "^0.15.1",
     "prettier": "^3.6.2"
   },
   "devDependencies": {
+    "@types/node": "^20.0.0",
     "typescript": "^5.8.3",
     "vitest": "^3.2.4"
   }

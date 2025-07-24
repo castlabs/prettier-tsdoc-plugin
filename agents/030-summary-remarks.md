@@ -1,5 +1,7 @@
 # Phase 030 – Summary & `@remarks` Formatting
 
+## Status: ✅ COMPLETED
+
 ## Goal
 
 Emit consistently wrapped and indented summary paragraphs and optional

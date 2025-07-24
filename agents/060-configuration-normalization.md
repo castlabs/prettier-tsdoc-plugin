@@ -1,5 +1,7 @@
 # Phase 060 – Configuration Surface & Tag Normalisation
 
+## Status: ✅ COMPLETED
+
 ## Goal
 
 Expose user-configurable options under the `tsdoc` Prettier namespace and honour

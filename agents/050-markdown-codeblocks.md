@@ -1,9 +1,11 @@
 # Phase 050 – Markdown & Fenced Code Block Formatting
 
+## Status: ✅ COMPLETED
+
 ## Goal
 
 Delegate Markdown paragraphs and fenced code blocks inside TSDoc comments to
-Prettier’s own printers, adhering to rules in §§6.1–6.3.
+Prettier's own printers, adhering to rules in §§6.1–6.3.
 
 ## Deliverables
 

@@ -1,0 +1,10 @@
+src/
+agents/
+node_modules/
+*.test.ts
+*.test.js
+.gitignore
+.DS_Store
+tsconfig.json
+vitest.config.ts
+vitest.setup.ts
