@@ -4,6 +4,8 @@ import { createTSDocConfiguration } from './parser-config.js';
 import { isTSDocCandidate } from './detection.js';
 import { formatTSDocComment } from './format.js';
 import { doc } from 'prettier';
+import parserTypescript from 'prettier/parser-typescript';
+import parserBabel from 'prettier/parser-babel';
 
 // Cached parser instances with memoized configurations for performance
 const parserCache = new Map<string, TSDocParser>();
@@ -39,6 +41,10 @@ function getTSDocParser(extraTags: string[] = []): TSDocParser {
  * Preprocess source text to format TSDoc comments
  */
 function preprocessComments(text: string, options?: ParserOptions<any>): string {
+  // Skip preprocessing unless forceFormatTSDoc is enabled
+  if (!(options as any).forceFormatTSDoc) {
+    return text;
+  }
   // Regular expression to match /** ... */ comments
   const tsdocCommentRegex = /\/\*\*([\s\S]*?)\*\//g;
   
@@ -182,6 +188,16 @@ const plugin: Plugin = {
       extensions: ['.js', '.jsx'],
     },
   ],
+  parsers: {
+    typescript: {
+      ...parserTypescript.parsers.typescript,
+      preprocess: preprocessComments,
+    },
+    babel: {
+      ...parserBabel.parsers.babel,
+      preprocess: preprocessComments,
+    },
+  },
   options: {
     fencedIndent: {
       type: 'choice',
