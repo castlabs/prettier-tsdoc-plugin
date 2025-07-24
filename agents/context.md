@@ -2,8 +2,9 @@
 
 - **Status:** Draft (ready for initial implementation)
 - **Scope:** Formatting _only_ (no semantic validation).
-- **Runtime:** Node ≥ 18; ESM module; zero build step (ships as plain
-  JavaScript).
+- **Implementation:** Written in TypeScript.
+- **Testing:** Uses [Vitest](https://vitest.dev/) for all tests.
+- **Runtime:** Node ≥ 18; ESM module
 - **Integrations:** Prettier core printers (`estree`, `typescript`, etc.),
   `@microsoft/tsdoc` AST, optional TypeDoc/AEDoc tag awareness, API Extractor
   conventions.
