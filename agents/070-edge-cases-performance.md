@@ -1,5 +1,7 @@
 # Phase 070 – Edge-Cases, Performance & Telemetry
 
+## Status: ✅ COMPLETED
+
 ## Goal
 
 Stabilise the plugin for real-world repositories, optimise hot paths, and

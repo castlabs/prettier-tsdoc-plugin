@@ -13,6 +13,7 @@
     "build": "tsc",
     "test": "vitest --run",
     "test:watch": "vitest",
+    "benchmark": "npm run build && node benchmarks/format-performance.js",
     "lint": "echo 'Linting not implemented yet'"
   },
   "dependencies": {
@@ -21,6 +22,7 @@
   },
   "devDependencies": {
     "@types/node": "^20.0.0",
+    "tinybench": "^4.0.1",
     "typescript": "^5.8.3",
     "vitest": "^3.2.4"
   }

@@ -54,8 +54,21 @@ const LANGUAGE_MAP: Record<string, string> = {
   'graphql': 'graphql',
 };
 
-// Cache for formatted code snippets
+// Cache for formatted code snippets with hash-based keys for better performance
 const formatCache = new Map<string, string>();
+
+/**
+ * Create a simple hash of input string for cache keys
+ */
+function simpleHash(str: string): string {
+  let hash = 0;
+  for (let i = 0; i < str.length; i++) {
+    const char = str.charCodeAt(i);
+    hash = ((hash << 5) - hash) + char;
+    hash = hash & hash; // Convert to 32-bit integer
+  }
+  return hash.toString(36);
+}
 
 /**
  * Extract markdown sections and fenced code blocks from text content.
@@ -133,8 +146,14 @@ export function formatFencedCode(
   language: string,
   options: ParserOptions<any>
 ): string {
-  // Create cache key
-  const cacheKey = `${language}:${JSON.stringify(options)}:${code}`;
+  // Create efficient cache key using hash
+  const contentHash = simpleHash(code);
+  const optionsHash = simpleHash(JSON.stringify({ 
+    printWidth: options.printWidth, 
+    tabWidth: options.tabWidth, 
+    useTabs: options.useTabs 
+  }));
+  const cacheKey = `${language}:${optionsHash}:${contentHash}`;
   
   // Check cache first
   if (formatCache.has(cacheKey)) {
@@ -172,8 +191,14 @@ export function formatMarkdown(
   content: string,
   options: ParserOptions<any>
 ): string {
-  // Create cache key
-  const cacheKey = `markdown:${JSON.stringify(options)}:${content}`;
+  // Create efficient cache key using hash
+  const contentHash = simpleHash(content);
+  const optionsHash = simpleHash(JSON.stringify({ 
+    printWidth: options.printWidth, 
+    tabWidth: options.tabWidth, 
+    useTabs: options.useTabs 
+  }));
+  const cacheKey = `markdown:${optionsHash}:${contentHash}`;
   
   // Check cache first
   if (formatCache.has(cacheKey)) {

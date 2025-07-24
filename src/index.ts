@@ -4,15 +4,33 @@ import { createTSDocConfiguration } from './parser-config.js';
 import { isTSDocCandidate } from './detection.js';
 import { formatTSDocComment } from './format.js';
 
-// Singleton parser instance - reuse across calls for performance
-let tsdocParser: TSDocParser | null = null;
+// Cached parser instances with memoized configurations for performance
+const parserCache = new Map<string, TSDocParser>();
 
-function getTSDocParser(): TSDocParser {
-  if (!tsdocParser) {
-    const configuration = createTSDocConfiguration();
-    tsdocParser = new TSDocParser(configuration);
+function getTSDocParser(extraTags: string[] = []): TSDocParser {
+  // Create cache key based on configuration
+  const cacheKey = extraTags.length > 0 ? extraTags.sort().join(',') : 'default';
+  
+  if (parserCache.has(cacheKey)) {
+    return parserCache.get(cacheKey)!;
   }
-  return tsdocParser;
+  
+  // Create new parser with configuration
+  const configuration = createTSDocConfiguration(extraTags);
+  const parser = new TSDocParser(configuration);
+  
+  // Cache the parser
+  parserCache.set(cacheKey, parser);
+  
+  // Limit cache size to prevent memory leaks
+  if (parserCache.size > 10) {
+    const firstKey = parserCache.keys().next().value;
+    if (firstKey) {
+      parserCache.delete(firstKey);
+    }
+  }
+  
+  return parser;
 }
 
 /**
@@ -35,8 +53,9 @@ function printComment(
   }
 
   try {
-    // Get the parser
-    const parser = getTSDocParser();
+    // Get cached parser (with potential extraTags from options)
+    const extraTags = (options as any).tsdoc?.extraTags || [];
+    const parser = getTSDocParser(extraTags);
     
     // Format the comment
     return formatTSDocComment(comment.value, options, parser);

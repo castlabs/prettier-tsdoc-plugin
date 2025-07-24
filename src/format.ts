@@ -14,6 +14,67 @@ import { printAligned, formatReturnsTag, ParamTagInfo } from './utils/tags.js';
 import { extractMarkdownSections, formatMarkdown, formatFencedCode, applyFencedIndent } from './utils/markdown.js';
 import { resolveOptions, normalizeTagName, isReleaseTag, isModifierTag, type TSDocPluginOptions } from './config.js';
 
+// Debug telemetry for performance and error tracking
+interface TelemetryData {
+  commentsProcessed: number;
+  parseErrors: number;
+  formattingErrors: number;
+  totalTime: number;
+  cacheHits: number;
+  cacheMisses: number;
+}
+
+const telemetry: TelemetryData = {
+  commentsProcessed: 0,
+  parseErrors: 0,
+  formattingErrors: 0,
+  totalTime: 0,
+  cacheHits: 0,
+  cacheMisses: 0,
+};
+
+/**
+ * Reset telemetry data (useful for testing)
+ */
+export function resetTelemetry(): void {
+  telemetry.commentsProcessed = 0;
+  telemetry.parseErrors = 0;
+  telemetry.formattingErrors = 0;
+  telemetry.totalTime = 0;
+  telemetry.cacheHits = 0;
+  telemetry.cacheMisses = 0;
+}
+
+/**
+ * Get current telemetry data
+ */
+export function getTelemetry(): Readonly<TelemetryData> {
+  return { ...telemetry };
+}
+
+/**
+ * Log debug telemetry if debug mode is enabled
+ */
+function logDebugTelemetry(options: ParserOptions<any>): void {
+  if (process.env.PRETTIER_TSDOC_DEBUG !== '1') return;
+  
+  const logger = (options as any).logger;
+  if (logger?.warn) {
+    const avgTime = telemetry.commentsProcessed > 0 ? telemetry.totalTime / telemetry.commentsProcessed : 0;
+    const cacheHitRate = telemetry.cacheHits + telemetry.cacheMisses > 0 
+      ? (telemetry.cacheHits / (telemetry.cacheHits + telemetry.cacheMisses) * 100).toFixed(1) 
+      : '0';
+    
+    logger.warn('TSDoc Debug Telemetry:', {
+      commentsProcessed: telemetry.commentsProcessed,
+      parseErrors: telemetry.parseErrors,
+      formattingErrors: telemetry.formattingErrors,
+      averageTimeMs: avgTime.toFixed(2),
+      cacheHitRate: `${cacheHitRate}%`,
+    });
+  }
+}
+
 const { builders } = doc;
 const { join, line, hardline, group } = builders;
 
@@ -30,21 +91,79 @@ export function formatTSDocComment(
   options: ParserOptions<any>,
   parser: TSDocParser
 ): Doc {
-  // Resolve TSDoc-specific options
-  const tsdocOptions = resolveOptions(options);
+  const startTime = performance.now();
   
-  // Parse the comment
-  const fullComment = `/**${commentValue}*/`;
-  const parserContext = parser.parseString(fullComment);
+  try {
+    // Resolve TSDoc-specific options
+    const tsdocOptions = resolveOptions(options);
+    
+    // Parse the comment
+    const fullComment = `/**${commentValue}*/`;
+    const parserContext = parser.parseString(fullComment);
+    
+    // Check for parse errors
+    if (parserContext.log.messages.length > 0) {
+      telemetry.parseErrors++;
+      
+      if (process.env.PRETTIER_TSDOC_DEBUG === '1') {
+        const logger = (options as any).logger;
+        if (logger?.warn) {
+          logger.warn('TSDoc parse warnings:', parserContext.log.messages.map(m => m.text));
+        }
+      }
+    }
+    
+    // Build intermediate model
+    const model = buildCommentModel(parserContext.docComment);
+    
+    // Apply normalizations and transformations
+    const normalizedModel = applyNormalizations(model, tsdocOptions);
+    
+    // Convert model to Prettier Doc
+    const result = buildPrettierDoc(normalizedModel, options, parserContext);
+    
+    // Update telemetry
+    telemetry.commentsProcessed++;
+    telemetry.totalTime += performance.now() - startTime;
+    
+    // Log debug info periodically
+    if (telemetry.commentsProcessed % 100 === 0) {
+      logDebugTelemetry(options);
+    }
+    
+    return result;
+    
+  } catch (error) {
+    telemetry.formattingErrors++;
+    
+    if (process.env.PRETTIER_TSDOC_DEBUG === '1') {
+      const logger = (options as any).logger;
+      if (logger?.warn) {
+        logger.warn('TSDoc formatting error:', error instanceof Error ? error.message : String(error));
+      }
+    }
+    
+    // Return a basic formatted version as fallback
+    return createFallbackDoc(commentValue);
+  }
+}
+
+/**
+ * Create a fallback Doc when formatting fails
+ */
+function createFallbackDoc(commentValue: string): Doc {
+  const lines = commentValue.split('\n');
+  const result: any[] = [];
   
-  // Build intermediate model
-  const model = buildCommentModel(parserContext.docComment);
+  result.push('/**');
+  for (const line of lines) {
+    result.push(hardline);
+    result.push(createCommentLine(line.replace(/^\s*\*?\s?/, '')));
+  }
+  result.push(hardline);
+  result.push(' */');
   
-  // Apply normalizations and transformations
-  const normalizedModel = applyNormalizations(model, tsdocOptions);
-  
-  // Convert model to Prettier Doc
-  return buildPrettierDoc(normalizedModel, options, parserContext);
+  return result;
 }
 
 /**
