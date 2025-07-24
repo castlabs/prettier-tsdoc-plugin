@@ -7,9 +7,16 @@ describe('Plugin Integration', () => {
     const plugin = await import('../dist/index.js');
 
     expect(plugin.default).toBeDefined();
-    expect(plugin.default).toHaveProperty('printers');
+    expect(plugin.default).toHaveProperty('languages');
     expect(plugin.default).toHaveProperty('options');
-    // In Phase 2, printers are empty - they will be added in Phase 3
+    
+    // Check that basic language support is defined
+    expect(Array.isArray(plugin.default.languages)).toBe(true);
+    expect(plugin.default.languages.length).toBeGreaterThan(0);
+    
+    // Check that TSDoc options are defined
+    expect(plugin.default.options).toHaveProperty('fencedIndent');
+    expect(plugin.default.options).toHaveProperty('forceFormatTSDoc');
   });
 
   test('formatting files without doc comments produces identical output', async () => {

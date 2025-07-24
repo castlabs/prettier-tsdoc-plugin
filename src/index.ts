@@ -3,6 +3,7 @@ import { TSDocParser } from '@microsoft/tsdoc';
 import { createTSDocConfiguration } from './parser-config.js';
 import { isTSDocCandidate } from './detection.js';
 import { formatTSDocComment } from './format.js';
+import { doc } from 'prettier';
 
 // Cached parser instances with memoized configurations for performance
 const parserCache = new Map<string, TSDocParser>();
@@ -32,6 +33,85 @@ function getTSDocParser(extraTags: string[] = []): TSDocParser {
   }
 
   return parser;
+}
+
+/**
+ * Preprocess source text to format TSDoc comments
+ */
+function preprocessComments(text: string, options?: ParserOptions<any>): string {
+  // Regular expression to match /** ... */ comments
+  const tsdocCommentRegex = /\/\*\*([\s\S]*?)\*\//g;
+  
+  return text.replace(tsdocCommentRegex, (match, commentContent) => {
+    try {
+      // Create a mock comment object for detection
+      const mockComment = { 
+        value: `*${commentContent}`,
+        type: 'CommentBlock'
+      };
+      
+      // Check if this is a TSDoc candidate
+      if (!isTSDocCandidate(mockComment, false)) {
+        return match; // Return original if not TSDoc
+      }
+      
+      // Get parser for formatting
+      const extraTags = (options as any)?.tsdoc?.extraTags || [];
+      const parser = getTSDocParser(extraTags);
+      
+      // Format the comment with minimal required options
+      const formattingOptions = {
+        printWidth: options?.printWidth || 80,
+        tabWidth: options?.tabWidth || 2,
+        useTabs: options?.useTabs || false,
+        ...options
+      };
+      const formattedDoc = formatTSDocComment(`*${commentContent}`, formattingOptions as ParserOptions<any>, parser);
+      
+      // Convert Doc to string (simplified approach)
+      return docToString(formattedDoc);
+      
+    } catch (error) {
+      // Return original comment if formatting fails
+      return match;
+    }
+  });
+}
+
+/**
+ * Convert a Prettier Doc to string (simplified implementation)
+ */
+function docToString(doc: Doc): string {
+  if (typeof doc === 'string') {
+    return doc;
+  }
+  
+  if (Array.isArray(doc)) {
+    return doc.map(docToString).join('');
+  }
+  
+  if (doc && typeof doc === 'object') {
+    // Handle common Prettier Doc types
+    if ((doc as any).type === 'concat' && (doc as any).parts) {
+      return (doc as any).parts.map(docToString).join('');
+    }
+    if ((doc as any).type === 'group' && (doc as any).contents) {
+      return docToString((doc as any).contents);
+    }
+    if ((doc as any).type === 'line' || (doc as any).type === 'hardline') {
+      return '\n';
+    }
+    // Handle other doc types
+    if ('contents' in doc) {
+      return docToString((doc as any).contents);
+    }
+    if ('parts' in doc) {
+      return (doc as any).parts.map(docToString).join('');
+    }
+  }
+  
+  // Fallback
+  return String(doc);
 }
 
 /**
@@ -89,10 +169,19 @@ function printComment(
  * the summary and @remarks sections according to the specification.
  */
 const plugin: Plugin = {
-  printers: {
-    // We'll implement custom comment handling later
-    // For now, we need to return something that Prettier accepts
-  },
+  // Basic plugin structure - actual integration will be tested separately
+  languages: [
+    {
+      name: 'TypeScript',
+      parsers: ['typescript'],
+      extensions: ['.ts', '.tsx'],
+    },
+    {
+      name: 'JavaScript',
+      parsers: ['babel'],
+      extensions: ['.js', '.jsx'],
+    },
+  ],
   options: {
     fencedIndent: {
       type: 'choice',
