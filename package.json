@@ -1,0 +1,22 @@
+{
+  "name": "prettier-tsdoc-plugin",
+  "version": "1.0.0",
+  "description": "A prettier plugin to handle TSDoc comments",
+  "license": "MIT",
+  "author": "",
+  "type": "module",
+  "main": "dist/index.js",
+  "scripts": {
+    "build": "tsc",
+    "test": "vitest --run",
+    "test:watch": "vitest"
+  },
+  "dependencies": {
+    "@microsoft/tsdoc": "^0.15.1",
+    "prettier": "^3.6.2"
+  },
+  "devDependencies": {
+    "typescript": "^5.8.3",
+    "vitest": "^3.2.4"
+  }
+}
