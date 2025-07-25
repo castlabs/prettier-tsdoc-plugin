@@ -65,12 +65,30 @@ export function extractTextFromNode(node: any): string {
     return '\n';
   }
 
-  // Handle inline tags like {@link}
+  // Handle inline tags like {@link} - preserve the original syntax
   if (node.kind === 'LinkTag') {
-    // Extract the URL and link text from {@link URL | text} or {@link URL}
+    // Reconstruct the original {@link URL | text} or {@link URL} syntax
     const urlArgument = node.urlDestination || '';
-    const linkText = node.linkText || urlArgument;
-    return linkText || urlArgument;
+    const linkText = node.linkText || '';
+    
+    if (linkText && linkText !== urlArgument) {
+      return `{@link ${urlArgument} | ${linkText}}`;
+    } else {
+      return `{@link ${urlArgument}}`;
+    }
+  }
+
+  // Handle other inline tags like {@inheritDoc}, {@label}, etc.
+  if (node.kind && node.kind.endsWith('Tag') && node.tagName) {
+    // Generic inline tag handling - preserve the original syntax
+    const tagName = node.tagName.startsWith('@') ? node.tagName : `@${node.tagName}`;
+    const content = node.content || node.text || '';
+    
+    if (content) {
+      return `{${tagName} ${content}}`;
+    } else {
+      return `{${tagName}}`;
+    }
   }
 
   if (node.kind === 'Paragraph' && node.nodes) {

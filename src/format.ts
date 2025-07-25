@@ -27,6 +27,8 @@ import {
   addCommentMarks,
   extractIndentation,
   isMarkdownCapableTag,
+  preserveInlineTags,
+  restoreInlineTags,
 } from './utils/markdown.js';
 import {
   resolveOptions,
@@ -323,8 +325,11 @@ function formatMarkdownText(text: string, options: ParserOptions<any>): any {
     return null;
   }
   
+  // Preserve inline tags to prevent them from being split during text wrapping
+  const { text: textWithTokens, tokens } = preserveInlineTags(text);
+  
   // Split text into lines to process properly
-  const lines = text.split('\n');
+  const lines = textWithTokens.split('\n');
   const result: any[] = [];
   let currentParagraph: string[] = [];
   let lastWasListItem = false;
@@ -406,7 +411,21 @@ function formatMarkdownText(text: string, options: ParserOptions<any>): any {
     result.push(wrapped);
   }
   
-  return result.length > 0 ? result : wrapTextToString(text, options);
+  // Restore inline tags in the final result
+  const finalResult = result.length > 0 ? result : [wrapTextToString(textWithTokens, options)];
+  
+  return finalResult.map((item: any) => {
+    if (typeof item === 'string') {
+      return restoreInlineTags(item, tokens);
+    } else if (item && typeof item === 'object' && item.type === 'list-item') {
+      // Restore inline tags in list item lines
+      return {
+        ...item,
+        lines: item.lines.map((line: string) => restoreInlineTags(line, tokens))
+      };
+    }
+    return item;
+  });
 }
 
 /**
