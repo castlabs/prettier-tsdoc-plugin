@@ -29,6 +29,20 @@ export function long_line_test(name: string) {
 function internal() {
   console.log('This is an internal function');
 }
+/**
+ * This is a function that renders HTML such as:
+ *
+ * @example This HTML example
+ * ```html
+ *    <html><head>
+ *    </head>
+ *    <body><p>Hello</p></body></html>
+ * ```
+ *
+ */
+function internal_html() {
+  console.log('This is an internal function that does HTML');
+}
 
 /**
  * This is a class that:
@@ -47,6 +61,7 @@ export class Thing {
   constructor(name: string) {
     this.name = name;
     internal();
+    internal_html();
   }
 
   /**
