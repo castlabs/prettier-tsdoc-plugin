@@ -12,3 +12,50 @@
 export function long_line_test(name: string) {
   console.log(`Hello ${name}`);
 }
+
+/**
+ * Well this is just a small function that we have in place for internal usage only. The point here is that this
+ * line should be split into two.
+ *
+ * The other thing that we are going to add to this function is an example with some TypeScript code. But
+ * before we do this lets try a {@link http://verylongurls.that.goes.way.over.com | long link} that should
+ * not be split.
+ *
+ * @example This is an example
+ * ```typescript
+ *   const a = internal(  )
+ * ```
+ */
+function internal() {
+  console.log('This is an internal function');
+}
+
+/**
+ * This is a class that:
+ *
+ * - is a thing
+ *  - with a nested list
+ */
+export class Thing {
+  private name: string;
+
+  /**
+   * This class has a constructor
+   *
+   * @param name The name
+   */
+  constructor(name: string) {
+    this.name = name;
+    internal();
+  }
+
+  /**
+   * This function returns something.
+   *
+   * @param who The name
+   * @return The result
+   */
+  public hello(who: string): string {
+    return this.name + ' ' + who;
+  }
+}
