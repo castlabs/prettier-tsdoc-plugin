@@ -65,6 +65,14 @@ export function extractTextFromNode(node: any): string {
     return '\n';
   }
 
+  // Handle inline tags like {@link}
+  if (node.kind === 'LinkTag') {
+    // Extract the URL and link text from {@link URL | text} or {@link URL}
+    const urlArgument = node.urlDestination || '';
+    const linkText = node.linkText || urlArgument;
+    return linkText || urlArgument;
+  }
+
   if (node.kind === 'Paragraph' && node.nodes) {
     return node.nodes.map(extractTextFromNode).join('');
   }

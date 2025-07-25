@@ -743,13 +743,13 @@ function formatExampleTag(tag: any): any {
  */
 function formatExampleWithMarkdown(content: string): any {
   const parts: any[] = [];
-  parts.push(createCommentLine('@example'));
   
   // Split content into lines and process each part
   const lines = content.split('\n');
   let inCodeBlock = false;
   let codeBlockLanguage = '';
   let codeBlockLines: string[] = [];
+  let firstTextLine = true;
   
   for (const line of lines) {
     const trimmedLine = line.trim();
@@ -805,10 +805,17 @@ function formatExampleWithMarkdown(content: string): any {
       codeBlockLines.push(line);
     } else {
       // Regular content outside code blocks
-      parts.push(hardline);
       if (trimmedLine) {
-        parts.push(createCommentLine(line));
+        if (firstTextLine) {
+          // First text line goes on same line as @example
+          parts.push(createCommentLine(`@example ${line}`));
+          firstTextLine = false;
+        } else {
+          parts.push(hardline);
+          parts.push(createCommentLine(line));
+        }
       } else {
+        parts.push(hardline);
         parts.push(createEmptyCommentLine());
       }
     }
