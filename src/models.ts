@@ -84,9 +84,45 @@ export function extractTextFromNode(node: any): string {
 }
 
 /**
+ * Extract full @example content including code blocks by parsing raw comment text
+ */
+function extractFullExampleContent(exampleBlock: any, docComment: any, rawComment?: string): string {
+  if (!rawComment) {
+    if (process.env.PRETTIER_TSDOC_DEBUG === '1') {
+      console.log('No raw comment provided, using fallback');
+    }
+    // Fallback to normal extraction
+    return extractTextFromNode(exampleBlock.content);
+  }
+  
+  // Find the @example tag in the raw text (stop at next @ tag or closing comment)
+  const exampleTagMatch = rawComment.match(/@example\s+(.*?)(?=@\w+|\*\/\s*$|$)/s);
+  
+  if (exampleTagMatch) {
+    let fullContent = exampleTagMatch[1].trim();
+    
+    // Clean up comment prefixes from each line
+    fullContent = fullContent
+      .split('\n')
+      .map((line: string) => line.replace(/^\s*\*\s?/, ''))
+      .join('\n')
+      .trim();
+    
+    if (process.env.PRETTIER_TSDOC_DEBUG === '1') {
+      console.log('Extracted full @example content:', JSON.stringify(fullContent));
+    }
+    
+    return fullContent;
+  }
+  
+  // Fallback to normal extraction
+  return extractTextFromNode(exampleBlock.content);
+}
+
+/**
  * Build the intermediate model from a parsed TSDoc comment.
  */
-export function buildCommentModel(docComment: any): TSDocCommentModel {
+export function buildCommentModel(docComment: any, rawComment?: string): TSDocCommentModel {
   const model: TSDocCommentModel = {
     params: [],
     typeParams: [],
@@ -166,7 +202,17 @@ export function buildCommentModel(docComment: any): TSDocCommentModel {
   if (docComment.customBlocks) {
     for (const block of docComment.customBlocks) {
       if (block.blockTag && block.blockTag.tagName) {
-        const content = extractTextFromNode(block.content);
+        let content = extractTextFromNode(block.content);
+        
+        // For @example tags, try to get the full content including code blocks
+        if (block.blockTag.tagName === '@example') {
+          content = extractFullExampleContent(block, docComment, rawComment);
+        }
+        
+        if (process.env.PRETTIER_TSDOC_DEBUG === '1') {
+          console.log(`Custom block found: ${block.blockTag.tagName}`);
+          console.log(`Content: ${JSON.stringify(content)}`);
+        }
         model.otherTags.push({
           tagName: block.blockTag.tagName,
           content: content.trim(),

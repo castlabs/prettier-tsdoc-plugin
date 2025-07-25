@@ -147,7 +147,7 @@ export function formatTSDocComment(
     }
 
     // Build intermediate model
-    const model = buildCommentModel(parserContext.docComment);
+    const model = buildCommentModel(parserContext.docComment, fullComment);
 
     // Apply normalizations and transformations
     const normalizedModel = applyNormalizations(model, tsdocOptions);
@@ -683,11 +683,144 @@ function buildPrettierDoc(
     parts.push(formatReturnsTag(model.returns));
   }
 
+  // Other tags (like @example, @see, etc.)
+  if (model.otherTags.length > 0) {
+    const needsLineBeforeOtherTags = hasContent || hasParamLikeTags || model.returns;
+    
+    for (const tag of model.otherTags) {
+      if (needsLineBeforeOtherTags) {
+        parts.push(hardline);
+        parts.push(createEmptyCommentLine());
+      }
+      parts.push(hardline);
+      parts.push(formatOtherTag(tag));
+    }
+  }
+
   // Closing */
   parts.push(hardline);
   parts.push(' */');
 
   return group(parts);
+}
+
+/**
+ * Format other tags like @example, @see, etc.
+ */
+function formatOtherTag(tag: any): any {
+  const tagName = tag.tagName.startsWith('@') ? tag.tagName : `@${tag.tagName}`;
+  const content = tag.content.trim();
+
+  if (!content) {
+    return createCommentLine(tagName);
+  }
+
+  // For @example tags, handle embedded code blocks specially
+  if (tagName === '@example') {
+    return formatExampleTag(tag);
+  }
+
+  // For other tags, format content with text wrapping
+  return createCommentLine([tagName, ' ', formatTextContent(content)]);
+}
+
+/**
+ * Format @example tags with potential embedded code blocks
+ */
+function formatExampleTag(tag: any): any {
+  const content = tag.content.trim();
+  
+  if (!content) {
+    return createCommentLine('@example');
+  }
+
+  // Check if content contains code blocks
+  if (content.includes('```')) {
+    return formatExampleWithCodeBlocks(content);
+  }
+
+  // Simple text example
+  return createCommentLine(['@example ', formatTextContent(content)]);
+}
+
+/**
+ * Format @example with embedded code blocks
+ */
+function formatExampleWithCodeBlocks(content: string): any {
+  const parts: any[] = [];
+  
+  // Start with @example tag
+  parts.push(createCommentLine('@example'));
+  
+  // Process the content line by line, handling code blocks specially
+  const lines = content.split('\n');
+  let inCodeBlock = false;
+  let codeBlockLanguage = '';
+  let codeBlockLines: string[] = [];
+  
+  for (const line of lines) {
+    const trimmedLine = line.trim();
+    
+    if (trimmedLine.startsWith('```')) {
+      if (!inCodeBlock) {
+        // Starting a code block
+        inCodeBlock = true;
+        codeBlockLanguage = trimmedLine.slice(3).trim() || 'text';
+        codeBlockLines = [];
+        parts.push(hardline);
+        parts.push(createCommentLine(trimmedLine));
+      } else {
+        // Ending a code block - format the collected code
+        inCodeBlock = false;
+        
+        // Format the code block content
+        if (codeBlockLines.length > 0) {
+          const codeContent = codeBlockLines.join('\n');
+          const formattedCode = formatCodeBlockContent(codeContent, codeBlockLanguage);
+          const formattedLines = formattedCode.split('\n');
+          
+          for (const codeLine of formattedLines) {
+            parts.push(hardline);
+            parts.push(createCommentLine(codeLine));
+          }
+        }
+        
+        // Add closing code fence
+        parts.push(hardline);
+        parts.push(createCommentLine(trimmedLine));
+      }
+    } else if (inCodeBlock) {
+      // Inside a code block - collect the line
+      codeBlockLines.push(line);
+    } else {
+      // Regular content outside code blocks
+      parts.push(hardline);
+      if (trimmedLine) {
+        parts.push(createCommentLine(line));
+      } else {
+        parts.push(createEmptyCommentLine());
+      }
+    }
+  }
+  
+  return parts;
+}
+
+/**
+ * Format code block content with language-specific formatting
+ */
+function formatCodeBlockContent(code: string, language: string): string {
+  // Import the markdown utilities
+  const { formatFencedCode } = require('./utils/markdown.js');
+  
+  // Use the existing formatFencedCode function
+  const formatted = formatFencedCode(code, language, { printWidth: 80 });
+  
+  // Apply proper indentation for code blocks in comments
+  return formatted
+    .split('\n')
+    .map((line: string) => line ? `  ${line}` : line)
+    .join('\n');
 }
 
 /**
