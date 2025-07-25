@@ -4,7 +4,102 @@
  */
 
 import type { ParserOptions } from 'prettier';
-import { format } from 'prettier';
+import { format, doc } from 'prettier';
+
+const { builders } = doc;
+
+// Comprehensive list of TSDoc block tags (standard + extended TypeDoc/AEDoc)
+export const BLOCK_TAGS = new Set([
+  // TSDoc Standard Block Tags
+  '@param', '@typeParam', '@returns', '@throws', '@example', '@deprecated',
+  '@see', '@since', '@override', '@sealed', '@virtual', '@readonly',
+  '@eventProperty', '@defaultValue', '@remarks', '@alpha', '@beta', '@public',
+  '@internal', '@packageDocumentation', '@privateRemarks',
+  
+  // TypeDoc Extensions
+  '@category', '@categoryDescription', '@group', '@groupDescription',
+  '@default', '@document', '@expandType', '@import', '@inlineType',
+  '@license', '@module', '@preventExpand', '@preventInline', '@property',
+  '@prop', '@return', '@sortStrategy', '@summary', '@template', '@type',
+  
+  // AEDoc Extensions
+  '@abstract', '@event', '@experimental', '@hidden', '@inline',
+  '@preapproved', '@migratedPackage', '@packageDocumentation'
+]);
+
+// Markdown-capable block tags that should be processed through markdown formatter
+export const MARKDOWN_BLOCK_TAGS = new Set([
+  '@remarks', '@example', '@privateRemarks', '@deprecated', '@see'
+]);
+
+// Inline tags that should be preserved as unbreakable tokens
+export const INLINE_TAGS = new Set([
+  '{@link}', '{@linkcode}', '{@linkplain}', '{@inheritDoc}', '{@label}',
+  '{@include}', '{@includeCode}'
+]);
+
+/**
+ * Check if a tag is a block tag
+ */
+export function isBlockTag(tagName: string): boolean {
+  return BLOCK_TAGS.has(tagName);
+}
+
+/**
+ * Check if a block tag should be processed through markdown formatter
+ */
+export function isMarkdownCapableTag(tagName: string): boolean {
+  return MARKDOWN_BLOCK_TAGS.has(tagName);
+}
+
+/**
+ * Extract clean text content for markdown processing by removing comment marks
+ */
+export function stripCommentMarks(rawText: string): string {
+  if (!rawText) return '';
+  
+  return rawText
+    .split('\n')
+    .map(line => {
+      // Remove leading whitespace and asterisk with optional space
+      return line.replace(/^\s*\*\s?/, '');
+    })
+    .join('\n')
+    .trim();
+}
+
+/**
+ * Preserve inline tags as unbreakable tokens during markdown processing
+ */
+export function preserveInlineTags(text: string): { text: string; tokens: Map<string, string> } {
+  const tokens = new Map<string, string>();
+  let tokenCounter = 0;
+  
+  // Replace inline tags with placeholder tokens
+  let processedText = text;
+  const inlineTagRegex = /\{@\w+[^}]*\}/g;
+  
+  processedText = processedText.replace(inlineTagRegex, (match) => {
+    const token = `__INLINE_TAG_${tokenCounter++}__`;
+    tokens.set(token, match);
+    return token;
+  });
+  
+  return { text: processedText, tokens };
+}
+
+/**
+ * Restore inline tags from placeholder tokens
+ */
+export function restoreInlineTags(text: string, tokens: Map<string, string>): string {
+  let restoredText = text;
+  
+  tokens.forEach((originalTag, token) => {
+    restoredText = restoredText.replace(new RegExp(token, 'g'), originalTag);
+  });
+  
+  return restoredText;
+}
 
 export interface MarkdownSection {
   type: 'markdown' | 'fenced-code';
@@ -244,4 +339,81 @@ export function applyFencedIndent(
  */
 export function clearFormatCache(): void {
   formatCache.clear();
+}
+
+/**
+ * Format a markdown block using Prettier's markdown formatter with embedded language support
+ */
+export async function formatMarkdownBlock(
+  rawText: string, 
+  options: ParserOptions<any>
+): Promise<string> {
+  if (!rawText.trim()) {
+    return '';
+  }
+
+  try {
+    // 1. Preserve inline tags as unbreakable tokens
+    const { text: textWithTokens, tokens } = preserveInlineTags(rawText);
+    
+    // 2. Format with Prettier markdown parser with embedded language support enabled
+    const formatted = await format(textWithTokens, {
+      ...options,
+      parser: 'markdown',
+      printWidth: options.printWidth || 80,
+      tabWidth: options.tabWidth || 2,
+      useTabs: options.useTabs || false,
+      proseWrap: 'always', // Ensure prose wrapping
+      // Enable embedded language formatting
+      plugins: options.plugins || [],
+    });
+    
+    // 3. Restore inline tags
+    const restored = restoreInlineTags(formatted, tokens);
+    
+    // 4. Clean up extra newlines and ensure proper formatting
+    return restored.trim();
+    
+  } catch (error) {
+    console.warn('Markdown formatting failed:', error instanceof Error ? error.message : String(error));
+    return rawText; // fallback to original
+  }
+}
+
+/**
+ * Add comment marks back to formatted markdown content with proper alignment
+ */
+export function addCommentMarks(formattedText: string, baseIndentation: string = ''): string {
+  if (!formattedText.trim()) {
+    return '';
+  }
+  
+  return formattedText
+    .split('\n')
+    .map((line, index) => {
+      // Handle empty lines
+      if (!line.trim()) {
+        return `${baseIndentation} *`;
+      }
+      
+      // Add comment mark with proper spacing
+      return `${baseIndentation} * ${line}`;
+    })
+    .join('\n');
+}
+
+/**
+ * Extract original indentation from a comment block
+ */
+export function extractIndentation(commentText: string): string {
+  const lines = commentText.split('\n');
+  
+  for (const line of lines) {
+    const match = line.match(/^(\s*)\*/);
+    if (match) {
+      return match[1]; // Return the whitespace before the asterisk
+    }
+  }
+  
+  return ''; // Default to no indentation
 }

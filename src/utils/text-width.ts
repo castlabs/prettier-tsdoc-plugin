@@ -57,16 +57,16 @@ export function wrapText(text: string): any {
  */
 export function createCommentLine(content: any): any {
   if (!content) {
-    return '* ';
+    return ' * ';
   }
-  return ['* ', content];
+  return [' * ', content];
 }
 
 /**
  * Create an empty comment line (just "* ").
  */
 export function createEmptyCommentLine(): string {
-  return '*';
+  return ' *';
 }
 
 /**

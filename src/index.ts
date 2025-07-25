@@ -175,10 +175,11 @@ function preprocessSource(text: string, options: ParserOptions<any>): string {
   
   return text.replace(tsdocRegex, (match, commentContent) => {
     try {
-      // Create mock comment object for detection (trim leading newline)
+      // Create mock comment object for detection 
+      // The comment content from regex doesn't include /** and */, but detection expects the * pattern
       const trimmedContent = commentContent.replace(/^\s*/, '');
       const mockComment = {
-        value: trimmedContent,
+        value: `*\n${trimmedContent}`,
         type: 'CommentBlock'
       };
       

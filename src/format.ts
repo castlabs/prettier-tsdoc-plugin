@@ -14,6 +14,7 @@ import {
   formatTextContent,
   createCommentLine,
   createEmptyCommentLine,
+  wrapText,
 } from './utils/text-width.js';
 import { printAligned, formatReturnsTag, ParamTagInfo } from './utils/tags.js';
 import {
@@ -21,6 +22,11 @@ import {
   formatMarkdown,
   formatFencedCode,
   applyFencedIndent,
+  stripCommentMarks,
+  formatMarkdownBlock,
+  addCommentMarks,
+  extractIndentation,
+  isMarkdownCapableTag,
 } from './utils/markdown.js';
 import {
   resolveOptions,
@@ -190,7 +196,7 @@ function createFallbackDoc(commentValue: string): Doc {
     result.push(createCommentLine(line.replace(/^\s*\*?\s?/, '')));
   }
   result.push(hardline);
-  result.push(' */');
+  result.push('*/');
 
   return result;
 }
@@ -273,56 +279,248 @@ function deduplicateReleaseTags(
 }
 
 /**
- * Format text content with markdown and fenced code support.
+ * Format text content with improved markdown support.
+ * Note: Full async Prettier formatting would require architectural changes,
+ * so we use enhanced text processing for now.
  */
 function formatTextWithMarkdown(
   text: string,
-  options: ParserOptions<any>
+  options: ParserOptions<any>,
+  originalIndentation: string = ''
 ): any {
   if (!text.trim()) {
     return null;
   }
 
-  const config = resolveOptions(options);
-  const sections = extractMarkdownSections(text);
-
-  if (sections.length <= 1 && sections[0]?.type === 'markdown') {
-    // Simple text without fenced code blocks
+  try {
+    // Strip comment marks for processing
+    const cleanText = stripCommentMarks(text);
+    
+    if (process.env.PRETTIER_TSDOC_DEBUG === '1') {
+      console.log('formatTextWithMarkdown input:', JSON.stringify(text));
+      console.log('formatTextWithMarkdown cleanText:', JSON.stringify(cleanText));
+    }
+    
+    // Apply enhanced markdown-aware text formatting
+    const formatted = formatMarkdownText(cleanText, options);
+    
+    
+    return formatted;
+    
+  } catch (error) {
+    console.warn('Markdown formatting failed, falling back to basic formatting:', error instanceof Error ? error.message : String(error));
+    
+    // Fallback to the original text formatting
     return formatTextContent(text, options);
   }
+}
 
-  // Complex content with fenced code blocks
+/**
+ * Enhanced markdown text formatting with proper list handling and line wrapping
+ */
+function formatMarkdownText(text: string, options: ParserOptions<any>): any {
+  if (!text.trim()) {
+    return null;
+  }
+  
+  // Split text into lines to process properly
+  const lines = text.split('\n');
   const result: any[] = [];
-
-  for (const section of sections) {
-    if (section.type === 'markdown') {
-      const formatted = formatMarkdown(section.content, options);
-      result.push(formatTextContent(formatted, options));
-    } else if (section.type === 'fenced-code') {
-      // Format the fenced code block
-      const formatted = formatFencedCode(
-        section.content,
-        section.language || 'text',
-        options
-      );
-      const indented = applyFencedIndent(formatted, config.fencedIndent);
-
-      // Add fenced code block markers
-      result.push('```' + (section.language || ''));
-      result.push(hardline);
-
-      // Add each line of code
-      const codeLines = indented.split('\n');
-      for (const codeLine of codeLines) {
-        result.push(createCommentLine(codeLine));
-        result.push(hardline);
+  let currentParagraph: string[] = [];
+  let lastWasListItem = false;
+  
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i].trim();
+    
+    if (!line) {
+      // Empty line - end current paragraph if any
+      if (currentParagraph.length > 0) {
+        const paragraphText = currentParagraph.join(' ');
+        const wrapped = wrapTextToString(paragraphText, options);
+        result.push(wrapped);
+        currentParagraph = [];
+        
+        // Add empty string to represent paragraph break (will become empty comment line)
+        result.push('');
       }
-
-      result.push(createCommentLine('```'));
+      lastWasListItem = false;
+    } else if (line.match(/^[-*+]\s/)) {
+      // List item - end current paragraph first
+      if (currentParagraph.length > 0) {
+        const paragraphText = currentParagraph.join(' ');
+        const wrapped = wrapTextToString(paragraphText, options);
+        result.push(wrapped);
+        currentParagraph = [];
+        // Don't add extra empty line before list - spacing will be handled by the existing paragraph breaks
+      }
+      
+      // Collect all content for this list item (including continuation lines)
+      const listContent: string[] = [];
+      const match = line.match(/^([-*+])\s(.+)$/);
+      if (match) {
+        const [, marker, content] = match;
+        listContent.push(content);
+        
+        // Look ahead for continuation lines
+        let j = i + 1;
+        while (j < lines.length) {
+          const nextLine = lines[j].trim();
+          if (!nextLine) {
+            // Empty line ends the list item
+            break;
+          } else if (nextLine.match(/^[-*+]\s/)) {
+            // Another list item ends this one
+            break;
+          } else {
+            // Continuation line - add to this list item
+            listContent.push(nextLine);
+            i = j; // Skip this line in the main loop
+            j++;
+          }
+        }
+        
+        // Join all content and wrap
+        const fullContent = listContent.join(' ');
+        const wrappedLines = wrapListItemContent(fullContent, options);
+        if (process.env.PRETTIER_TSDOC_DEBUG === '1') {
+          console.log('List item wrapped lines:', JSON.stringify(wrappedLines));
+        }
+        result.push({
+          type: 'list-item',
+          marker,
+          lines: wrappedLines
+        });
+      }
+      lastWasListItem = true;
+    } else {
+      // Regular text line - add to current paragraph
+      currentParagraph.push(line);
+      lastWasListItem = false;
     }
   }
+  
+  // Handle remaining paragraph
+  if (currentParagraph.length > 0) {
+    const paragraphText = currentParagraph.join(' ');
+    const wrapped = wrapTextToString(paragraphText, options);
+    result.push(wrapped);
+  }
+  
+  return result.length > 0 ? result : wrapTextToString(text, options);
+}
 
-  return result.length > 0 ? result : formatTextContent(text, options);
+/**
+ * Wrap text to string format for comment content
+ */
+function wrapTextToString(text: string, options: ParserOptions<any>): string {
+  const printWidth = options.printWidth || 80;
+  const availableWidth = printWidth - 3; // Account for "* "
+  
+  if (text.length <= availableWidth) {
+    return text;
+  }
+  
+  // Simple word wrapping
+  const words = text.split(/\s+/);
+  const lines: string[] = [];
+  let currentLine = '';
+  
+  for (const word of words) {
+    if (currentLine.length + word.length + 1 <= availableWidth) {
+      currentLine += (currentLine ? ' ' : '') + word;
+    } else {
+      if (currentLine) {
+        lines.push(currentLine);
+        currentLine = word;
+      } else {
+        lines.push(word); // Word is too long, but include it anyway
+        currentLine = '';
+      }
+    }
+  }
+  
+  if (currentLine) {
+    lines.push(currentLine);
+  }
+  
+  return lines.join('\n');
+}
+
+/**
+ * Wrap list item content into an array of lines
+ */
+function wrapListItemContent(text: string, options: ParserOptions<any>): string[] {
+  const printWidth = options.printWidth || 80;
+  const availableWidth = printWidth - 3; // Account for " * " (3 characters) - the "- " is part of content
+  
+  // First, normalize the text by collapsing whitespace and newlines
+  const normalizedText = text.replace(/\s+/g, ' ').trim();
+  
+  if (normalizedText.length <= availableWidth) {
+    return [normalizedText];
+  }
+  
+  // Simple word wrapping
+  const words = normalizedText.split(/\s+/);
+  const lines: string[] = [];
+  let currentLine = '';
+  
+  for (const word of words) {
+    if (currentLine.length + word.length + 1 <= availableWidth) {
+      currentLine += (currentLine ? ' ' : '') + word;
+    } else {
+      if (currentLine) {
+        lines.push(currentLine);
+        currentLine = word;
+      } else {
+        lines.push(word); // Word is too long, but include it anyway
+        currentLine = '';
+      }
+    }
+  }
+  
+  if (currentLine) {
+    lines.push(currentLine);
+  }
+  
+  return lines;
+}
+
+/**
+ * Wrap text for list items with proper continuation indentation (legacy)
+ */
+function wrapTextForList(text: string, options: ParserOptions<any>, baseIndent: number): string {
+  const printWidth = options.printWidth || 80;
+  const availableWidth = printWidth - 3 - baseIndent; // Account for "* " and base indentation
+  
+  if (text.length <= availableWidth) {
+    return text;
+  }
+  
+  // Simple word wrapping for list items
+  const words = text.split(/\s+/);
+  const lines: string[] = [];
+  let currentLine = '';
+  
+  for (const word of words) {
+    if (currentLine.length + word.length + 1 <= availableWidth) {
+      currentLine += (currentLine ? ' ' : '') + word;
+    } else {
+      if (currentLine) {
+        lines.push(currentLine);
+        currentLine = word;
+      } else {
+        lines.push(word); // Word is too long, but include it anyway
+        currentLine = '';
+      }
+    }
+  }
+  
+  if (currentLine) {
+    lines.push(currentLine);
+  }
+  
+  return lines.join('\n' + ' '.repeat(baseIndent + 2)); // Continuation indent
 }
 
 /**
@@ -352,7 +550,58 @@ function buildPrettierDoc(
     );
     if (summaryContent) {
       parts.push(hardline);
-      parts.push(createCommentLine(summaryContent));
+      if (process.env.PRETTIER_TSDOC_DEBUG === '1') {
+        console.log('Summary content array:', JSON.stringify(summaryContent));
+      }
+      if (Array.isArray(summaryContent)) {
+        // Handle array of lines/content
+        summaryContent.forEach((line, index) => {
+          // Add hardline before each element except the first one to ensure proper line separation
+          if (index > 0) {
+            parts.push(hardline);
+          }
+          
+          if (typeof line === 'object' && line.type === 'list-item') {
+            // Handle list items with proper continuation indentation
+            const listItem = line as any;
+            // First line with marker
+            parts.push(createCommentLine(`${listItem.marker} ${listItem.lines[0]}`));
+            // Continuation lines with proper indentation - align with the content after the marker
+            for (let i = 1; i < listItem.lines.length; i++) {
+              parts.push(hardline);
+              parts.push(` *   ${listItem.lines[i]}`); // Space, asterisk, 3 spaces to align with content after "- "
+            }
+            // List item is complete - no additional hardline needed as it's handled globally
+          } else if (typeof line === 'string' && line.trim()) {
+            // Split multi-line strings into individual lines
+            const lines = line.split('\n');
+            lines.forEach((singleLine, lineIndex) => {
+              if (singleLine.trim()) {
+                // Handle embedded newlines in the line (from text wrapping)
+                const subLines = singleLine.split('\n');
+                subLines.forEach((subLine, subIndex) => {
+                  if (subLine.trim()) {
+                    parts.push(createCommentLine(subLine));
+                    // Add hardline after each subline except the last one
+                    if (subIndex < subLines.length - 1) {
+                      parts.push(hardline);
+                    }
+                  }
+                });
+                // Add hardline after each line except the last one within this element
+                if (lineIndex < lines.length - 1) {
+                  parts.push(hardline);
+                }
+              }
+            });
+          } else if (line === '') {
+            // Empty string represents paragraph break - add empty comment line for spacing
+            parts.push(createEmptyCommentLine());
+          }
+        });
+      } else {
+        parts.push(createCommentLine(summaryContent));
+      }
     }
   }
 

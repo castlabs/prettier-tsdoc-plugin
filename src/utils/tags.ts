@@ -92,13 +92,18 @@ export function printAligned(
         );
       } else {
         // Normal aligned format
-        const content = [
-          prefix,
-          padding,
-          '- ',
-          formatTextContent(tag.description),
-        ];
-        result.push(createCommentLine(content));
+        // Format description with proper wrapping and continuation indent
+        const fullPrefix = `${prefix}${padding}- `;
+        const wrappedLines = wrapParamDescription(tag.description, fullPrefix.length);
+        
+        // Create the first line with the full prefix
+        result.push(createCommentLine([prefix, padding, '- ', wrappedLines[0]]));
+        
+        // Create continuation lines with proper indentation (align with comment content)
+        for (let i = 1; i < wrappedLines.length; i++) {
+          const continuationIndent = '  '; // 2 spaces to align with comment content
+          result.push(createCommentLine([continuationIndent, wrappedLines[i]]));
+        }
       }
     } else {
       // No description, no hyphen
@@ -107,6 +112,43 @@ export function printAligned(
   }
 
   return result;
+}
+
+/**
+ * Wrap parameter description text into an array of lines
+ */
+function wrapParamDescription(text: string, prefixLength: number): string[] {
+  const printWidth = 80; // Default print width
+  const availableWidth = printWidth - 3 - prefixLength; // Account for " * " and prefix
+  
+  if (text.length <= availableWidth) {
+    return [text];
+  }
+  
+  // Simple word wrapping
+  const words = text.split(/\s+/);
+  const lines: string[] = [];
+  let currentLine = '';
+  
+  for (const word of words) {
+    if (currentLine.length + word.length + 1 <= availableWidth) {
+      currentLine += (currentLine ? ' ' : '') + word;
+    } else {
+      if (currentLine) {
+        lines.push(currentLine);
+        currentLine = word;
+      } else {
+        lines.push(word); // Word is too long, but include it anyway
+        currentLine = '';
+      }
+    }
+  }
+  
+  if (currentLine) {
+    lines.push(currentLine);
+  }
+  
+  return lines;
 }
 
 /**

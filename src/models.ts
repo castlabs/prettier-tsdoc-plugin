@@ -51,6 +51,7 @@ export interface TSDocCommentModel {
  */
 export function extractTextFromNode(node: any): string {
   if (!node) return '';
+  
 
   if (typeof node === 'string') {
     return node;
@@ -59,6 +60,10 @@ export function extractTextFromNode(node: any): string {
   if (node.kind === 'PlainText') {
     return node.text || '';
   }
+  
+  if (node.kind === 'SoftBreak') {
+    return '\n';
+  }
 
   if (node.kind === 'Paragraph' && node.nodes) {
     return node.nodes.map(extractTextFromNode).join('');
@@ -66,7 +71,8 @@ export function extractTextFromNode(node: any): string {
 
   if (node.kind === 'Section' && node.nodes) {
     // For sections, preserve line breaks between different elements
-    return node.nodes.map(extractTextFromNode).join('\n').replace(/\n+/g, '\n');
+    // Allow up to 2 consecutive newlines (paragraph breaks) but collapse more than that
+    return node.nodes.map(extractTextFromNode).join('\n').replace(/\n{3,}/g, '\n\n');
   }
 
   if (node.nodes) {

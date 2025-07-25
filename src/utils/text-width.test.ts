@@ -62,14 +62,14 @@ describe('Text Width Utilities', () => {
 
   test('creates comment lines', () => {
     const line = createCommentLine('content');
-    expect(line).toEqual(['* ', 'content']);
+    expect(line).toEqual([' * ', 'content']);
 
     const emptyLine = createCommentLine(null);
-    expect(emptyLine).toBe('* ');
+    expect(emptyLine).toBe(' * ');
   });
 
   test('creates empty comment line', () => {
     const line = createEmptyCommentLine();
-    expect(line).toBe('*');
+    expect(line).toBe(' *');
   });
 });
