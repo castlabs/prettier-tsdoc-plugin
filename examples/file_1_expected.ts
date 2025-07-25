@@ -1,6 +1,6 @@
 /**
- * This is one of the comments we would like to have formatted and we create a long
- * line that the formatter should wrap for us.
+ * This is one of the comments we would like to have formatted and we create a
+ * long line that the formatter should wrap for us.
  *
  * We can also try a list that should be formatted using the markdown formatter:
  *
@@ -9,9 +9,58 @@
  * - This is the third item and I hope that this very long line will be wrapped by
  *   the plugin and then it will continue on the next line
  *
- * @param name - The name param should receive a `-` and maybe it should also be
+ * @param name - The name param should receive a and maybe it should also be
  *   formatted over multiple lines.
  */
 export function long_line_test(name: string) {
   console.log(`Hello ${name}`);
+}
+
+/**
+ * Well this is just a small function that we have in place for internal usage
+ * only. The point here is that this line should be split into two.
+ *
+ * The other thing that we are going to add to this function is an example with
+ * some TypeScript code. But before we do this lets try a
+ * {@link http://verylongurls.that.goes.way.over.com | long link} that should
+ * not be split.
+ *
+ * @example This is an example
+ * ```typescript
+ * const a = internal();
+ * ```
+ */
+function internal() {
+  console.log('This is an internal function');
+}
+
+/**
+ * This is a class that:
+ *
+ * - is a thing
+ * - with a nested list
+ */
+export class Thing {
+  private name: string;
+
+  /**
+   * This class has a constructor
+   *
+   * @param name - The name
+   */
+  constructor(name: string) {
+    this.name = name;
+    internal();
+  }
+
+  /**
+   * This function returns something.
+   *
+   * @param who - The name
+   *
+   * @returns The result
+   */
+  public hello(who: string): string {
+    return this.name + ' ' + who;
+  }
 }
