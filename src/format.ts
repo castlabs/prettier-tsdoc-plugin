@@ -5,7 +5,7 @@
  */
 
 import type { ParserOptions, Doc } from 'prettier';
-import { doc } from 'prettier';
+import { doc, format } from 'prettier';
 import type { TSDocParser, ParserContext } from '@microsoft/tsdoc';
 import type { TSDocCommentModel } from './models.js';
 import { buildCommentModel } from './models.js';
@@ -734,25 +734,18 @@ function formatExampleTag(tag: any): any {
     return createCommentLine('@example');
   }
 
-  // Check if content contains code blocks
-  if (content.includes('```')) {
-    return formatExampleWithCodeBlocks(content);
-  }
-
-  // Simple text example
-  return createCommentLine(['@example ', formatTextContent(content)]);
+  // Use Prettier's markdown formatter for all @example content
+  return formatExampleWithMarkdown(content);
 }
 
 /**
- * Format @example with embedded code blocks
+ * Format @example content using enhanced code block formatting
  */
-function formatExampleWithCodeBlocks(content: string): any {
+function formatExampleWithMarkdown(content: string): any {
   const parts: any[] = [];
-  
-  // Start with @example tag
   parts.push(createCommentLine('@example'));
   
-  // Process the content line by line, handling code blocks specially
+  // Split content into lines and process each part
   const lines = content.split('\n');
   let inCodeBlock = false;
   let codeBlockLanguage = '';
@@ -773,15 +766,33 @@ function formatExampleWithCodeBlocks(content: string): any {
         // Ending a code block - format the collected code
         inCodeBlock = false;
         
-        // Format the code block content
+        // Format the code block content using Prettier if it's a supported language
         if (codeBlockLines.length > 0) {
           const codeContent = codeBlockLines.join('\n');
-          const formattedCode = formatCodeBlockContent(codeContent, codeBlockLanguage);
-          const formattedLines = formattedCode.split('\n');
-          
-          for (const codeLine of formattedLines) {
-            parts.push(hardline);
-            parts.push(createCommentLine(codeLine));
+          try {
+            let formattedCode = codeContent;
+            
+            // Format TypeScript/JavaScript code blocks using basic formatting
+            if (codeBlockLanguage === 'typescript' || codeBlockLanguage === 'ts' || 
+                codeBlockLanguage === 'javascript' || codeBlockLanguage === 'js') {
+              formattedCode = formatTypeScriptCode(codeContent);
+            }
+            
+            // Add the formatted code lines
+            const formattedLines = formattedCode.split('\n');
+            for (const codeLine of formattedLines) {
+              parts.push(hardline);
+              parts.push(createCommentLine(codeLine));
+            }
+          } catch (error) {
+            // Fallback to original code if formatting fails
+            if (process.env.PRETTIER_TSDOC_DEBUG === '1') {
+              console.warn('Code formatting failed:', error);
+            }
+            for (const codeLine of codeBlockLines) {
+              parts.push(hardline);
+              parts.push(createCommentLine(codeLine));
+            }
           }
         }
         
@@ -807,20 +818,54 @@ function formatExampleWithCodeBlocks(content: string): any {
 }
 
 /**
- * Format code block content with language-specific formatting
+ * Fallback @example formatting when Prettier markdown fails
  */
-function formatCodeBlockContent(code: string, language: string): string {
-  // Import the markdown utilities
-  const { formatFencedCode } = require('./utils/markdown.js');
+function formatExampleFallback(content: string): any {
+  const parts: any[] = [];
+  parts.push(createCommentLine('@example'));
   
-  // Use the existing formatFencedCode function
-  const formatted = formatFencedCode(code, language, { printWidth: 80 });
+  const lines = content.split('\n');
+  for (const line of lines) {
+    parts.push(hardline);
+    if (line.trim()) {
+      parts.push(createCommentLine(line));
+    } else {
+      parts.push(createEmptyCommentLine());
+    }
+  }
   
-  // Apply proper indentation for code blocks in comments
-  return formatted
-    .split('\n')
-    .map((line: string) => line ? `  ${line}` : line)
-    .join('\n');
+  return parts;
+}
+
+/**
+ * Format TypeScript/JavaScript code with basic formatting rules
+ */
+function formatTypeScriptCode(code: string): string {
+  // Basic TypeScript/JavaScript formatting
+  let formatted = code.trim();
+  
+  // Remove excessive whitespace
+  formatted = formatted.replace(/\s+/g, ' ');
+  
+  // Fix function call spacing: "internal(  )" -> "internal()"
+  formatted = formatted.replace(/\(\s+\)/g, '()');
+  
+  // Fix spacing around operators
+  formatted = formatted.replace(/\s*=\s*/g, ' = ');
+  formatted = formatted.replace(/\s*;\s*/g, ';');
+  
+  // Add semicolons to statements that need them
+  if (!formatted.endsWith(';') && !formatted.endsWith('}') && formatted.trim()) {
+    formatted = formatted + ';';
+  }
+  
+  // Add proper line breaks for statements
+  formatted = formatted.replace(/;/g, ';\n');
+  
+  // Clean up any trailing newlines or extra spaces
+  formatted = formatted.trim();
+  
+  return formatted;
 }
 
 /**
