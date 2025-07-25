@@ -712,7 +712,7 @@ function buildPrettierDoc(
         parts.push(createEmptyCommentLine());
       }
       parts.push(hardline);
-      parts.push(formatOtherTag(tag));
+      parts.push(formatOtherTag(tag, options));
     }
   }
 
@@ -726,7 +726,7 @@ function buildPrettierDoc(
 /**
  * Format other tags like @example, @see, etc.
  */
-function formatOtherTag(tag: any): any {
+function formatOtherTag(tag: any, options: ParserOptions<any>): any {
   const tagName = tag.tagName.startsWith('@') ? tag.tagName : `@${tag.tagName}`;
   const content = tag.content.trim();
 
@@ -736,7 +736,7 @@ function formatOtherTag(tag: any): any {
 
   // For @example tags, handle embedded code blocks specially
   if (tagName === '@example') {
-    return formatExampleTag(tag);
+    return formatExampleTag(tag, options);
   }
 
   // For other tags, format content with text wrapping
@@ -746,7 +746,7 @@ function formatOtherTag(tag: any): any {
 /**
  * Format @example tags with potential embedded code blocks
  */
-function formatExampleTag(tag: any): any {
+function formatExampleTag(tag: any, options: ParserOptions<any>): any {
   const content = tag.content.trim();
   
   if (!content) {
@@ -754,13 +754,13 @@ function formatExampleTag(tag: any): any {
   }
 
   // Use Prettier's markdown formatter for all @example content
-  return formatExampleWithMarkdown(content);
+  return formatExampleWithMarkdown(content, options);
 }
 
 /**
  * Format @example content using enhanced code block formatting
  */
-function formatExampleWithMarkdown(content: string): any {
+function formatExampleWithMarkdown(content: string, options: ParserOptions<any>): any {
   const parts: any[] = [];
   
   // Split content into lines and process each part
@@ -785,17 +785,11 @@ function formatExampleWithMarkdown(content: string): any {
         // Ending a code block - format the collected code
         inCodeBlock = false;
         
-        // Format the code block content using Prettier if it's a supported language
+        // Format the code block content using Prettier for supported languages
         if (codeBlockLines.length > 0) {
           const codeContent = codeBlockLines.join('\n');
           try {
-            let formattedCode = codeContent;
-            
-            // Format TypeScript/JavaScript code blocks using basic formatting
-            if (codeBlockLanguage === 'typescript' || codeBlockLanguage === 'ts' || 
-                codeBlockLanguage === 'javascript' || codeBlockLanguage === 'js') {
-              formattedCode = formatTypeScriptCode(codeContent);
-            }
+            const formattedCode = formatCodeBlock(codeContent, codeBlockLanguage, options);
             
             // Add the formatted code lines
             const formattedLines = formattedCode.split('\n');
@@ -864,34 +858,145 @@ function formatExampleFallback(content: string): any {
 }
 
 /**
- * Format TypeScript/JavaScript code with basic formatting rules
+ * Map language identifiers to Prettier parser names
  */
-function formatTypeScriptCode(code: string): string {
-  // Basic TypeScript/JavaScript formatting
-  let formatted = code.trim();
+const LANGUAGE_TO_PARSER: Record<string, string> = {
+  // TypeScript/JavaScript
+  'typescript': 'typescript',
+  'ts': 'typescript', 
+  'javascript': 'babel',
+  'js': 'babel',
+  'jsx': 'babel',
+  'tsx': 'typescript',
   
-  // Remove excessive whitespace
-  formatted = formatted.replace(/\s+/g, ' ');
+  // Web technologies
+  'html': 'html',
+  'css': 'css',
+  'scss': 'scss',
+  'less': 'less',
   
-  // Fix function call spacing: "internal(  )" -> "internal()"
-  formatted = formatted.replace(/\(\s+\)/g, '()');
+  // Data formats
+  'json': 'json',
+  'json5': 'json5',
+  'yaml': 'yaml',
+  'yml': 'yaml',
   
-  // Fix spacing around operators
-  formatted = formatted.replace(/\s*=\s*/g, ' = ');
-  formatted = formatted.replace(/\s*;\s*/g, ';');
-  
-  // Add semicolons to statements that need them
-  if (!formatted.endsWith(';') && !formatted.endsWith('}') && formatted.trim()) {
-    formatted = formatted + ';';
+  // Other
+  'markdown': 'markdown',
+  'md': 'markdown',
+  'graphql': 'graphql',
+};
+
+/**
+ * Format code block using Prettier with appropriate parser for the language
+ */
+function formatCodeBlock(code: string, language: string, options: ParserOptions<any>): string {
+  if (!code.trim()) {
+    return code;
   }
   
-  // Add proper line breaks for statements
-  formatted = formatted.replace(/;/g, ';\n');
+  const parser = LANGUAGE_TO_PARSER[language.toLowerCase()];
   
-  // Clean up any trailing newlines or extra spaces
-  formatted = formatted.trim();
+  if (!parser) {
+    // For unsupported languages, return as-is but with basic whitespace cleanup
+    return code.trim();
+  }
+  
+  // Since Prettier's format functions are async and we're in a sync context,
+  // we use enhanced basic formatting for now
+  // TODO: In the future, consider restructuring to support async formatting
+  
+  if (process.env.PRETTIER_TSDOC_DEBUG === '1') {
+    console.log(`Formatting ${language} code with basic formatter:`, JSON.stringify(code.substring(0, 50)));
+  }
+  
+  const formatted = formatCodeBasic(code, language);
+  
+  if (process.env.PRETTIER_TSDOC_DEBUG === '1') {
+    console.log(`Formatted ${language} code result:`, JSON.stringify(formatted.substring(0, 50)));
+  }
   
   return formatted;
+}
+
+/**
+ * Basic code formatting fallback for when Prettier fails
+ */
+function formatCodeBasic(code: string, language: string): string {
+  let formatted = code.trim();
+  
+  // Basic whitespace normalization for all languages
+  formatted = formatted.replace(/\s+$/gm, ''); // Remove trailing whitespace from lines
+  
+  // Language-specific basic formatting
+  if (['typescript', 'ts', 'javascript', 'js', 'jsx', 'tsx'].includes(language)) {
+    // JavaScript/TypeScript basic formatting
+    formatted = formatted.replace(/\(\s+\)/g, '()'); // Fix function call spacing
+    formatted = formatted.replace(/\s*=\s*/g, ' = '); // Fix assignment spacing
+    formatted = formatted.replace(/\s*;\s*$/gm, ';'); // Fix semicolon spacing
+  } else if (language === 'html') {
+    // HTML basic formatting - add proper indentation and line breaks
+    formatted = formatHtmlBasic(formatted);
+  }
+  
+  return formatted;
+}
+
+/**
+ * Basic HTML formatting with proper indentation and line breaks
+ */
+function formatHtmlBasic(html: string): string {
+  // Remove all existing whitespace between tags
+  let formatted = html.replace(/>\s+</g, '><').trim();
+  
+  // Add line breaks and indentation
+  const indent = '  '; // 2 spaces
+  let level = 0;
+  let result = '';
+  let i = 0;
+  
+  while (i < formatted.length) {
+    if (formatted[i] === '<') {
+      const tagEnd = formatted.indexOf('>', i);
+      if (tagEnd === -1) break;
+      
+      const tag = formatted.slice(i, tagEnd + 1);
+      const isClosingTag = tag.startsWith('</');
+      const isSelfClosing = tag.endsWith('/>') || 
+                           ['<br>', '<hr>', '<img', '<input', '<meta', '<link'].some(t => tag.startsWith(t));
+      
+      if (isClosingTag) {
+        level--;
+      }
+      
+      // Add indentation
+      if (result && !result.endsWith('\n')) {
+        result += '\n';
+      }
+      result += indent.repeat(Math.max(0, level)) + tag;
+      
+      if (!isClosingTag && !isSelfClosing) {
+        level++;
+      }
+      
+      i = tagEnd + 1;
+    } else {
+      // Text content between tags
+      const nextTag = formatted.indexOf('<', i);
+      const textContent = formatted.slice(i, nextTag === -1 ? formatted.length : nextTag).trim();
+      
+      if (textContent) {
+        if (result && !result.endsWith('\n')) {
+          result += '\n';
+        }
+        result += indent.repeat(level) + textContent;
+      }
+      
+      i = nextTag === -1 ? formatted.length : nextTag;
+    }
+  }
+  
+  return result;
 }
 
 /**

@@ -10,3 +10,17 @@ We can also try a list that should be formatted using the markdown formatter:
 
 @param name - The name param should receive a `-` and maybe it should also be
 formatted over multiple lines.
+
+```html
+<html>
+  <head></head>
+  <body>
+    <p>Hello</p>
+    <p>Hello</p>
+    <p>Hello</p>
+    <p>Hello</p>
+    <p>Hello</p>
+    <p>Hello</p>
+  </body>
+</html>
+```
