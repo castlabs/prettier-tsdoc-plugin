@@ -114,8 +114,10 @@ export function extractTextFromNode(node: any): string {
  */
 function extractFullExampleContent(exampleBlock: any, docComment: any, rawComment?: string): string {
   if (!rawComment) {
+    // Debug logging would need options parameter here, but this is deep in parsing
+    // For now, only log in strict debug mode
     if (process.env.PRETTIER_TSDOC_DEBUG === '1') {
-      console.log('No raw comment provided, using fallback');
+      console.debug('No raw comment provided, using fallback');
     }
     // Fallback to normal extraction
     return extractTextFromNode(exampleBlock.content);
@@ -135,7 +137,7 @@ function extractFullExampleContent(exampleBlock: any, docComment: any, rawCommen
       .trim();
     
     if (process.env.PRETTIER_TSDOC_DEBUG === '1') {
-      console.log('Extracted full @example content:', JSON.stringify(fullContent));
+      console.debug('Extracted full @example content:', JSON.stringify(fullContent));
     }
     
     return fullContent;
@@ -236,8 +238,8 @@ export function buildCommentModel(docComment: any, rawComment?: string): TSDocCo
         }
         
         if (process.env.PRETTIER_TSDOC_DEBUG === '1') {
-          console.log(`Custom block found: ${block.blockTag.tagName}`);
-          console.log(`Content: ${JSON.stringify(content)}`);
+          console.debug(`Custom block found: ${block.blockTag.tagName}`);
+          console.debug(`Content: ${JSON.stringify(content)}`);
         }
         model.otherTags.push({
           tagName: block.blockTag.tagName,

@@ -299,8 +299,11 @@ function formatTextWithMarkdown(
     const cleanText = stripCommentMarks(text);
     
     if (process.env.PRETTIER_TSDOC_DEBUG === '1') {
-      console.log('formatTextWithMarkdown input:', JSON.stringify(text));
-      console.log('formatTextWithMarkdown cleanText:', JSON.stringify(cleanText));
+      const logger = (options as any).logger;
+      if (logger?.warn) {
+        logger.warn('formatTextWithMarkdown input:', JSON.stringify(text));
+        logger.warn('formatTextWithMarkdown cleanText:', JSON.stringify(cleanText));
+      }
     }
     
     // Apply enhanced markdown-aware text formatting
@@ -310,7 +313,12 @@ function formatTextWithMarkdown(
     return formatted;
     
   } catch (error) {
-    console.warn('Markdown formatting failed, falling back to basic formatting:', error instanceof Error ? error.message : String(error));
+    if (process.env.PRETTIER_TSDOC_DEBUG === '1') {
+      const logger = (options as any).logger;
+      if (logger?.warn) {
+        logger.warn('Markdown formatting failed, falling back to basic formatting:', error instanceof Error ? error.message : String(error));
+      }
+    }
     
     // Fallback to the original text formatting
     return formatTextContent(text, options);
@@ -388,7 +396,7 @@ function formatMarkdownText(text: string, options: ParserOptions<any>): any {
         const fullContent = listContent.join(' ');
         const wrappedLines = wrapListItemContent(fullContent, options);
         if (process.env.PRETTIER_TSDOC_DEBUG === '1') {
-          console.log('List item wrapped lines:', JSON.stringify(wrappedLines));
+          console.debug('List item wrapped lines:', JSON.stringify(wrappedLines));
         }
         result.push({
           type: 'list-item',
@@ -560,7 +568,7 @@ function buildPrettierDoc(
   if (model.summary) {
     // Debug: log the raw summary content
     if (process.env.PRETTIER_TSDOC_DEBUG === '1') {
-      console.log('Summary content:', JSON.stringify(model.summary.content));
+      console.debug('Summary content:', JSON.stringify(model.summary.content));
     }
     
     const summaryContent = formatTextWithMarkdown(
@@ -570,7 +578,7 @@ function buildPrettierDoc(
     if (summaryContent) {
       parts.push(hardline);
       if (process.env.PRETTIER_TSDOC_DEBUG === '1') {
-        console.log('Summary content array:', JSON.stringify(summaryContent));
+        console.debug('Summary content array:', JSON.stringify(summaryContent));
       }
       if (Array.isArray(summaryContent)) {
         // Handle array of lines/content
@@ -800,7 +808,7 @@ function formatExampleWithMarkdown(content: string, options: ParserOptions<any>)
           } catch (error) {
             // Fallback to original code if formatting fails
             if (process.env.PRETTIER_TSDOC_DEBUG === '1') {
-              console.warn('Code formatting failed:', error);
+              console.debug('Code formatting failed:', error);
             }
             for (const codeLine of codeBlockLines) {
               parts.push(hardline);
@@ -907,13 +915,13 @@ function formatCodeBlock(code: string, language: string, options: ParserOptions<
   // TODO: In the future, consider restructuring to support async formatting
   
   if (process.env.PRETTIER_TSDOC_DEBUG === '1') {
-    console.log(`Formatting ${language} code with basic formatter:`, JSON.stringify(code.substring(0, 50)));
+    console.debug(`Formatting ${language} code with basic formatter:`, JSON.stringify(code.substring(0, 50)));
   }
   
   const formatted = formatCodeBasic(code, language);
   
   if (process.env.PRETTIER_TSDOC_DEBUG === '1') {
-    console.log(`Formatted ${language} code result:`, JSON.stringify(formatted.substring(0, 50)));
+    console.debug(`Formatted ${language} code result:`, JSON.stringify(formatted.substring(0, 50)));
   }
   
   return formatted;

@@ -47,7 +47,10 @@ function printComment(
 
   // Debug logging
   if (process.env.PRETTIER_TSDOC_DEBUG === '1') {
-    console.log('Comment received:', JSON.stringify(comment, null, 2));
+    const logger = (options as any).logger;
+    if (logger?.warn) {
+      logger.warn('TSDoc comment received:', JSON.stringify(comment, null, 2));
+    }
   }
 
   // For block comments, we need to wrap with /** and */
@@ -149,7 +152,9 @@ function docToString(doc: any): string {
   }
   
   // Only return [object Object] if we truly can't extract anything
-  console.warn('Unable to convert doc to string:', doc);
+  if (process.env.PRETTIER_TSDOC_DEBUG === '1') {
+    console.warn('Unable to convert doc to string:', doc);
+  }
   return String(doc);
 }
 
@@ -186,13 +191,19 @@ function preprocessSource(text: string, options: ParserOptions<any>): string {
       // Check if this is a TSDoc candidate
       if (!isTSDocCandidate(mockComment, true)) {
         if (process.env.PRETTIER_TSDOC_DEBUG === '1') {
-          console.log('Not a TSDoc candidate:', JSON.stringify(mockComment.value.substring(0, 50)));
+          const logger = (options as any).logger;
+          if (logger?.warn) {
+            logger.warn('Not a TSDoc candidate:', JSON.stringify(mockComment.value.substring(0, 50)));
+          }
         }
         return match; // Return original if not TSDoc
       }
       
       if (process.env.PRETTIER_TSDOC_DEBUG === '1') {
-        console.log('Processing TSDoc comment:', JSON.stringify(mockComment.value.substring(0, 50)));
+        const logger = (options as any).logger;
+        if (logger?.warn) {
+          logger.warn('Processing TSDoc comment:', JSON.stringify(mockComment.value.substring(0, 50)));
+        }
       }
       
       // Get parser

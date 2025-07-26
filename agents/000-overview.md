@@ -32,6 +32,7 @@ public behaviour proven by existing tests.
 | `030-summary-remarks.md`             | Format summary & `@remarks` sections, implement width calculations             |
 | `040-tags-alignment.md`              | Handle `@param`, `@typeParam`, `@returns`, alignment & hyphen rules            |
 | `050-markdown-codeblocks.md`         | Delegate Markdown & fenced-code to Prettier, support language mapping          |
+| `055-multi-language-codeblocks.md`   | Multi-language code block formatting with enhanced HTML and JS/TS support      |
 | `060-configuration-normalization.md` | Expose user options, tag spelling normalisation, deduping                      |
 | `070-edge-cases-performance.md`      | Performance tuning, large-file stress tests, failure telemetry                 |
 

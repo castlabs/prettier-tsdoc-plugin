@@ -375,7 +375,10 @@ export async function formatMarkdownBlock(
     return restored.trim();
     
   } catch (error) {
-    console.warn('Markdown formatting failed:', error instanceof Error ? error.message : String(error));
+    // Log only in debug mode since this is a utility function without access to options
+    if (process.env.PRETTIER_TSDOC_DEBUG === '1') {
+      console.debug('Markdown formatting failed:', error instanceof Error ? error.message : String(error));
+    }
     return rawText; // fallback to original
   }
 }
