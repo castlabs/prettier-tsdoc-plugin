@@ -226,7 +226,23 @@ export function buildCommentModel(docComment: any, rawComment?: string): TSDocCo
     }
   }
 
-  // Extract other custom blocks (for modifier/release tags, etc)
+  // Extract modifier tags from modifierTagSet (includes release tags like @public, @internal, etc)
+  if (docComment.modifierTagSet && docComment.modifierTagSet.nodes) {
+    for (const modifierTag of docComment.modifierTagSet.nodes) {
+      if (modifierTag.tagName) {
+        if (process.env.PRETTIER_TSDOC_DEBUG === '1') {
+          console.debug(`Modifier tag found: ${modifierTag.tagName}`);
+        }
+        model.otherTags.push({
+          tagName: modifierTag.tagName,
+          content: '', // Modifier tags typically have no content
+          rawNode: modifierTag,
+        });
+      }
+    }
+  }
+
+  // Extract other custom blocks (for block tags like @example, @see, etc)
   if (docComment.customBlocks) {
     for (const block of docComment.customBlocks) {
       if (block.blockTag && block.blockTag.tagName) {

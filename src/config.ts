@@ -62,6 +62,13 @@ export interface TSDocPluginOptions {
    * When false, each parameter is formatted independently.
    */
   alignParamTags?: boolean;
+
+  /**
+   * Default release tag to add when no release tag is present.
+   * Set to null to disable automatic release tag insertion.
+   * @default '@internal'
+   */
+  defaultReleaseTag?: string | null;
 }
 
 /**
@@ -111,6 +118,7 @@ export const DEFAULT_OPTIONS: Required<TSDocPluginOptions> = {
   normalizeTags: {},
   releaseTagStrategy: 'keep-first',
   alignParamTags: false,
+  defaultReleaseTag: '@internal',
 };
 
 /**
@@ -133,6 +141,7 @@ export function resolveOptions(
     ...(userOptions.singleSentenceSummary !== undefined && { singleSentenceSummary: userOptions.singleSentenceSummary }),
     ...(userOptions.releaseTagStrategy !== undefined && { releaseTagStrategy: userOptions.releaseTagStrategy }),
     ...(userOptions.alignParamTags !== undefined && { alignParamTags: userOptions.alignParamTags }),
+    ...(userOptions.defaultReleaseTag !== undefined && { defaultReleaseTag: userOptions.defaultReleaseTag }),
     ...(userOptions.extraTags !== undefined && { extraTags: userOptions.extraTags }),
     ...(userOptions.normalizeTags !== undefined && { normalizeTags: userOptions.normalizeTags }),
   };
@@ -173,4 +182,23 @@ export function isReleaseTag(tagName: string): boolean {
  */
 export function isModifierTag(tagName: string): boolean {
   return MODIFIER_TAGS.has(tagName);
+}
+
+/**
+ * Check if there are any existing release tags in the comment model.
+ */
+export function hasReleaseTag(model: { otherTags: { tagName: string }[] }): boolean {
+  // Check otherTags for any release tags
+  return model.otherTags.some((tag: any) => isReleaseTag(tag.tagName));
+}
+
+/**
+ * Create a default release tag for insertion when no release tag exists.
+ */
+export function createDefaultReleaseTag(defaultTag: string): { tagName: string; content: string; rawNode: any } {
+  return {
+    tagName: defaultTag,
+    content: '',
+    rawNode: null, // This will be a synthetic tag
+  };
 }

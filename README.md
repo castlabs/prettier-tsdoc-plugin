@@ -4,16 +4,18 @@ A Prettier plugin that formats TSDoc comments consistently.
 
 ## Features
 
-- **Structural Formatting**: Consistent leading `/**`, aligned `*`, controlled
-  blank lines
-- **Tag Normalization**: Normalize common tag spelling variants (e.g., `@return`
-  → `@returns`)
-- **Parameter Alignment**: Align parameter tags with consistent hyphen rules
-- **Markdown & Code Support**: Format markdown and fenced code blocks within
-  comments
-- **Release Tag Deduplication**: Remove duplicate release tags (`@public`,
-  `@beta`, etc.)
-- **Configurable Options**: Extensive configuration options via Prettier config
+- **Structural Formatting**: Consistent leading `/**`, aligned `*`, controlled blank lines
+- **Tag Normalization**: Normalize common tag spelling variants (e.g., `@return` → `@returns`)
+- **Parameter Alignment**: Align parameter descriptions across `@param` tags
+- **Markdown & Code Support**: Format markdown and fenced code blocks within comments
+- **Release Tag Management**: 
+  - Automatic insertion of default release tags (`@internal` by default)
+  - Deduplication of duplicate release tags (`@public`, `@beta`, etc.)
+  - Preservation of existing release tags
+- **Multi-language Code Formatting**: Enhanced support for TypeScript, JavaScript, HTML, CSS, and more
+- **Performance Optimized**: Efficient parsing with telemetry and debug support
+- **Highly Configurable**: 11+ configuration options via Prettier config
+- **TypeDoc/AEDoc Compatible**: Support for extended tag sets beyond core TSDoc
 
 ## Installation
 
@@ -46,6 +48,8 @@ configuration:
     "dedupeReleaseTags": true,
     "splitModifiers": true,
     "singleSentenceSummary": false,
+    "alignParamTags": false,
+    "defaultReleaseTag": "@internal",
     "extraTags": [],
     "normalizeTags": {
       "@return": "@returns",
@@ -66,6 +70,8 @@ configuration:
 | `dedupeReleaseTags`     | `boolean`                       | `true`         | Deduplicate release tags (`@public`, `@beta`, etc.) |
 | `splitModifiers`        | `boolean`                       | `true`         | Split modifiers to separate lines                   |
 | `singleSentenceSummary` | `boolean`                       | `false`        | Enforce single sentence summaries                   |
+| `alignParamTags`        | `boolean`                       | `false`        | Align parameter descriptions across @param tags     |
+| `defaultReleaseTag`     | `string` \| `null`              | `"@internal"`  | Default release tag when none exists (null to disable) |
 | `extraTags`             | `string[]`                      | `[]`           | Additional custom tags to recognize                 |
 | `normalizeTags`         | `Record<string, string>`        | `{}`           | Custom tag spelling normalizations                  |
 | `releaseTagStrategy`    | `"keep-first"` \| `"keep-last"` | `"keep-first"` | Strategy for release tag deduplication              |
@@ -89,6 +95,71 @@ The following tags are considered release tags and can be deduplicated:
 - `@alpha`
 - `@internal`
 - `@experimental`
+
+#### Default Release Tag Insertion
+
+By default, the plugin automatically adds `@internal` to comments that don't have any release tag. This ensures all high-level constructs are properly annotated with visibility information.
+
+**Configuration Options:**
+
+```json
+{
+  "tsdoc": {
+    "defaultReleaseTag": "@internal",  // Default tag to add
+    "defaultReleaseTag": "@public",    // Use @public instead
+    "defaultReleaseTag": null          // Disable feature
+  }
+}
+```
+
+**Example - Automatic @internal insertion:**
+
+**Input:**
+```typescript
+/**
+ * Helper function without release tag.
+ * @param value - Input value
+ * @returns Processed value
+ */
+function helper(value: string): string {
+  return value.trim();
+}
+```
+
+**Output:**
+```typescript
+/**
+ * Helper function without release tag.
+ * @internal
+ * @param value - Input value
+ * @returns Processed value
+ */
+function helper(value: string): string {
+  return value.trim();
+}
+```
+
+**Example - Existing tags are preserved:**
+
+**Input:**
+```typescript
+/**
+ * Public API function.
+ * @public
+ * @param data - Input data
+ */
+function publicApi(data: any): void {}
+```
+
+**Output (no change):**
+```typescript
+/**
+ * Public API function.
+ * @public
+ * @param data - Input data
+ */
+function publicApi(data: any): void {}
+```
 
 ## Examples
 
@@ -177,6 +248,38 @@ function internalFn(x: number): void {}
 function internalFn(x: number): void {}
 ```
 
+### Parameter Alignment
+
+**With `alignParamTags: true`:**
+
+**Input:**
+```typescript
+/**
+ * Function with parameters.
+ * @param shortName - Short description
+ * @param veryLongParameterName - Long description that may wrap
+ * @param id - ID value
+ * @returns Result
+ */
+function example(shortName: string, veryLongParameterName: string, id: number): string {
+  return '';
+}
+```
+
+**Output:**
+```typescript
+/**
+ * Function with parameters.
+ * @param shortName             - Short description
+ * @param veryLongParameterName - Long description that may wrap
+ * @param id                    - ID value
+ * @returns Result
+ */
+function example(shortName: string, veryLongParameterName: string, id: number): string {
+  return '';
+}
+```
+
 ## Performance & Debugging
 
 ### Performance Characteristics
@@ -224,11 +327,61 @@ Run the included benchmarks to measure performance on your system:
 npm run benchmark
 ```
 
+## Migration & Troubleshooting
+
+### Migration Notes
+
+The plugin is designed to be backward-compatible. All new features are opt-in through configuration:
+
+- **Default release tags**: Enabled by default with `@internal`. Set to `null` to disable.
+- **Parameter alignment**: Disabled by default. Set `alignParamTags: true` to enable.
+- **Tag normalization**: Only built-in normalizations (`@return` → `@returns`) are applied by default.
+
+### Common Issues
+
+#### Comments not being formatted
+
+1. **Check comment syntax**: Only `/** */` comments are processed, not `/* */` or `//`
+2. **Enable force formatting**: Set `forceFormatTSDoc: true` to format all `/** */` comments
+3. **Check debug output**: Use `PRETTIER_TSDOC_DEBUG=1` to see which comments are being processed
+
+#### Performance issues
+
+1. **Large files**: Comments > 1000 characters may take longer to format
+2. **Custom tags**: Excessive `extraTags` can impact performance
+3. **Debug mode**: Use `PRETTIER_TSDOC_DEBUG=1` to identify slow comments
+
+#### Unexpected tag changes
+
+1. **Tag normalization**: Built-in normalizations are applied by default
+2. **Release tag insertion**: `@internal` is added to comments without release tags
+3. **Custom normalizations**: Check your `normalizeTags` configuration
+
+### Configuration Validation
+
+To validate your configuration, use this TypeScript interface:
+
+```typescript
+interface TSDocPluginOptions {
+  fencedIndent?: 'space' | 'none';
+  forceFormatTSDoc?: boolean;
+  normalizeTagOrder?: boolean;
+  dedupeReleaseTags?: boolean;
+  splitModifiers?: boolean;
+  singleSentenceSummary?: boolean;
+  alignParamTags?: boolean;
+  defaultReleaseTag?: string | null;
+  extraTags?: string[];
+  normalizeTags?: Record<string, string>;
+  releaseTagStrategy?: 'keep-first' | 'keep-last';
+}
+```
+
 ## Development Status
 
-Phase 7 (Edge Cases & Performance) - ✅ COMPLETED
+Phase 8 (Release Tags) - ✅ COMPLETED
 
-All 7 phases of the implementation plan have been completed successfully:
+All 8 phases of the implementation plan have been completed successfully:
 
 - ✅ Phase 1: Bootstrap
 - ✅ Phase 2: Parser Detection
@@ -237,6 +390,7 @@ All 7 phases of the implementation plan have been completed successfully:
 - ✅ Phase 5: Markdown & Codeblocks
 - ✅ Phase 6: Configuration & Normalization
 - ✅ Phase 7: Edge Cases & Performance
+- ✅ Phase 8: Release Tags
 
 See [agents/context.md](./agents/context.md) for the detailed specification.
 

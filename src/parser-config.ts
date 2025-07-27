@@ -139,7 +139,27 @@ export function createTSDocConfiguration(
       allowMultiple: false,
     },
     {
+      tagName: '@alpha',
+      syntaxKind: TSDocTagSyntaxKind.ModifierTag,
+      allowMultiple: false,
+    },
+    {
       tagName: '@beta',
+      syntaxKind: TSDocTagSyntaxKind.ModifierTag,
+      allowMultiple: false,
+    },
+    {
+      tagName: '@public',
+      syntaxKind: TSDocTagSyntaxKind.ModifierTag,
+      allowMultiple: false,
+    },
+    {
+      tagName: '@internal',
+      syntaxKind: TSDocTagSyntaxKind.ModifierTag,
+      allowMultiple: false,
+    },
+    {
+      tagName: '@experimental',
       syntaxKind: TSDocTagSyntaxKind.ModifierTag,
       allowMultiple: false,
     },
@@ -150,11 +170,6 @@ export function createTSDocConfiguration(
     },
     {
       tagName: '@eventProperty',
-      syntaxKind: TSDocTagSyntaxKind.ModifierTag,
-      allowMultiple: false,
-    },
-    {
-      tagName: '@experimental',
       syntaxKind: TSDocTagSyntaxKind.ModifierTag,
       allowMultiple: false,
     },

@@ -303,6 +303,12 @@ const plugin: Plugin = {
       default: false,
       description: 'Align parameter descriptions in @param and @typeParam tags',
     },
+    defaultReleaseTag: {
+      type: 'string',
+      category: 'TSDoc',
+      default: '@internal',
+      description: 'Default release tag to add when no release tag is present (use null to disable)',
+    },
   },
 };
 

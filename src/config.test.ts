@@ -5,6 +5,8 @@ import {
   normalizeTagName,
   isReleaseTag,
   isModifierTag,
+  hasReleaseTag,
+  createDefaultReleaseTag,
   DEFAULT_OPTIONS,
   BUILTIN_TAG_NORMALIZATIONS,
   RELEASE_TAGS,
@@ -76,6 +78,7 @@ describe('Configuration', () => {
         dedupeReleaseTags: false,
         normalizeTags: { '@return': '@returns' },
         releaseTagStrategy: 'keep-last' as const,
+        defaultReleaseTag: '@public',
       },
     };
 
@@ -85,6 +88,7 @@ describe('Configuration', () => {
     expect(resolved.dedupeReleaseTags).toBe(false);
     expect(resolved.normalizeTags).toEqual({ '@return': '@returns' });
     expect(resolved.releaseTagStrategy).toBe('keep-last');
+    expect(resolved.defaultReleaseTag).toBe('@public');
     expect(resolved.fencedIndent).toBe(DEFAULT_OPTIONS.fencedIndent); // Should use default
   });
 });
@@ -185,5 +189,128 @@ describe('Built-in Normalizations', () => {
     // Per spec, @default -> @defaultValue only when expandDefault is true
     // Since we default expandDefault to false, we keep @default as is
     expect(BUILTIN_TAG_NORMALIZATIONS['@default']).toBeUndefined();
+  });
+});
+
+describe('Default Release Tag', () => {
+  test('hasReleaseTag detects existing release tags', () => {
+    const modelWithReleaseTag = {
+      otherTags: [
+        { tagName: '@public', content: '' },
+        { tagName: '@example', content: 'some example' },
+      ],
+    };
+
+    const modelWithoutReleaseTag = {
+      otherTags: [
+        { tagName: '@example', content: 'some example' },
+        { tagName: '@see', content: 'some reference' },
+      ],
+    };
+
+    const emptyModel = { otherTags: [] };
+
+    expect(hasReleaseTag(modelWithReleaseTag)).toBe(true);
+    expect(hasReleaseTag(modelWithoutReleaseTag)).toBe(false);
+    expect(hasReleaseTag(emptyModel)).toBe(false);
+  });
+
+  test('createDefaultReleaseTag creates proper tag structure', () => {
+    const defaultTag = createDefaultReleaseTag('@internal');
+
+    expect(defaultTag).toEqual({
+      tagName: '@internal',
+      content: '',
+      rawNode: null,
+    });
+  });
+
+  test('default options includes defaultReleaseTag as @internal', () => {
+    expect(DEFAULT_OPTIONS.defaultReleaseTag).toBe('@internal');
+  });
+
+  test('resolveOptions handles defaultReleaseTag configuration', () => {
+    const userOptions = {
+      tsdoc: {
+        defaultReleaseTag: '@public',
+      },
+    };
+
+    const resolved = resolveOptions(userOptions);
+    expect(resolved.defaultReleaseTag).toBe('@public');
+  });
+
+  test('resolveOptions handles null defaultReleaseTag to disable feature', () => {
+    const userOptions = {
+      tsdoc: {
+        defaultReleaseTag: null,
+      },
+    };
+
+    const resolved = resolveOptions(userOptions);
+    expect(resolved.defaultReleaseTag).toBeNull();
+  });
+
+  test('hasReleaseTag detects modifier tags correctly after fix', () => {
+    // Test with various release tags in otherTags (which now includes modifier tags)
+    const modelWithPublic = {
+      otherTags: [
+        { tagName: '@public', content: '' },
+        { tagName: '@param', content: 'some param' },
+      ],
+    };
+
+    const modelWithBeta = {
+      otherTags: [
+        { tagName: '@beta', content: '' },
+        { tagName: '@example', content: 'some example' },
+      ],
+    };
+
+    const modelWithAlpha = {
+      otherTags: [
+        { tagName: '@alpha', content: '' },
+      ],
+    };
+
+    const modelWithInternal = {
+      otherTags: [
+        { tagName: '@internal', content: '' },
+      ],
+    };
+
+    const modelWithExperimental = {
+      otherTags: [
+        { tagName: '@experimental', content: '' },
+      ],
+    };
+
+    expect(hasReleaseTag(modelWithPublic)).toBe(true);
+    expect(hasReleaseTag(modelWithBeta)).toBe(true);
+    expect(hasReleaseTag(modelWithAlpha)).toBe(true);
+    expect(hasReleaseTag(modelWithInternal)).toBe(true);
+    expect(hasReleaseTag(modelWithExperimental)).toBe(true);
+  });
+
+  test('hasReleaseTag correctly handles mixed tags including non-release modifier tags', () => {
+    const modelWithMixedTags = {
+      otherTags: [
+        { tagName: '@readonly', content: '' }, // modifier but not release tag
+        { tagName: '@example', content: 'some example' }, // block tag
+        { tagName: '@public', content: '' }, // release tag
+      ],
+    };
+
+    const modelWithOnlyNonReleaseTags = {
+      otherTags: [
+        { tagName: '@readonly', content: '' },
+        { tagName: '@override', content: '' },
+        { tagName: '@sealed', content: '' },
+        { tagName: '@example', content: 'some example' },
+      ],
+    };
+
+    expect(hasReleaseTag(modelWithMixedTags)).toBe(true);
+    expect(hasReleaseTag(modelWithOnlyNonReleaseTags)).toBe(false);
   });
 });

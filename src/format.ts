@@ -35,6 +35,8 @@ import {
   normalizeTagName,
   isReleaseTag,
   isModifierTag,
+  hasReleaseTag,
+  createDefaultReleaseTag,
   type TSDocPluginOptions,
 } from './config.js';
 
@@ -239,6 +241,13 @@ function applyNormalizations(
     ...tag,
     tagName: normalizeTagName(tag.tagName, options),
   }));
+
+  // Apply default release tag insertion if none exists and option is configured
+  if (options.defaultReleaseTag && !hasReleaseTag(normalizedModel)) {
+    const defaultTag = createDefaultReleaseTag(options.defaultReleaseTag);
+    // Add the default release tag to the beginning of otherTags for conventional ordering
+    normalizedModel.otherTags.unshift(defaultTag);
+  }
 
   // Apply release tag deduplication
   if (options.dedupeReleaseTags) {
