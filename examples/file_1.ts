@@ -1,32 +1,27 @@
 /**
- * This is one of the comments we would like to have formatted and we create a
- * long line that the formatter should wrap for us.
+ * This is one of the comments we would like to have formatted and we create a long line that the formatter should wrap for us.
  *
  * We can also try a list that should be formatted using the markdown formatter:
  *
  * - This is the first item
- * - This is the second one
- * - This is the third item and I hope that this very long line will be wrapped by
- *   the plugin and then it will continue on the next line
+ *  - This is the second one
+ * - This is the third item and I hope that this very long line will be wrapped by the plugin and then it will continue on the next line
  *
- * @param name - The name param should receive a and maybe it should also be
- *   formatted over multiple lines.
+ * @param name - The name param should receive a and maybe it should also be formatted over multiple lines.
+ * @param second The second thing
  */
-export function long_line_test(name: string) {
+export function long_line_test(name: string, second: string) {
   console.log(`Hello ${name}`);
 }
 
 /**
- * Well this is just a small function that we have in place for internal usage
- * only. The point here is that this line should be split into two.
+ * Well this is just a small function that we have in place for internal usage only. The point here is that this line should be split into two.
  *
- * The other thing that we are going to add to this function is an example with
- * some TypeScript code. But before we do this lets try a {@link http://verylongurls.that.goes.way.over.com | long link} that
- * should not be split.
+ * The other thing that we are going to add to this function is an example with some TypeScript code. But before we do this lets try a {@link http://verylongurls.that.goes.way.over.com | long link} that should not be split.
  *
  * @example This is an example
  * ```typescript
- * const a = internal()
+ *  const a   = internal( )
  * ```
  */
 function internal() {
@@ -37,15 +32,7 @@ function internal() {
  *
  * @example This HTML example
  * ```html
- * <html>
- *   <head>
- *   </head>
- *   <body>
- *     <p>
- *       Hello
- *     </p>
- *   </body>
- * </html>
+ * <html><head></head><body><p>Hello</p></body></html>
  * ```
  */
 function internal_html() {
@@ -56,7 +43,7 @@ function internal_html() {
  * This is a class that:
  *
  * - is a thing
- * - with a nested list
+ *  - with a nested list
  */
 export class Thing {
   private name: string;
