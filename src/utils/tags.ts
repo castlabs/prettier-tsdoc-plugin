@@ -66,7 +66,8 @@ export function computeColumnWidths(tags: ParamTagInfo[]): number {
  */
 export function printAligned(
   tags: ParamTagInfo[],
-  effectiveWidth: number
+  effectiveWidth: number,
+  alignTags: boolean = true
 ): any[] {
   if (tags.length === 0) return [];
 
@@ -78,31 +79,62 @@ export function printAligned(
     const prefix = `${tagName} ${tag.name}`;
 
     if (tag.description) {
-      // Calculate padding needed for alignment
-      const currentWidth = prefix.length;
-      const paddingNeeded = Math.max(1, maxWidth - currentWidth - 3); // -3 for " - "
-      const padding = ' '.repeat(paddingNeeded);
+      if (alignTags && tags.length > 1) {
+        // Calculate padding needed for alignment
+        const currentWidth = prefix.length;
+        // Fix: We want to align the "-" characters, so we need to pad to reach the max width
+        // The maxWidth already includes the " - " in its calculation, so we subtract the current width
+        // and add back 1 for the space before the hyphen
+        const targetWidth = maxWidth - 3; // maxWidth includes " - ", so subtract it
+        const paddingNeeded = Math.max(1, targetWidth - currentWidth + 1); // +1 for space before hyphen
+        const padding = ' '.repeat(paddingNeeded);
 
-      // Check if the header would exceed effective width
-      if (currentWidth + 3 > effectiveWidth) {
-        // Break header and description onto separate lines
-        result.push(createCommentLine(`${prefix} -`));
-        result.push(
-          createCommentLine(`  ${formatTextContent(tag.description)}`)
-        );
+        // Check if the header would exceed effective width
+        if (currentWidth + paddingNeeded + 2 > effectiveWidth) {
+          // Break header and description onto separate lines
+          result.push(createCommentLine(`${prefix} -`));
+          result.push(
+            createCommentLine(`  ${formatTextContent(tag.description)}`)
+          );
+        } else {
+          // Normal aligned format
+          // Format description with proper wrapping and continuation indent
+          const fullPrefix = `${prefix}${padding}- `;
+          const wrappedLines = wrapParamDescription(tag.description, fullPrefix.length);
+          
+          // Create the first line with the full prefix
+          result.push(createCommentLine([prefix, padding, '- ', wrappedLines[0]]));
+          
+          // Create continuation lines with proper indentation (align with comment content)
+          for (let i = 1; i < wrappedLines.length; i++) {
+            const continuationIndent = '  '; // 2 spaces to align with comment content
+            result.push(createCommentLine([continuationIndent, wrappedLines[i]]));
+          }
+        }
       } else {
-        // Normal aligned format
-        // Format description with proper wrapping and continuation indent
-        const fullPrefix = `${prefix}${padding}- `;
-        const wrappedLines = wrapParamDescription(tag.description, fullPrefix.length);
+        // Non-aligned format - each tag is independent
+        const padding = ' ';
         
-        // Create the first line with the full prefix
-        result.push(createCommentLine([prefix, padding, '- ', wrappedLines[0]]));
-        
-        // Create continuation lines with proper indentation (align with comment content)
-        for (let i = 1; i < wrappedLines.length; i++) {
-          const continuationIndent = '  '; // 2 spaces to align with comment content
-          result.push(createCommentLine([continuationIndent, wrappedLines[i]]));
+        // Check if the header would exceed effective width
+        if (prefix.length + 3 > effectiveWidth) {
+          // Break header and description onto separate lines
+          result.push(createCommentLine(`${prefix} -`));
+          result.push(
+            createCommentLine(`  ${formatTextContent(tag.description)}`)
+          );
+        } else {
+          // Simple non-aligned format
+          const fullPrefix = `${prefix}${padding}- `;
+          const wrappedLines = wrapParamDescription(tag.description, fullPrefix.length);
+          
+          // Create the first line with the full prefix
+          result.push(createCommentLine([prefix, padding, '- ', wrappedLines[0]]));
+          
+          // Create continuation lines with proper indentation
+          for (let i = 1; i < wrappedLines.length; i++) {
+            const continuationIndent = '  '; // 2 spaces to align with comment content
+            result.push(createCommentLine([continuationIndent, wrappedLines[i]]));
+          }
         }
       }
     } else {

@@ -297,6 +297,12 @@ const plugin: Plugin = {
         { value: 'keep-last', description: 'Keep the last occurrence' },
       ],
     },
+    alignParamTags: {
+      type: 'boolean',
+      category: 'TSDoc',
+      default: false,
+      description: 'Align parameter descriptions in @param and @typeParam tags',
+    },
   },
 };
 

@@ -55,6 +55,13 @@ export interface TSDocPluginOptions {
    * - 'keep-last': Keep the last occurrence
    */
   releaseTagStrategy?: 'keep-first' | 'keep-last';
+
+  /**
+   * Whether to align parameter descriptions in parameter-like tags.
+   * When true, aligns the '-' character across @param tags.
+   * When false, each parameter is formatted independently.
+   */
+  alignParamTags?: boolean;
 }
 
 /**
@@ -103,6 +110,7 @@ export const DEFAULT_OPTIONS: Required<TSDocPluginOptions> = {
   extraTags: [],
   normalizeTags: {},
   releaseTagStrategy: 'keep-first',
+  alignParamTags: false,
 };
 
 /**
@@ -116,6 +124,17 @@ export function resolveOptions(
   return {
     ...DEFAULT_OPTIONS,
     ...tsdocOptions,
+    // Also check for top-level options (for Prettier config)
+    ...(userOptions.fencedIndent !== undefined && { fencedIndent: userOptions.fencedIndent }),
+    ...(userOptions.forceFormatTSDoc !== undefined && { forceFormatTSDoc: userOptions.forceFormatTSDoc }),
+    ...(userOptions.normalizeTagOrder !== undefined && { normalizeTagOrder: userOptions.normalizeTagOrder }),
+    ...(userOptions.dedupeReleaseTags !== undefined && { dedupeReleaseTags: userOptions.dedupeReleaseTags }),
+    ...(userOptions.splitModifiers !== undefined && { splitModifiers: userOptions.splitModifiers }),
+    ...(userOptions.singleSentenceSummary !== undefined && { singleSentenceSummary: userOptions.singleSentenceSummary }),
+    ...(userOptions.releaseTagStrategy !== undefined && { releaseTagStrategy: userOptions.releaseTagStrategy }),
+    ...(userOptions.alignParamTags !== undefined && { alignParamTags: userOptions.alignParamTags }),
+    ...(userOptions.extraTags !== undefined && { extraTags: userOptions.extraTags }),
+    ...(userOptions.normalizeTags !== undefined && { normalizeTags: userOptions.normalizeTags }),
   };
 }
 

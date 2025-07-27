@@ -155,7 +155,7 @@ export function formatTSDocComment(
     const normalizedModel = applyNormalizations(model, tsdocOptions);
 
     // Convert model to Prettier Doc
-    const result = buildPrettierDoc(normalizedModel, options, parserContext);
+    const result = buildPrettierDoc(normalizedModel, options, parserContext, tsdocOptions);
 
     // Update telemetry
     telemetry.commentsProcessed++;
@@ -556,7 +556,8 @@ function wrapTextForList(text: string, options: ParserOptions<any>, baseIndent: 
 function buildPrettierDoc(
   model: TSDocCommentModel,
   options: ParserOptions<any>,
-  parserContext?: any
+  parserContext?: any,
+  tsdocOptions?: TSDocPluginOptions
 ): Doc {
   const parts: any[] = [];
   const width = effectiveWidth(options);
@@ -672,7 +673,7 @@ function buildPrettierDoc(
       description: p.description,
       rawNode: p.rawNode,
     }));
-    const alignedParams = printAligned(paramTags, width);
+    const alignedParams = printAligned(paramTags, width, tsdocOptions?.alignParamTags ?? false);
     for (const paramLine of alignedParams) {
       parts.push(hardline);
       parts.push(paramLine);
@@ -690,7 +691,7 @@ function buildPrettierDoc(
       description: tp.description,
       rawNode: tp.rawNode,
     }));
-    const alignedTypeParams = printAligned(typeParamTags, width);
+    const alignedTypeParams = printAligned(typeParamTags, width, tsdocOptions?.alignParamTags ?? false);
     for (const typeParamLine of alignedTypeParams) {
       parts.push(hardline);
       parts.push(typeParamLine);
