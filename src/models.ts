@@ -3,6 +3,22 @@
  * These represent the parsed and normalized structure before converting to Prettier Doc.
  */
 
+import type {
+  TSDocCommentModel,
+  ParamTag,
+  ReturnsTag,
+  OtherTag,
+} from './types.js';
+
+// Re-export types for backward compatibility
+export type {
+  TSDocCommentModel,
+  ParamTag,
+  ReturnsTag as ReturnsSection,
+  OtherTag,
+};
+
+// Legacy interfaces for backward compatibility
 export interface CommentSection {
   type: string;
 }
@@ -15,35 +31,6 @@ export interface SummarySection extends CommentSection {
 export interface RemarksSection extends CommentSection {
   type: 'remarks';
   content: string;
-}
-
-export interface ParamTag {
-  tagName: string;
-  name: string;
-  description: string;
-  rawNode: any;
-}
-
-export interface ReturnsSection extends CommentSection {
-  type: 'returns';
-  tagName: string;
-  content: string;
-  rawNode: any;
-}
-
-export interface OtherTag {
-  tagName: string;
-  content: string;
-  rawNode: any;
-}
-
-export interface TSDocCommentModel {
-  summary?: SummarySection;
-  remarks?: RemarksSection;
-  params: ParamTag[];
-  typeParams: ParamTag[];
-  returns?: ReturnsSection;
-  otherTags: OtherTag[];
 }
 
 /**
@@ -233,7 +220,6 @@ export function buildCommentModel(
     );
     if (returnsText.trim()) {
       model.returns = {
-        type: 'returns',
         tagName: '@returns',
         content: returnsText.trim(),
         rawNode: docComment.returnsBlock,
