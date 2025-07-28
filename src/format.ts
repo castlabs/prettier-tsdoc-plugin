@@ -120,7 +120,8 @@ export function formatTSDocComment(
   commentValue: string,
   options: any,
   parser: TSDocParser,
-  commentPath?: AstPath<any>
+  commentPath?: AstPath<any>,
+  exportContext?: { isExported: boolean; followingCode: string }
 ): Doc {
   const startTime = performance.now();
 
@@ -155,7 +156,8 @@ export function formatTSDocComment(
       model,
       tsdocOptions,
       commentPath,
-      commentValue
+      commentValue,
+      exportContext
     );
 
     // Convert model to Prettier Doc
@@ -214,7 +216,8 @@ function applyNormalizations(
   model: TSDocCommentModel,
   options: TSDocPluginOptions,
   commentPath?: AstPath<any>,
-  commentValue?: string
+  commentValue?: string,
+  exportContext?: { isExported: boolean; followingCode: string }
 ): TSDocCommentModel {
   const normalizedModel: TSDocCommentModel = {
     ...model,
@@ -300,15 +303,31 @@ function applyNormalizations(
         }
       }
     } else if (options.onlyExportedAPI && !commentPath) {
-      // When onlyExportedAPI is true but no AST context, we cannot determine export status
-      // To be safe and respect the onlyExportedAPI setting, we skip tag insertion
-      // This is a limitation of the preprocessor approach
-      shouldInsertTag = false;
+      // When onlyExportedAPI is true but no AST context, use export context if available
+      if (exportContext) {
+        // Use the export context from preprocessor to determine if we should add tags
+        const isClassMember = commentValue
+          ? isLikelyClassMember(commentValue)
+          : false;
+        shouldInsertTag = exportContext.isExported && !isClassMember;
 
-      if (process.env.PRETTIER_TSDOC_DEBUG === '1') {
-        console.debug(
-          'onlyExportedAPI enabled but no AST context - skipping tag insertion for safety'
-        );
+        if (process.env.PRETTIER_TSDOC_DEBUG === '1') {
+          console.debug('Using export context for release tag decision:', {
+            isExported: exportContext.isExported,
+            isLikelyClassMember: isClassMember,
+            shouldInsertTag,
+            followingCode: exportContext.followingCode.substring(0, 50),
+          });
+        }
+      } else {
+        // No export context available, skip tag insertion for safety
+        shouldInsertTag = false;
+
+        if (process.env.PRETTIER_TSDOC_DEBUG === '1') {
+          console.debug(
+            'onlyExportedAPI enabled but no AST or export context - skipping tag insertion for safety'
+          );
+        }
       }
     } else if (options.inheritanceAware) {
       // If inheritance-aware mode is enabled but no AST context, use heuristic

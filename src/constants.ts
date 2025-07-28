@@ -150,7 +150,7 @@ export const FORMATTING = {
    * Regex patterns for text processing
    */
   PATTERNS: {
-    TSDOC_COMMENT: /\/\*\*([\s\S]*?)\*\//g,
+    TSDOC_COMMENT: /\/\*\*([\s\S]*?)\*\/(\s*(?:export\s+)?\s*(?:function|class|interface|type|const|let|var|enum|namespace|abstract\s+class|declare\s+(?:function|class|interface|type|const|let|var|enum|namespace)))/g,
     LEADING_ASTERISK: /^\s*\*\s?/,
     MULTIPLE_SPACES: /\s+/g,
     TRAILING_WHITESPACE: /\s+$/gm,

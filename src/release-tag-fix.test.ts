@@ -54,9 +54,13 @@ function internal() {
       },
     });
 
-    // With current implementation, no release tags should be added
-    // because we don't have AST context in preprocessor mode
-    expect(formatted).not.toMatch(/@internal/);
+    // Should add release tag to exported function but not internal function
+    expect(formatted).toMatch(/export function exported\(\) \{/);
+    expect(formatted).toMatch(/@internal/);
+    
+    // Count @internal occurrences - should be exactly 1 (for the exported function)
+    const internalMatches = formatted.match(/@internal/g);
+    expect(internalMatches).toHaveLength(1);
   });
 
   test('should handle class members correctly', async () => {
@@ -84,9 +88,13 @@ export class TestClass {
       },
     });
 
-    // Class should not get tags, methods should not get tags
-    // (because they inherit from class)
-    expect(formatted).not.toMatch(/@internal/);
+    // Exported class should get @internal tag, but method should not
+    // (because methods inherit from class)
+    expect(formatted).toMatch(/@internal/);
+    
+    // Should have exactly one @internal tag (on the class, not the method)
+    const internalMatches = formatted.match(/@internal/g);
+    expect(internalMatches).toHaveLength(1);
   });
 
   test('should handle multiple @example tags without content loss', async () => {

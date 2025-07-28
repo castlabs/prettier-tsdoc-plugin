@@ -51,7 +51,7 @@ function preprocessSource(
   const tsdocRegex =
     regexCache.get('tsdocComment') || FORMATTING.PATTERNS.TSDOC_COMMENT;
 
-  return text.replace(tsdocRegex, (match, commentContent) => {
+  return text.replace(tsdocRegex, (match, commentContent, followingCode) => {
     try {
       // Create mock comment object for detection
       // The comment content from regex doesn't include /** and */, but detection expects the * pattern
@@ -81,16 +81,25 @@ function preprocessSource(
         );
       }
 
+      // Detect if this is an exported construct
+      const isExported = followingCode ? /^\s*export\s+/.test(followingCode) : false;
+      
+      // Create export context for release tag analysis
+      const exportContext = {
+        isExported,
+        followingCode: followingCode || '',
+      };
+
       // Get parser
       const extraTags = options.tsdoc?.extraTags || [];
       const parser = getTSDocParser(extraTags);
 
-      // Format the comment
-      const formattedDoc = formatTSDocComment(commentContent, options, parser);
+      // Format the comment with export context
+      const formattedDoc = formatTSDocComment(commentContent, options, parser, undefined, exportContext);
       const formatted = safeDocToString(formattedDoc);
 
-      // Return the formatted comment (already includes /** and */)
-      return formatted;
+      // Return the formatted comment with the following code
+      return formatted + (followingCode || '');
     } catch (_error) {
       // Return original on error
       return match;
