@@ -248,7 +248,9 @@ function applyNormalizations(
 
   // Apply default release tag insertion using AST-aware analysis
   if (options.defaultReleaseTag && !hasReleaseTag(normalizedModel)) {
-    let shouldInsertTag = true;
+    // Default to false when onlyExportedAPI is true but no AST context is available
+    // This ensures we don't add release tags to non-exported code when we can't determine export status
+    let shouldInsertTag = !options.onlyExportedAPI;
 
     if (process.env.PRETTIER_TSDOC_DEBUG === '1') {
       console.debug('Release tag conditions:', {
@@ -296,6 +298,17 @@ function applyNormalizations(
             shouldInsertTag,
           });
         }
+      }
+    } else if (options.onlyExportedAPI && !commentPath) {
+      // When onlyExportedAPI is true but no AST context, we cannot determine export status
+      // To be safe and respect the onlyExportedAPI setting, we skip tag insertion
+      // This is a limitation of the preprocessor approach
+      shouldInsertTag = false;
+
+      if (process.env.PRETTIER_TSDOC_DEBUG === '1') {
+        console.debug(
+          'onlyExportedAPI enabled but no AST context - skipping tag insertion for safety'
+        );
       }
     } else if (options.inheritanceAware) {
       // If inheritance-aware mode is enabled but no AST context, use heuristic
@@ -731,10 +744,11 @@ function buildPrettierDoc(
   }
 
   // Blank line before parameters (if we have content above and param tags below)
-  if (hasContent && hasParamLikeTags) {
-    parts.push(hardline);
-    parts.push(createEmptyCommentLine());
-  }
+  // Disabled for now to match standard Prettier behavior
+  // if (hasContent && hasParamLikeTags) {
+  //   parts.push(hardline);
+  //   parts.push(createEmptyCommentLine());
+  // }
 
   // @param tags
   if (model.params.length > 0) {
@@ -798,11 +812,14 @@ function buildPrettierDoc(
     const needsLineBeforeOtherTags =
       hasContent || hasParamLikeTags || model.returns;
 
+    // Add blank line before otherTags section (only once)
+    // Disabled for now to match standard Prettier behavior
+    if (needsLineBeforeOtherTags) {
+      parts.push(hardline);
+      parts.push(createEmptyCommentLine());
+    }
+
     for (const tag of model.otherTags) {
-      if (needsLineBeforeOtherTags) {
-        parts.push(hardline);
-        parts.push(createEmptyCommentLine());
-      }
       parts.push(hardline);
       parts.push(formatOtherTag(tag));
     }
@@ -845,8 +862,37 @@ function formatExampleTag(tag: any): any {
     return createCommentLine('@example');
   }
 
-  // Use Prettier's markdown formatter for all @example content
-  return formatExampleWithMarkdown(content);
+  // For @example tags, we need to format as: @example [description]
+  // followed by the markdown-formatted content
+  const parts: any[] = [];
+
+  // Add the @example tag with its description (first line of content)
+  const lines = content.split('\n');
+  const firstLine = lines[0].trim();
+  if (firstLine && !firstLine.startsWith('```')) {
+    parts.push(createCommentLine(['@example ', firstLine]));
+    // Format the rest as markdown if there's more content
+    const remainingContent = lines.slice(1).join('\n').trim();
+    if (remainingContent) {
+      const formattedContent = formatExampleWithMarkdown(remainingContent);
+      if (Array.isArray(formattedContent)) {
+        parts.push(...formattedContent);
+      } else {
+        parts.push(formattedContent);
+      }
+    }
+  } else {
+    // No description, just @example followed by content
+    parts.push(createCommentLine('@example'));
+    const formattedContent = formatExampleWithMarkdown(content);
+    if (Array.isArray(formattedContent)) {
+      parts.push(...formattedContent);
+    } else {
+      parts.push(formattedContent);
+    }
+  }
+
+  return parts;
 }
 
 /**

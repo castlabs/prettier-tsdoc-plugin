@@ -50,6 +50,7 @@ console.log(result);`;
  * @param a - The first number
  * @param b - The second number  
  * @returns The sum of a and b
+ *
  * @example
  * \`\`\`ts
  * const result = add(1, 2);
