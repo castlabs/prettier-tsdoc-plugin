@@ -18,7 +18,9 @@
     "lint": "echo 'Linting not implemented yet'"
   },
   "dependencies": {
-    "@microsoft/tsdoc": "^0.15.1",
+    "@microsoft/tsdoc": "^0.15.1"
+  },
+  "peerDependencies": {
     "prettier": "^3.6.2"
   },
   "devDependencies": {

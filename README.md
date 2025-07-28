@@ -1,20 +1,56 @@
 # Prettier Plugin for TSDoc
 
+- [Prettier Plugin for TSDoc](#prettier-plugin-for-tsdoc)
+  - [Features](#features)
+  - [Installation](#installation)
+  - [Usage](#usage)
+  - [Configuration Options](#configuration-options)
+    - [Option Details](#option-details)
+    - [Built-in Tag Normalizations](#built-in-tag-normalizations)
+    - [Release Tags](#release-tags)
+      - [AST-Aware Release Tag Insertion](#ast-aware-release-tag-insertion)
+  - [Examples](#examples)
+    - [Basic Usage](#basic-usage)
+    - [With Fenced Code Blocks](#with-fenced-code-blocks)
+    - [Release Tag Deduplication](#release-tag-deduplication)
+    - [Parameter Alignment](#parameter-alignment)
+  - [Performance and Debugging](#performance-and-debugging)
+    - [Performance Characteristics](#performance-characteristics)
+    - [Performance Tuning Tips](#performance-tuning-tips)
+    - [Debug Mode](#debug-mode)
+    - [Benchmarking](#benchmarking)
+  - [Migration and Troubleshooting](#migration-and-troubleshooting)
+    - [Migration Notes](#migration-notes)
+    - [Common Issues](#common-issues)
+      - [Comments not being formatted](#comments-not-being-formatted)
+      - [Performance issues](#performance-issues)
+      - [Unexpected tag changes](#unexpected-tag-changes)
+      - [Release tags not being added](#release-tags-not-being-added)
+    - [Configuration Validation](#configuration-validation)
+  - [Development Status](#development-status)
+  - [License](#license)
+  <!--toc:end-->
+
 A Prettier plugin that formats TSDoc comments consistently.
 
 ## Features
 
-- **Structural Formatting**: Consistent leading `/**`, aligned `*`, controlled blank lines
-- **Tag Normalization**: Normalize common tag spelling variants (e.g., `@return` → `@returns`)
+- **Structural Formatting**: Consistent leading `/**`, aligned `*`, controlled
+  blank lines
+- **Tag Normalization**: Normalize common tag spelling variants (e.g., `@return`
+  → `@returns`)
 - **Parameter Alignment**: Align parameter descriptions across `@param` tags
-- **Markdown & Code Support**: Format markdown and fenced code blocks within comments
-- **Release Tag Management**: 
+- **Markdown & Code Support**: Format markdown and fenced code blocks within
+  comments
+- **Release Tag Management**:
   - **AST-aware insertion**: Only add release tags to exported API constructs
-  - **API Extractor compatible**: Follows inheritance rules for class/interface members
+  - **API Extractor compatible**: Follows inheritance rules for class/interface
+    members
   - Automatic insertion of default release tags (`@internal` by default)
   - Deduplication of duplicate release tags (`@public`, `@beta`, etc.)
   - Preservation of existing release tags
-- **Multi-language Code Formatting**: Enhanced support for TypeScript, JavaScript, HTML, CSS, and more
+- **Multi-language Code Formatting**: Enhanced support for TypeScript,
+  JavaScript, HTML, CSS, and more
 - **Performance Optimized**: Efficient parsing with telemetry and debug support
 - **Highly Configurable**: 13+ configuration options via Prettier config
 - **TypeDoc/AEDoc Compatible**: Support for extended tag sets beyond core TSDoc
@@ -66,21 +102,21 @@ configuration:
 
 ### Option Details
 
-| Option                  | Type                            | Default        | Description                                         |
-| ----------------------- | ------------------------------- | -------------- | --------------------------------------------------- |
-| `fencedIndent`          | `"space"` \| `"none"`           | `"space"`      | Indentation style for fenced code blocks            |
-| `forceFormatTSDoc`      | `boolean`                       | `false`        | Force format all `/** */` comments as TSDoc         |
-| `normalizeTagOrder`     | `boolean`                       | `false`        | Normalize tag order based on conventional patterns  |
-| `dedupeReleaseTags`     | `boolean`                       | `true`         | Deduplicate release tags (`@public`, `@beta`, etc.) |
-| `splitModifiers`        | `boolean`                       | `true`         | Split modifiers to separate lines                   |
-| `singleSentenceSummary` | `boolean`                       | `false`        | Enforce single sentence summaries                   |
-| `alignParamTags`        | `boolean`                       | `false`        | Align parameter descriptions across @param tags     |
-| `defaultReleaseTag`     | `string` \| `null`              | `"@internal"`  | Default release tag when none exists (null to disable) |
-| `onlyExportedAPI`       | `boolean`                       | `true`         | Only add release tags to exported API constructs (AST-aware) |
+| Option                  | Type                            | Default        | Description                                                      |
+| ----------------------- | ------------------------------- | -------------- | ---------------------------------------------------------------- |
+| `fencedIndent`          | `"space"` \| `"none"`           | `"space"`      | Indentation style for fenced code blocks                         |
+| `forceFormatTSDoc`      | `boolean`                       | `false`        | Force format all `/** */` comments as TSDoc                      |
+| `normalizeTagOrder`     | `boolean`                       | `false`        | Normalize tag order based on conventional patterns               |
+| `dedupeReleaseTags`     | `boolean`                       | `true`         | Deduplicate release tags (`@public`, `@beta`, etc.)              |
+| `splitModifiers`        | `boolean`                       | `true`         | Split modifiers to separate lines                                |
+| `singleSentenceSummary` | `boolean`                       | `false`        | Enforce single sentence summaries                                |
+| `alignParamTags`        | `boolean`                       | `false`        | Align parameter descriptions across @param tags                  |
+| `defaultReleaseTag`     | `string` \| `null`              | `"@internal"`  | Default release tag when none exists (null to disable)           |
+| `onlyExportedAPI`       | `boolean`                       | `true`         | Only add release tags to exported API constructs (AST-aware)     |
 | `inheritanceAware`      | `boolean`                       | `true`         | Respect inheritance rules - skip tagging class/interface members |
-| `extraTags`             | `string[]`                      | `[]`           | Additional custom tags to recognize                 |
-| `normalizeTags`         | `Record<string, string>`        | `{}`           | Custom tag spelling normalizations                  |
-| `releaseTagStrategy`    | `"keep-first"` \| `"keep-last"` | `"keep-first"` | Strategy for release tag deduplication              |
+| `extraTags`             | `string[]`                      | `[]`           | Additional custom tags to recognize                              |
+| `normalizeTags`         | `Record<string, string>`        | `{}`           | Custom tag spelling normalizations                               |
+| `releaseTagStrategy`    | `"keep-first"` \| `"keep-last"` | `"keep-first"` | Strategy for release tag deduplication                           |
 
 ### Built-in Tag Normalizations
 
@@ -104,7 +140,8 @@ The following tags are considered release tags and can be deduplicated:
 
 #### AST-Aware Release Tag Insertion
 
-The plugin uses **AST analysis** to intelligently determine which comments need release tags, following API Extractor conventions:
+The plugin uses **AST analysis** to intelligently determine which comments need
+release tags, following API Extractor conventions:
 
 - **Only exported declarations** receive default release tags
 - **Class/interface members inherit** from their container's release tag
@@ -116,9 +153,9 @@ The plugin uses **AST analysis** to intelligently determine which comments need 
 ```json
 {
   "tsdoc": {
-    "defaultReleaseTag": "@internal",  // Default tag to add
-    "defaultReleaseTag": "@public",    // Use @public instead
-    "defaultReleaseTag": null          // Disable feature
+    "defaultReleaseTag": "@internal", // Default tag to add
+    "defaultReleaseTag": "@public", // Use @public instead
+    "defaultReleaseTag": null // Disable feature
   }
 }
 ```
@@ -126,6 +163,7 @@ The plugin uses **AST analysis** to intelligently determine which comments need 
 **Example - AST-aware insertion for exported functions:**
 
 **Input:**
+
 ```typescript
 /**
  * Exported helper function.
@@ -146,6 +184,7 @@ function internal(value: string): void {
 ```
 
 **Output:**
+
 ```typescript
 /**
  * Exported helper function.
@@ -169,6 +208,7 @@ function internal(value: string): void {
 **Example - Existing tags are preserved:**
 
 **Input:**
+
 ```typescript
 /**
  * Public API function.
@@ -179,6 +219,7 @@ function publicApi(data: any): void {}
 ```
 
 **Output (no change):**
+
 ```typescript
 /**
  * Public API function.
@@ -191,6 +232,7 @@ function publicApi(data: any): void {}
 **Example - Inheritance rules (class members inherit from class):**
 
 **Input:**
+
 ```typescript
 /**
  * Widget class for the public API.
@@ -208,6 +250,7 @@ export class Widget {
 ```
 
 **Output (no change - method inherits @public from class):**
+
 ```typescript
 /**
  * Widget class for the public API.
@@ -316,6 +359,7 @@ function internalFn(x: number): void {}
 **With `alignParamTags: true`:**
 
 **Input:**
+
 ```typescript
 /**
  * Function with parameters.
@@ -324,12 +368,17 @@ function internalFn(x: number): void {}
  * @param id - ID value
  * @returns Result
  */
-function example(shortName: string, veryLongParameterName: string, id: number): string {
+function example(
+  shortName: string,
+  veryLongParameterName: string,
+  id: number
+): string {
   return '';
 }
 ```
 
 **Output:**
+
 ```typescript
 /**
  * Function with parameters.
@@ -338,12 +387,16 @@ function example(shortName: string, veryLongParameterName: string, id: number): 
  * @param id                    - ID value
  * @returns Result
  */
-function example(shortName: string, veryLongParameterName: string, id: number): string {
+function example(
+  shortName: string,
+  veryLongParameterName: string,
+  id: number
+): string {
   return '';
 }
 ```
 
-## Performance & Debugging
+## Performance and Debugging
 
 ### Performance Characteristics
 
@@ -390,25 +443,34 @@ Run the included benchmarks to measure performance on your system:
 npm run benchmark
 ```
 
-## Migration & Troubleshooting
+## Migration and Troubleshooting
 
 ### Migration Notes
 
-The plugin is designed to be backward-compatible. New AST-aware features are enabled by default:
+The plugin is designed to be backward-compatible. New AST-aware features are
+enabled by default:
 
-- **AST-aware release tags**: Enabled by default (`onlyExportedAPI: true`). Set to `false` for legacy behavior.
-- **Inheritance awareness**: Enabled by default (`inheritanceAware: true`). Set to `false` to tag all constructs.
-- **Default release tags**: Enabled by default with `@internal`. Set to `null` to disable.
-- **Parameter alignment**: Disabled by default. Set `alignParamTags: true` to enable.
-- **Tag normalization**: Only built-in normalizations (`@return` → `@returns`) are applied by default.
+- **AST-aware release tags**: Enabled by default (`onlyExportedAPI: true`). Set
+  to `false` for legacy behavior.
+- **Inheritance awareness**: Enabled by default (`inheritanceAware: true`). Set
+  to `false` to tag all constructs.
+- **Default release tags**: Enabled by default with `@internal`. Set to `null`
+  to disable.
+- **Parameter alignment**: Disabled by default. Set `alignParamTags: true` to
+  enable.
+- **Tag normalization**: Only built-in normalizations (`@return` → `@returns`)
+  are applied by default.
 
 ### Common Issues
 
 #### Comments not being formatted
 
-1. **Check comment syntax**: Only `/** */` comments are processed, not `/* */` or `//`
-2. **Enable force formatting**: Set `forceFormatTSDoc: true` to format all `/** */` comments
-3. **Check debug output**: Use `PRETTIER_TSDOC_DEBUG=1` to see which comments are being processed
+1. **Check comment syntax**: Only `/** */` comments are processed, not `/* */`
+   or `//`
+2. **Enable force formatting**: Set `forceFormatTSDoc: true` to format all
+   `/** */` comments
+3. **Check debug output**: Use `PRETTIER_TSDOC_DEBUG=1` to see which comments
+   are being processed
 
 #### Performance issues
 
@@ -419,13 +481,15 @@ The plugin is designed to be backward-compatible. New AST-aware features are ena
 #### Unexpected tag changes
 
 1. **Tag normalization**: Built-in normalizations are applied by default
-2. **AST-aware release tag insertion**: Only exported declarations get default tags
+2. **AST-aware release tag insertion**: Only exported declarations get default
+   tags
 3. **Inheritance rules**: Class/interface members inherit from container
 4. **Custom normalizations**: Check your `normalizeTags` configuration
 
 #### Release tags not being added
 
-1. **Check export status**: Only exported declarations get default tags with `onlyExportedAPI: true`
+1. **Check export status**: Only exported declarations get default tags with
+   `onlyExportedAPI: true`
 2. **Check inheritance**: Class members inherit from class release tag
 3. **Disable AST analysis**: Set `onlyExportedAPI: false` for legacy behavior
 4. **Debug AST analysis**: Use `PRETTIER_TSDOC_DEBUG=1` to see analysis results
