@@ -4,23 +4,23 @@ import { format } from 'prettier';
 describe('Plugin Integration', () => {
   test('plugin loads and has required structure', async () => {
     // Import the compiled plugin from dist
-    const plugin = await import('../dist/index.js');
+    const plugin = await import('./index.js');
 
     expect(plugin.default).toBeDefined();
     expect(plugin.default).toHaveProperty('languages');
     expect(plugin.default).toHaveProperty('options');
-    
+
     // Check that basic language support is defined
     expect(Array.isArray(plugin.default.languages)).toBe(true);
     expect(plugin.default.languages.length).toBeGreaterThan(0);
-    
+
     // Check that TSDoc options are defined
     expect(plugin.default.options).toHaveProperty('fencedIndent');
     expect(plugin.default.options).toHaveProperty('forceFormatTSDoc');
   });
 
   test('formatting files without doc comments produces identical output', async () => {
-    const plugin = await import('../dist/index.js');
+    const plugin = await import('./index.js');
 
     const code = `function add(a: number, b: number) {
   return a + b;
@@ -44,7 +44,7 @@ console.log(result);`;
   });
 
   test('formatting files with TSDoc comments preserves content (no transformation yet)', async () => {
-    const plugin = await import('../dist/index.js');
+    const plugin = await import('./index.js');
 
     const code = `/**
  * Adds two numbers together.
@@ -75,7 +75,7 @@ function add(a: number, b: number) {
   });
 
   test('plugin handles malformed TSDoc gracefully', async () => {
-    const plugin = await import('../dist/index.js');
+    const plugin = await import('./index.js');
 
     const code = `/**
  * This has malformed TSDoc

@@ -1,9 +1,9 @@
 {
   "name": "prettier-tsdoc-plugin",
-  "version": "1.0.0",
+  "version": "0.5.0",
   "description": "A prettier plugin to handle TSDoc comments",
   "license": "MIT",
-  "author": "",
+  "author": "castLabs",
   "type": "module",
   "main": "dist/index.js",
   "exports": {
@@ -14,9 +14,7 @@
     "typecheck": "tsc --noEmit",
     "prettier": "prettier --write .",
     "test": "vitest --run",
-    "test:watch": "vitest",
-    "benchmark": "npm run build && node benchmarks/format-performance.js",
-    "lint": "echo 'Linting not implemented yet'"
+    "test:watch": "vitest"
   },
   "dependencies": {
     "@microsoft/tsdoc": "^0.15.1"
@@ -29,7 +27,6 @@
     "@rollup/plugin-typescript": "^12.1.4",
     "@types/node": "^20.0.0",
     "rollup": "^4.46.1",
-    "tinybench": "^4.0.1",
     "tslib": "^2.8.1",
     "typescript": "^5.8.3",
     "vitest": "^3.2.4"
