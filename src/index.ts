@@ -71,7 +71,7 @@ function printComment(
     const parser = getTSDocParser(extraTags);
 
     // Format the comment and convert to string
-    const formattedDoc = formatTSDocComment(comment.value, options, parser);
+    const formattedDoc = formatTSDocComment(comment.value, options, parser, commentPath);
     const formattedContent = docToString(formattedDoc);
     
     // For block comments, wrap with /** and */
@@ -308,6 +308,18 @@ const plugin: Plugin = {
       category: 'TSDoc',
       default: '@internal',
       description: 'Default release tag to add when no release tag is present (use null to disable)',
+    },
+    onlyExportedAPI: {
+      type: 'boolean',
+      category: 'TSDoc',
+      default: true,
+      description: 'Only add release tags to exported API constructs (AST-aware detection)',
+    },
+    inheritanceAware: {
+      type: 'boolean',
+      category: 'TSDoc',
+      default: true,
+      description: 'Respect inheritance rules - skip tagging class/interface members',
     },
   },
 };

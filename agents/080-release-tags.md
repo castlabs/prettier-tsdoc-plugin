@@ -1,85 +1,166 @@
 # Phase 080 – Release Tags
 
-## Status: ✅ COMPLETED
+## Status: 🔄 ENHANCED (AST-Aware Implementation)
 
 ## Goal
 
-Ensure that all high-level constructs in TSDoc comments are annotated with a
-release tag, allowing users to specify a default tag if none exists, defaulting
-to `@internal`.
+Ensure that **exported API constructs** in TSDoc comments are annotated with a
+release tag for API Extractor compatibility. Automatically detect exported
+declarations and apply default release tags only where required, avoiding
+over-annotation of internal code.
 
 ## Planning and Design
 
-- **Identify Integration Points**: Review and understand existing phases and
-  integration points where release tags can be seamlessly injected or appended.
-  - Existing integration point: `format.ts` where TSDoc comments are parsed and
-    formatted.
-  - Configuration expansion: `parser-config.js` for handling additional tag
-    configurations.
+### API Extractor Requirements (Research Summary)
 
-- **Define Configuration Options**:
-  - Introduce `defaultReleaseTag` in `.prettierrc` under the `tsdoc` namespace
-    with a default value set to `@internal`.
-  - Ensure backward compatibility by verifying that existing configurations are
-    not impacted.
+Based on comprehensive API Extractor documentation research:
 
-- **Outline Parsing Logic**:
-  - If no release tag exists in a high-level construct, append the
-    `defaultReleaseTag` during formatting.
-  - Leverage the TSDoc AST to detect missing release tags efficiently.
-  - Ensure the appended tag adheres to existing formatting standards.
+- **Required Scope**: Release tags are required for **exported API items** only:
+  - Classes, functions, interfaces, enums, types, variables
+  - Namespace members (inherit from namespace)
+  - **NOT** required for class/interface members (inherit from container)
+  - **NOT** required for non-exported internal code
 
-- **Test Scenarios and Coverage**:
-  - Test with various scenarios including existing release tags, missing release
-    tags, and custom default tags.
-  - Validate that tags are correctly appended and that existing functionality
-    remains stable.
+- **Tag Inheritance**: 
+  - Release tags apply recursively to container members
+  - Class members inherit from class release tag
+  - Namespace members inherit from namespace release tag
+  - Only the "outermost container" needs explicit tagging
+
+- **Validation Rules**:
+  - API Extractor reports `ae-missing-release-tag` for exported items without tags
+  - Logical compatibility rules apply (e.g., `@public` function can't return `@beta` type)
+
+### AST-Aware Detection Strategy
+
+- **Integration Point**: Enhance `format.ts` to analyze TypeScript AST context
+- **Export Detection**: Identify `export` keywords, `export default`, re-exports
+- **Container Analysis**: Detect if comment belongs to class member vs top-level construct
+- **Namespace Handling**: Apply inheritance rules for namespace members
+
+### Enhanced Configuration Options
+
+- **`defaultReleaseTag`**: Default tag for exported constructs (`@internal`)
+- **`onlyExportedAPI`**: Enable AST-aware detection (default: `true`)
+- **`inheritanceAware`**: Skip tagging when inheritance applies (default: `true`)
+
+### Parsing Logic Enhancement
+
+1. **Comment Context Analysis**: 
+   - Parse following AST node to determine construct type
+   - Check for export keywords and declaration patterns
+   - Identify parent containers (classes, namespaces)
+
+2. **Smart Tag Application**:
+   - Apply default tag only to exported top-level constructs
+   - Skip class/interface members (inherit from container)
+   - Respect existing release tags completely
+   - Handle namespace member inheritance
+
+3. **Edge Case Handling**:
+   - `export default` declarations
+   - Re-exports (`export { foo } from './module'`)
+   - Overloaded functions
+   - Ambient declarations
 
 ## Implementation Plan
 
-### Tasks
+### Enhanced Tasks
 
-1. **Development Setup**
-   - Configure and ensure development environment supports the new phase.
-   - Update `tsconfig.json` as needed to accommodate potential new dependencies.
-2. **Apply Configuration Changes**
-   - Modify `parser-config.js` to include the `defaultReleaseTag` option.
-   - Ensure the configuration is correctly loaded and accessible in `format.ts`.
+1. **AST Context Access**
+   - Investigate Prettier plugin context to access parent AST nodes
+   - Research comment-to-declaration mapping in Prettier's architecture
+   - Implement helper functions to analyze TypeScript AST patterns
 
-3. **Modify Formatting Logic**
-   - Update `format.ts` to detect missing release tags and append the default if
-     necessary.
-   - Use Prettier API for maintaining formatting standards when adding tags.
+2. **Export Detection Module**
+   - Create `src/utils/ast-analysis.ts` for AST pattern detection
+   - Implement `isExportedDeclaration()` function
+   - Handle all export variants: `export`, `export default`, re-exports
+   - Detect declaration types: function, class, interface, enum, type, variable
 
-4. **Testing and Validation**
-   - Implement unit tests verifying correct behavior with and without existing
-     tags.
-   - Write integration tests to ensure seamless operation with overall TSDoc
-     formatting.
-   - Ensure regression tests pass, maintaining overall project stability.
+3. **Container Analysis Module**
+   - Implement `isClassMember()` detection
+   - Implement `isNamespaceMember()` detection
+   - Create inheritance chain analysis
+   - Handle nested namespace scenarios
 
-## Acceptance Criteria
+4. **Enhanced Configuration**
+   - Add `onlyExportedAPI: boolean` option (default: `true`)
+   - Add `inheritanceAware: boolean` option (default: `true`)
+   - Update configuration types and validation
+   - Maintain backward compatibility
 
-- Successfully compiles via `npm run build`.
-- All tests covering new logic pass, with no new errors introduced.
-- Configuration changes do not impact existing users unless they opt into new
-  options.
+5. **Smart Tag Application Logic**
+   - Enhance `format.ts` with AST-aware context analysis
+   - Implement decision tree for tag application
+   - Create comprehensive logging for debugging
+   - Ensure performance optimization
 
-## Out-of-Scope
+6. **Comprehensive Testing Strategy**
+   - **Unit Tests**: AST detection functions with mock nodes
+   - **Integration Tests**: Real TypeScript code scenarios
+   - **Edge Case Tests**: Complex export patterns
+   - **Performance Tests**: Large file handling
+   - **Regression Tests**: Backward compatibility
 
-- Semantic validation of TSDoc content outside formatting requirements.
-- Deprecation or removal of existing tag functionalities.
+## Enhanced Acceptance Criteria
 
-## Test Matrix
+### Functionality Requirements
+- **Export Detection**: Only exported declarations receive default release tags
+- **Container Inheritance**: Class/interface members are skipped (inherit from container)
+- **Namespace Handling**: Namespace members inherit from namespace tag
+- **Backward Compatibility**: Existing configurations work unchanged
+- **Performance**: No significant performance degradation for AST analysis
 
-| Scenario                          | Expectation                                   |
-| --------------------------------- | --------------------------------------------- |
-| Existing release tag present      | No changes; original tag maintained           |
-| Missing release tag               | `@internal` appended                          |
-| Custom default tag defined        | Specified custom tag appended                 |
-| Mixed existing and new tag config | No duplication; respects most restrictive tag |
+### Quality Gates
+- Successfully compiles via `npm run build`
+- All existing tests continue to pass
+- New AST-aware tests achieve >95% coverage
+- Performance tests show <10ms overhead for AST analysis
+- Integration tests cover all API Extractor scenarios
 
-## Migration Notes
+## Enhanced Test Matrix
 
-This phase is additive and focuses on backward-compatible enhancement, ensuring
-users can opt into new behavior by extending their configurations as needed.
+### Core Scenarios
+| Scenario | Input | Expected Behavior |
+|----------|--------|------------------|
+| **Exported function without tag** | `export function foo() {}` | Add `@internal` tag |
+| **Non-exported function** | `function internal() {}` | No tag added |
+| **Class with existing tag** | `/** @public */ export class Foo {}` | Preserve existing tag |
+| **Class method** | Method inside `@public` class | No tag added (inherits) |
+| **Interface member** | Property in `@beta` interface | No tag added (inherits) |
+| **Namespace member** | `export namespace N { export function f() {} }` | Inherits from namespace |
+| **Export default** | `export default class Widget {}` | Add default tag |
+| **Re-export** | `export { Widget } from './widget'` | Skip (no local declaration) |
+
+### Edge Cases
+| Scenario | Expected Behavior |
+|----------|------------------|
+| **Function overloads** | Tag only the implementation |
+| **Ambient declarations** | Skip (`.d.ts` context) |
+| **Generic constraints** | Handle type parameters correctly |
+| **Nested classes** | Detect export context properly |
+
+### Configuration Scenarios
+| Config | Behavior |
+|--------|----------|
+| `onlyExportedAPI: false` | Fallback to current behavior (tag everything) |
+| `inheritanceAware: false` | Tag all declarations regardless of container |
+| `defaultReleaseTag: null` | Disable automatic tagging |
+| `defaultReleaseTag: "@public"` | Use custom default tag |
+
+## Migration & Compatibility Notes
+
+### Breaking Changes
+- **Default behavior change**: New installations will use AST-aware detection
+- **Existing users**: Behavior changes only if they update configuration
+
+### Migration Path
+1. **Current users**: No immediate changes - existing behavior preserved
+2. **New feature adoption**: Users can enable via configuration
+3. **Gradual migration**: Option to disable AST-awareness for gradual transition
+
+### Backward Compatibility
+- All existing configuration options remain functional
+- Existing `defaultReleaseTag` behavior maintained when AST detection disabled
+- Performance characteristics maintained for non-AST mode

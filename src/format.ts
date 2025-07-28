@@ -39,6 +39,12 @@ import {
   createDefaultReleaseTag,
   type TSDocPluginOptions,
 } from './config.js';
+import {
+  analyzeCommentContext,
+  shouldAddReleaseTag,
+  type ExportAnalysis,
+} from './utils/ast-analysis.js';
+import type { AstPath } from 'prettier';
 
 // Debug telemetry for performance and error tracking
 interface TelemetryData {
@@ -118,12 +124,14 @@ const { join, line, hardline, group } = builders;
  * @param commentValue - The comment content (without delimiters)
  * @param options - Prettier formatting options
  * @param parser - TSDoc parser instance
+ * @param commentPath - Optional AST path for context analysis
  * @returns Formatted comment as Prettier Doc
  */
 export function formatTSDocComment(
   commentValue: string,
   options: ParserOptions<any>,
-  parser: TSDocParser
+  parser: TSDocParser,
+  commentPath?: AstPath<any>
 ): Doc {
   const startTime = performance.now();
 
@@ -154,7 +162,7 @@ export function formatTSDocComment(
     const model = buildCommentModel(parserContext.docComment, fullComment);
 
     // Apply normalizations and transformations
-    const normalizedModel = applyNormalizations(model, tsdocOptions);
+    const normalizedModel = applyNormalizations(model, tsdocOptions, commentPath);
 
     // Convert model to Prettier Doc
     const result = buildPrettierDoc(normalizedModel, options, parserContext, tsdocOptions);
@@ -210,7 +218,8 @@ function createFallbackDoc(commentValue: string): Doc {
  */
 function applyNormalizations(
   model: TSDocCommentModel,
-  options: TSDocPluginOptions
+  options: TSDocPluginOptions,
+  commentPath?: AstPath<any>
 ): TSDocCommentModel {
   const normalizedModel: TSDocCommentModel = {
     ...model,
@@ -242,11 +251,41 @@ function applyNormalizations(
     tagName: normalizeTagName(tag.tagName, options),
   }));
 
-  // Apply default release tag insertion if none exists and option is configured
+  // Apply default release tag insertion using AST-aware analysis
   if (options.defaultReleaseTag && !hasReleaseTag(normalizedModel)) {
-    const defaultTag = createDefaultReleaseTag(options.defaultReleaseTag);
-    // Add the default release tag to the beginning of otherTags for conventional ordering
-    normalizedModel.otherTags.unshift(defaultTag);
+    let shouldInsertTag = true;
+
+    // Use AST analysis if enabled and context is available
+    if (options.onlyExportedAPI && commentPath) {
+      try {
+        const analysis = analyzeCommentContext(commentPath);
+        shouldInsertTag = shouldAddReleaseTag(analysis, false);
+
+        if (process.env.PRETTIER_TSDOC_DEBUG === '1') {
+          console.debug('AST Analysis Result:', {
+            isExported: analysis.isExported,
+            exportType: analysis.exportType,
+            isContainerMember: analysis.isContainerMember,
+            containerType: analysis.containerType,
+            shouldInheritReleaseTag: analysis.shouldInheritReleaseTag,
+            shouldInsertTag,
+          });
+        }
+      } catch (error) {
+        // Fallback to legacy behavior on AST analysis errors
+        if (process.env.PRETTIER_TSDOC_DEBUG === '1') {
+          console.warn('AST analysis failed, using legacy behavior:', error);
+        }
+        shouldInsertTag = true;
+      }
+    }
+
+    // Insert default tag if analysis determines it's appropriate
+    if (shouldInsertTag) {
+      const defaultTag = createDefaultReleaseTag(options.defaultReleaseTag);
+      // Add the default release tag to the beginning of otherTags for conventional ordering
+      normalizedModel.otherTags.unshift(defaultTag);
+    }
   }
 
   // Apply release tag deduplication

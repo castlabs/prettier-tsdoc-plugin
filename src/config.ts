@@ -69,6 +69,22 @@ export interface TSDocPluginOptions {
    * @default '@internal'
    */
   defaultReleaseTag?: string | null;
+
+  /**
+   * Whether to use AST analysis to only add release tags to exported API constructs.
+   * When true, only exported declarations receive default release tags.
+   * When false, all TSDoc comments receive default release tags (legacy behavior).
+   * @default true
+   */
+  onlyExportedAPI?: boolean;
+
+  /**
+   * Whether to respect inheritance rules for release tags.
+   * When true, class/interface members and namespace members inherit from their container.
+   * When false, all declarations are candidates for release tags.
+   * @default true
+   */
+  inheritanceAware?: boolean;
 }
 
 /**
@@ -119,6 +135,8 @@ export const DEFAULT_OPTIONS: Required<TSDocPluginOptions> = {
   releaseTagStrategy: 'keep-first',
   alignParamTags: false,
   defaultReleaseTag: '@internal',
+  onlyExportedAPI: true,
+  inheritanceAware: true,
 };
 
 /**
@@ -142,6 +160,8 @@ export function resolveOptions(
     ...(userOptions.releaseTagStrategy !== undefined && { releaseTagStrategy: userOptions.releaseTagStrategy }),
     ...(userOptions.alignParamTags !== undefined && { alignParamTags: userOptions.alignParamTags }),
     ...(userOptions.defaultReleaseTag !== undefined && { defaultReleaseTag: userOptions.defaultReleaseTag }),
+    ...(userOptions.onlyExportedAPI !== undefined && { onlyExportedAPI: userOptions.onlyExportedAPI }),
+    ...(userOptions.inheritanceAware !== undefined && { inheritanceAware: userOptions.inheritanceAware }),
     ...(userOptions.extraTags !== undefined && { extraTags: userOptions.extraTags }),
     ...(userOptions.normalizeTags !== undefined && { normalizeTags: userOptions.normalizeTags }),
   };

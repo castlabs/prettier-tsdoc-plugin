@@ -9,12 +9,14 @@ A Prettier plugin that formats TSDoc comments consistently.
 - **Parameter Alignment**: Align parameter descriptions across `@param` tags
 - **Markdown & Code Support**: Format markdown and fenced code blocks within comments
 - **Release Tag Management**: 
+  - **AST-aware insertion**: Only add release tags to exported API constructs
+  - **API Extractor compatible**: Follows inheritance rules for class/interface members
   - Automatic insertion of default release tags (`@internal` by default)
   - Deduplication of duplicate release tags (`@public`, `@beta`, etc.)
   - Preservation of existing release tags
 - **Multi-language Code Formatting**: Enhanced support for TypeScript, JavaScript, HTML, CSS, and more
 - **Performance Optimized**: Efficient parsing with telemetry and debug support
-- **Highly Configurable**: 11+ configuration options via Prettier config
+- **Highly Configurable**: 13+ configuration options via Prettier config
 - **TypeDoc/AEDoc Compatible**: Support for extended tag sets beyond core TSDoc
 
 ## Installation
@@ -50,6 +52,8 @@ configuration:
     "singleSentenceSummary": false,
     "alignParamTags": false,
     "defaultReleaseTag": "@internal",
+    "onlyExportedAPI": true,
+    "inheritanceAware": true,
     "extraTags": [],
     "normalizeTags": {
       "@return": "@returns",
@@ -72,6 +76,8 @@ configuration:
 | `singleSentenceSummary` | `boolean`                       | `false`        | Enforce single sentence summaries                   |
 | `alignParamTags`        | `boolean`                       | `false`        | Align parameter descriptions across @param tags     |
 | `defaultReleaseTag`     | `string` \| `null`              | `"@internal"`  | Default release tag when none exists (null to disable) |
+| `onlyExportedAPI`       | `boolean`                       | `true`         | Only add release tags to exported API constructs (AST-aware) |
+| `inheritanceAware`      | `boolean`                       | `true`         | Respect inheritance rules - skip tagging class/interface members |
 | `extraTags`             | `string[]`                      | `[]`           | Additional custom tags to recognize                 |
 | `normalizeTags`         | `Record<string, string>`        | `{}`           | Custom tag spelling normalizations                  |
 | `releaseTagStrategy`    | `"keep-first"` \| `"keep-last"` | `"keep-first"` | Strategy for release tag deduplication              |
@@ -96,9 +102,14 @@ The following tags are considered release tags and can be deduplicated:
 - `@internal`
 - `@experimental`
 
-#### Default Release Tag Insertion
+#### AST-Aware Release Tag Insertion
 
-By default, the plugin automatically adds `@internal` to comments that don't have any release tag. This ensures all high-level constructs are properly annotated with visibility information.
+The plugin uses **AST analysis** to intelligently determine which comments need release tags, following API Extractor conventions:
+
+- **Only exported declarations** receive default release tags
+- **Class/interface members inherit** from their container's release tag
+- **Namespace members inherit** from the namespace's release tag
+- **Non-exported code** remains untagged (not part of public API)
 
 **Configuration Options:**
 
@@ -112,30 +123,46 @@ By default, the plugin automatically adds `@internal` to comments that don't hav
 }
 ```
 
-**Example - Automatic @internal insertion:**
+**Example - AST-aware insertion for exported functions:**
 
 **Input:**
 ```typescript
 /**
- * Helper function without release tag.
+ * Exported helper function.
  * @param value - Input value
  * @returns Processed value
  */
-function helper(value: string): string {
+export function helper(value: string): string {
   return value.trim();
+}
+
+/**
+ * Internal helper (not exported).
+ * @param value - Input value
+ */
+function internal(value: string): void {
+  console.log(value);
 }
 ```
 
 **Output:**
 ```typescript
 /**
- * Helper function without release tag.
+ * Exported helper function.
  * @internal
  * @param value - Input value
  * @returns Processed value
  */
-function helper(value: string): string {
+export function helper(value: string): string {
   return value.trim();
+}
+
+/**
+ * Internal helper (not exported).
+ * @param value - Input value
+ */
+function internal(value: string): void {
+  console.log(value);
 }
 ```
 
@@ -159,6 +186,42 @@ function publicApi(data: any): void {}
  * @param data - Input data
  */
 function publicApi(data: any): void {}
+```
+
+**Example - Inheritance rules (class members inherit from class):**
+
+**Input:**
+```typescript
+/**
+ * Widget class for the public API.
+ * @public
+ */
+export class Widget {
+  /**
+   * Method that inherits @public from class.
+   * @param value - Input value
+   */
+  process(value: string): void {
+    // implementation
+  }
+}
+```
+
+**Output (no change - method inherits @public from class):**
+```typescript
+/**
+ * Widget class for the public API.
+ * @public
+ */
+export class Widget {
+  /**
+   * Method that inherits @public from class.
+   * @param value - Input value
+   */
+  process(value: string): void {
+    // implementation
+  }
+}
 ```
 
 ## Examples
@@ -331,8 +394,10 @@ npm run benchmark
 
 ### Migration Notes
 
-The plugin is designed to be backward-compatible. All new features are opt-in through configuration:
+The plugin is designed to be backward-compatible. New AST-aware features are enabled by default:
 
+- **AST-aware release tags**: Enabled by default (`onlyExportedAPI: true`). Set to `false` for legacy behavior.
+- **Inheritance awareness**: Enabled by default (`inheritanceAware: true`). Set to `false` to tag all constructs.
 - **Default release tags**: Enabled by default with `@internal`. Set to `null` to disable.
 - **Parameter alignment**: Disabled by default. Set `alignParamTags: true` to enable.
 - **Tag normalization**: Only built-in normalizations (`@return` → `@returns`) are applied by default.
@@ -354,8 +419,16 @@ The plugin is designed to be backward-compatible. All new features are opt-in th
 #### Unexpected tag changes
 
 1. **Tag normalization**: Built-in normalizations are applied by default
-2. **Release tag insertion**: `@internal` is added to comments without release tags
-3. **Custom normalizations**: Check your `normalizeTags` configuration
+2. **AST-aware release tag insertion**: Only exported declarations get default tags
+3. **Inheritance rules**: Class/interface members inherit from container
+4. **Custom normalizations**: Check your `normalizeTags` configuration
+
+#### Release tags not being added
+
+1. **Check export status**: Only exported declarations get default tags with `onlyExportedAPI: true`
+2. **Check inheritance**: Class members inherit from class release tag
+3. **Disable AST analysis**: Set `onlyExportedAPI: false` for legacy behavior
+4. **Debug AST analysis**: Use `PRETTIER_TSDOC_DEBUG=1` to see analysis results
 
 ### Configuration Validation
 
@@ -371,6 +444,8 @@ interface TSDocPluginOptions {
   singleSentenceSummary?: boolean;
   alignParamTags?: boolean;
   defaultReleaseTag?: string | null;
+  onlyExportedAPI?: boolean;
+  inheritanceAware?: boolean;
   extraTags?: string[];
   normalizeTags?: Record<string, string>;
   releaseTagStrategy?: 'keep-first' | 'keep-last';
