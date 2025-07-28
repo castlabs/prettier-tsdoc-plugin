@@ -30,7 +30,14 @@ export function analyzeCommentContext(
     // Get the parent node that this comment is attached to
     const parentNode = getCommentParent(commentPath);
 
+    if (process.env.PRETTIER_TSDOC_DEBUG === '1') {
+      console.debug('AST Analysis - Parent node:', parentNode?.type);
+    }
+
     if (!parentNode) {
+      if (process.env.PRETTIER_TSDOC_DEBUG === '1') {
+        console.debug('AST Analysis - No parent node found');
+      }
       return createDefaultAnalysis();
     }
 
@@ -43,13 +50,19 @@ export function analyzeCommentContext(
       commentPath
     );
 
-    return {
+    const result = {
       isExported: exportInfo.isExported,
       exportType: exportInfo.exportType,
       isContainerMember: inheritanceInfo.isContainerMember,
       containerType: inheritanceInfo.containerType,
       shouldInheritReleaseTag: inheritanceInfo.shouldInherit,
     };
+
+    if (process.env.PRETTIER_TSDOC_DEBUG === '1') {
+      console.debug('AST Analysis Result:', result);
+    }
+
+    return result;
   } catch (error) {
     // Graceful fallback on analysis errors
     if (process.env.PRETTIER_TSDOC_DEBUG === '1') {
@@ -161,7 +174,14 @@ function analyzeContainerInheritance(
   shouldInherit: boolean;
 } {
   if (!node) {
+    if (process.env.PRETTIER_TSDOC_DEBUG === '1') {
+      console.debug('Container Analysis - No node provided');
+    }
     return { isContainerMember: false, shouldInherit: false };
+  }
+
+  if (process.env.PRETTIER_TSDOC_DEBUG === '1') {
+    console.debug('Container Analysis - Analyzing node type:', node.type);
   }
 
   // Check if this is a class member
@@ -170,6 +190,12 @@ function analyzeContainerInheritance(
     'ClassExpression',
   ]);
   if (classContainer) {
+    if (process.env.PRETTIER_TSDOC_DEBUG === '1') {
+      console.debug(
+        'Container Analysis - Found class container:',
+        classContainer.type
+      );
+    }
     return {
       isContainerMember: true,
       containerType: 'class',
@@ -182,6 +208,12 @@ function analyzeContainerInheritance(
     'TSInterfaceDeclaration',
   ]);
   if (interfaceContainer) {
+    if (process.env.PRETTIER_TSDOC_DEBUG === '1') {
+      console.debug(
+        'Container Analysis - Found interface container:',
+        interfaceContainer.type
+      );
+    }
     return {
       isContainerMember: true,
       containerType: 'interface',
@@ -195,6 +227,12 @@ function analyzeContainerInheritance(
     'ModuleDeclaration',
   ]);
   if (namespaceContainer) {
+    if (process.env.PRETTIER_TSDOC_DEBUG === '1') {
+      console.debug(
+        'Container Analysis - Found namespace container:',
+        namespaceContainer.type
+      );
+    }
     return {
       isContainerMember: true,
       containerType: 'namespace',
@@ -202,6 +240,9 @@ function analyzeContainerInheritance(
     };
   }
 
+  if (process.env.PRETTIER_TSDOC_DEBUG === '1') {
+    console.debug('Container Analysis - No container found');
+  }
   return { isContainerMember: false, shouldInherit: false };
 }
 
@@ -219,10 +260,41 @@ function findContainerOfType(
   try {
     // Check the immediate parent
     const parent = commentPath.getParentNode();
+    if (process.env.PRETTIER_TSDOC_DEBUG === '1') {
+      console.debug(
+        'findContainerOfType - Parent:',
+        parent?.type,
+        'Looking for:',
+        containerTypes
+      );
+    }
+
     if (!parent) return null;
 
     if (containerTypes.includes(parent.type)) {
+      if (process.env.PRETTIER_TSDOC_DEBUG === '1') {
+        console.debug(
+          'findContainerOfType - Found matching parent:',
+          parent.type
+        );
+      }
       return parent;
+    }
+
+    // Try to get grandparent for more context
+    const grandparent = commentPath.getParentNode(1);
+    if (process.env.PRETTIER_TSDOC_DEBUG === '1') {
+      console.debug('findContainerOfType - Grandparent:', grandparent?.type);
+    }
+
+    if (grandparent && containerTypes.includes(grandparent.type)) {
+      if (process.env.PRETTIER_TSDOC_DEBUG === '1') {
+        console.debug(
+          'findContainerOfType - Found matching grandparent:',
+          grandparent.type
+        );
+      }
+      return grandparent;
     }
 
     // For now, return null - we could implement more sophisticated
@@ -349,4 +421,69 @@ export function shouldAddReleaseTag(
 
   // Add to exported top-level constructs
   return true;
+}
+
+/**
+ * Simple heuristic-based approach to detect class members from comment context.
+ * This is a fallback when AST analysis is not available.
+ *
+ * @param commentContent - The raw comment content including surrounding context
+ * @returns Whether this appears to be a class member
+ */
+export function isLikelyClassMember(commentContent: string): boolean {
+  if (!commentContent) return false;
+
+  if (process.env.PRETTIER_TSDOC_DEBUG === '1') {
+    console.debug(
+      'Analyzing comment for class member heuristics:',
+      JSON.stringify(commentContent.substring(0, 100))
+    );
+  }
+
+  // Split into lines and look for indentation patterns
+  const lines = commentContent.split('\n');
+
+  // Look for asterisk lines that have significant indentation
+  // Class members typically have comments indented by 2+ spaces beyond the base indentation
+  let hasSignificantIndentation = false;
+  let indentedLineCount = 0;
+
+  for (const line of lines) {
+    // Skip the first line which might be just "*"
+    if (line.trim() === '*' || line.trim() === '') continue;
+
+    // Look for lines that start with spaces followed by asterisk
+    const match = line.match(/^(\s+)\*/);
+    if (match) {
+      const spaces = match[1];
+      // Class members typically have 2+ spaces of indentation before the asterisk
+      if (spaces.length >= 2) {
+        hasSignificantIndentation = true;
+        indentedLineCount++;
+      }
+    }
+  }
+
+  // If multiple lines show significant indentation, likely a class member
+  if (hasSignificantIndentation && indentedLineCount >= 2) {
+    if (process.env.PRETTIER_TSDOC_DEBUG === '1') {
+      console.debug(
+        'Detected likely class member based on indentation pattern:',
+        {
+          indentedLineCount,
+          hasSignificantIndentation,
+        }
+      );
+    }
+    return true;
+  }
+
+  if (process.env.PRETTIER_TSDOC_DEBUG === '1') {
+    console.debug('No class member indentation pattern detected:', {
+      indentedLineCount,
+      hasSignificantIndentation,
+    });
+  }
+
+  return false;
 }

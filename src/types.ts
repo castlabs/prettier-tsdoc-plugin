@@ -10,7 +10,6 @@ import type { DocNode, DocBlock, TSDocParser } from '@microsoft/tsdoc';
  */
 export interface TSDocPluginOptions {
   fencedIndent?: 'space' | 'none';
-  forceFormatTSDoc?: boolean;
   normalizeTagOrder?: boolean;
   dedupeReleaseTags?: boolean;
   splitModifiers?: boolean;
@@ -29,7 +28,6 @@ export interface TSDocPluginOptions {
  */
 export interface PrettierOptionsWithTSDoc extends ParserOptions<any> {
   tsdoc?: TSDocPluginOptions;
-  forceFormatTSDoc?: boolean;
   logger?: {
     warn?(message: string, ...args: any[]): void;
     debug?(message: string, ...args: any[]): void;

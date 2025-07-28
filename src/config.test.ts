@@ -19,7 +19,6 @@ describe('Configuration', () => {
 
     expect(options).toEqual(DEFAULT_OPTIONS);
     expect(options.fencedIndent).toBe('space');
-    expect(options.forceFormatTSDoc).toBe(false);
   });
 
   test('merges user options with defaults', () => {
@@ -32,7 +31,6 @@ describe('Configuration', () => {
     const options = resolveOptions(userOptions);
 
     expect(options.fencedIndent).toBe('none');
-    expect(options.forceFormatTSDoc).toBe(false); // Should use default
   });
 
   test('handles nested tsdoc options', () => {
@@ -40,14 +38,12 @@ describe('Configuration', () => {
       printWidth: 100, // Other Prettier option
       tsdoc: {
         fencedIndent: 'none' as const,
-        forceFormatTSDoc: true,
       },
     };
 
     const options = resolveOptions(userOptions);
 
     expect(options.fencedIndent).toBe('none');
-    expect(options.forceFormatTSDoc).toBe(true);
   });
 
   test('handles empty tsdoc options object', () => {

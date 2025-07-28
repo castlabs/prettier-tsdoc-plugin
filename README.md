@@ -81,7 +81,6 @@ configuration:
   "plugins": ["prettier-tsdoc-plugin"],
   "tsdoc": {
     "fencedIndent": "space",
-    "forceFormatTSDoc": false,
     "normalizeTagOrder": false,
     "dedupeReleaseTags": true,
     "splitModifiers": true,
@@ -105,7 +104,6 @@ configuration:
 | Option                  | Type                            | Default        | Description                                                      |
 | ----------------------- | ------------------------------- | -------------- | ---------------------------------------------------------------- |
 | `fencedIndent`          | `"space"` \| `"none"`           | `"space"`      | Indentation style for fenced code blocks                         |
-| `forceFormatTSDoc`      | `boolean`                       | `false`        | Force format all `/** */` comments as TSDoc                      |
 | `normalizeTagOrder`     | `boolean`                       | `false`        | Normalize tag order based on conventional patterns               |
 | `dedupeReleaseTags`     | `boolean`                       | `true`         | Deduplicate release tags (`@public`, `@beta`, etc.)              |
 | `splitModifiers`        | `boolean`                       | `true`         | Split modifiers to separate lines                                |
@@ -495,9 +493,7 @@ enabled by default:
 
 1. **Check comment syntax**: Only `/** */` comments are processed, not `/* */`
    or `//`
-2. **Enable force formatting**: Set `forceFormatTSDoc: true` to format all
-   `/** */` comments
-3. **Check debug output**: Use `PRETTIER_TSDOC_DEBUG=1` to see which comments
+2. **Check debug output**: Use `PRETTIER_TSDOC_DEBUG=1` to see which comments
    are being processed
 
 #### Performance issues
@@ -529,7 +525,6 @@ To validate your configuration, use this TypeScript interface:
 ```typescript
 interface TSDocPluginOptions {
   fencedIndent?: 'space' | 'none';
-  forceFormatTSDoc?: boolean;
   normalizeTagOrder?: boolean;
   dedupeReleaseTags?: boolean;
   splitModifiers?: boolean;

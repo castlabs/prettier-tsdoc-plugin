@@ -20,6 +20,7 @@ import { buildCommentModel } from './models.js';
 import {
   analyzeCommentContext,
   shouldAddReleaseTag,
+  isLikelyClassMember,
 } from './utils/ast-analysis.js';
 import {
   preserveInlineTags,
@@ -153,7 +154,8 @@ export function formatTSDocComment(
     const normalizedModel = applyNormalizations(
       model,
       tsdocOptions,
-      commentPath
+      commentPath,
+      commentValue
     );
 
     // Convert model to Prettier Doc
@@ -211,7 +213,8 @@ function createFallbackDoc(commentValue: string): Doc {
 function applyNormalizations(
   model: TSDocCommentModel,
   options: TSDocPluginOptions,
-  commentPath?: AstPath<any>
+  commentPath?: AstPath<any>,
+  commentValue?: string
 ): TSDocCommentModel {
   const normalizedModel: TSDocCommentModel = {
     ...model,
@@ -247,6 +250,15 @@ function applyNormalizations(
   if (options.defaultReleaseTag && !hasReleaseTag(normalizedModel)) {
     let shouldInsertTag = true;
 
+    if (process.env.PRETTIER_TSDOC_DEBUG === '1') {
+      console.debug('Release tag conditions:', {
+        defaultReleaseTag: options.defaultReleaseTag,
+        hasReleaseTag: hasReleaseTag(normalizedModel),
+        onlyExportedAPI: options.onlyExportedAPI,
+        hasCommentPath: !!commentPath,
+      });
+    }
+
     // Use AST analysis if enabled and context is available
     if (options.onlyExportedAPI && commentPath) {
       try {
@@ -264,11 +276,43 @@ function applyNormalizations(
           });
         }
       } catch (error) {
-        // Fallback to legacy behavior on AST analysis errors
+        // Fallback to heuristic analysis when AST analysis fails
         if (process.env.PRETTIER_TSDOC_DEBUG === '1') {
-          console.warn('AST analysis failed, using legacy behavior:', error);
+          console.warn(
+            'AST analysis failed, falling back to heuristic analysis:',
+            error
+          );
         }
-        shouldInsertTag = true;
+
+        // Use heuristic-based class member detection as fallback
+        const isClassMember = commentValue
+          ? isLikelyClassMember(commentValue)
+          : false;
+        shouldInsertTag = !isClassMember;
+
+        if (process.env.PRETTIER_TSDOC_DEBUG === '1') {
+          console.debug('Heuristic Analysis Result:', {
+            isLikelyClassMember: isClassMember,
+            shouldInsertTag,
+          });
+        }
+      }
+    } else if (options.inheritanceAware) {
+      // If inheritance-aware mode is enabled but no AST context, use heuristic
+      const isClassMember = commentValue
+        ? isLikelyClassMember(commentValue)
+        : false;
+      shouldInsertTag = !isClassMember;
+
+      if (process.env.PRETTIER_TSDOC_DEBUG === '1') {
+        console.debug('Inheritance-aware heuristic analysis:', {
+          isLikelyClassMember: isClassMember,
+          shouldInsertTag,
+        });
+      }
+    } else {
+      if (process.env.PRETTIER_TSDOC_DEBUG === '1') {
+        console.debug('Skipping analysis - using legacy behavior');
       }
     }
 
@@ -277,6 +321,20 @@ function applyNormalizations(
       const defaultTag = createDefaultReleaseTag(options.defaultReleaseTag);
       // Add the default release tag to the beginning of otherTags for conventional ordering
       normalizedModel.otherTags.unshift(defaultTag);
+    }
+  }
+
+  // Remove release tags from class members if inheritance-aware mode is enabled
+  if (options.inheritanceAware && commentValue) {
+    const isClassMember = isLikelyClassMember(commentValue);
+    if (isClassMember) {
+      if (process.env.PRETTIER_TSDOC_DEBUG === '1') {
+        console.debug('Removing release tags from detected class member');
+      }
+      // Remove all release tags from class members since they should inherit from container
+      normalizedModel.otherTags = normalizedModel.otherTags.filter(
+        (tag) => !isReleaseTag(tag.tagName)
+      );
     }
   }
 

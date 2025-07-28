@@ -12,12 +12,6 @@ export interface TSDocPluginOptions {
   fencedIndent?: 'space' | 'none';
 
   /**
-   * Whether to force format all /** comments as TSDoc,
-   * even if they don't contain recognizable TSDoc elements.
-   */
-  forceFormatTSDoc?: boolean;
-
-  /**
    * Whether to normalize tag order based on conventional patterns.
    */
   normalizeTagOrder?: boolean;
@@ -74,7 +68,8 @@ export interface TSDocPluginOptions {
    * Whether to use AST analysis to only add release tags to exported API constructs.
    * When true, only exported declarations receive default release tags.
    * When false, all TSDoc comments receive default release tags (legacy behavior).
-   * \@default true
+   *
+   * @defaultValue `true`
    */
   onlyExportedAPI?: boolean;
 
@@ -82,7 +77,8 @@ export interface TSDocPluginOptions {
    * Whether to respect inheritance rules for release tags.
    * When true, class/interface members and namespace members inherit from their container.
    * When false, all declarations are candidates for release tags.
-   * \@default true
+   *
+   * @defaultValue `true`
    */
   inheritanceAware?: boolean;
 }
@@ -125,7 +121,6 @@ export const MODIFIER_TAGS = new Set([
 
 export const DEFAULT_OPTIONS: Required<TSDocPluginOptions> = {
   fencedIndent: 'space',
-  forceFormatTSDoc: false,
   normalizeTagOrder: false,
   dedupeReleaseTags: true,
   splitModifiers: true,
@@ -153,9 +148,6 @@ export function resolveOptions(
     // Also check for top-level options (for Prettier config)
     ...(userOptions.fencedIndent !== undefined && {
       fencedIndent: userOptions.fencedIndent,
-    }),
-    ...(userOptions.forceFormatTSDoc !== undefined && {
-      forceFormatTSDoc: userOptions.forceFormatTSDoc,
     }),
     ...(userOptions.normalizeTagOrder !== undefined && {
       normalizeTagOrder: userOptions.normalizeTagOrder,

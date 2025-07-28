@@ -1,20 +1,15 @@
-import type { Plugin, AstPath } from 'prettier';
 import { TSDocParser } from '@microsoft/tsdoc';
-import { createTSDocConfiguration } from './parser-config.js';
+import type { Plugin } from 'prettier';
+import parserBabel from 'prettier/parser-babel';
+import parserTypescript from 'prettier/parser-typescript';
+import { FORMATTING } from './constants.js';
 import { isTSDocCandidate } from './detection.js';
 import { formatTSDocComment } from './format.js';
-import parserTypescript from 'prettier/parser-typescript';
-import parserBabel from 'prettier/parser-babel';
-import type { PrettierOptionsWithTSDoc, CommentNode } from './types.js';
+import { createTSDocConfiguration } from './parser-config.js';
+import type { PrettierOptionsWithTSDoc } from './types.js';
 import { parserCache, PerformanceMonitor, regexCache } from './utils/cache.js';
-import {
-  wrapBlockComment,
-  isBlockComment,
-  logWarning,
-} from './utils/common.js';
+import { logWarning } from './utils/common.js';
 import { safeDocToString } from './utils/doc-to-string.js';
-import { TSDocFormatError, handleFormatError } from './utils/error-handling.js';
-import { FORMATTING } from './constants.js';
 
 /**
  * Get cached TSDoc parser with performance monitoring
@@ -46,99 +41,12 @@ function getTSDocParser(extraTags: string[] = []): TSDocParser {
 }
 
 /**
- * Handle comment printing for TSDoc comments.
- */
-function _printComment(
-  commentPath: AstPath<CommentNode>,
-  options: PrettierOptionsWithTSDoc
-): string {
-  PerformanceMonitor.startTimer('comment-processing');
-  PerformanceMonitor.increment('comments-processed');
-
-  const comment = commentPath.getValue();
-  const blockComment = isBlockComment(comment);
-
-  // Debug logging
-  if (process.env.PRETTIER_TSDOC_DEBUG === '1') {
-    logWarning(
-      options.logger,
-      'TSDoc comment received:',
-      JSON.stringify(comment, null, 2)
-    );
-  }
-
-  // Check if this is a TSDoc candidate
-  if (!isTSDocCandidate(comment, options.forceFormatTSDoc || false)) {
-    PerformanceMonitor.endTimer('comment-processing');
-    PerformanceMonitor.increment('comments-skipped');
-    return wrapBlockComment(comment.value, blockComment);
-  }
-
-  try {
-    PerformanceMonitor.startTimer('format-processing');
-
-    // Get cached parser (with potential extraTags from options)
-    const extraTags = options.tsdoc?.extraTags || [];
-    const parser = getTSDocParser(extraTags);
-
-    // Format the comment and convert to string
-    const formattedDoc = formatTSDocComment(
-      comment.value,
-      options,
-      parser,
-      commentPath
-    );
-    const formattedContent = safeDocToString(formattedDoc);
-
-    PerformanceMonitor.endTimer('format-processing');
-    PerformanceMonitor.endTimer('comment-processing');
-    PerformanceMonitor.increment('comments-formatted');
-
-    return wrapBlockComment(formattedContent, blockComment);
-  } catch (error) {
-    PerformanceMonitor.increment('format-errors');
-    PerformanceMonitor.endTimer('format-processing');
-    PerformanceMonitor.endTimer('comment-processing');
-
-    const formatError =
-      error instanceof TSDocFormatError
-        ? error
-        : new TSDocFormatError(error as Error, 'comment formatting');
-
-    const context = {
-      commentText: comment.value,
-      options,
-      parser: getTSDocParser(options.tsdoc?.extraTags || []),
-      commentPath,
-    };
-
-    const fallback = wrapBlockComment(comment.value, blockComment);
-    return handleFormatError(formatError.originalError, context, fallback);
-  }
-}
-
-// docToString is now imported from utils/doc-to-string.js
-
-// Import estree plugin to extend its printer
-
-/**
- * Prettier plugin for TSDoc comment formatting.
- *
- * This implementation detects TSDoc candidates, parses them, and formats
- * the summary and @remarks sections according to the specification.
- */
-/**
  * Transform TSDoc comments in the source text before parsing
  */
 function preprocessSource(
   text: string,
   options: PrettierOptionsWithTSDoc
 ): string {
-  // Only run if forceFormatTSDoc is enabled
-  if (!options.forceFormatTSDoc) {
-    return text;
-  }
-
   // Use compiled regex for performance
   const tsdocRegex =
     regexCache.get('tsdocComment') || FORMATTING.PATTERNS.TSDOC_COMMENT;
@@ -223,12 +131,6 @@ const plugin: Plugin = {
         { value: 'space', description: 'Add one space indentation' },
         { value: 'none', description: 'No additional indentation' },
       ],
-    },
-    forceFormatTSDoc: {
-      type: 'boolean',
-      category: 'TSDoc',
-      default: false,
-      description: 'Force format all /** comments as TSDoc',
     },
     normalizeTagOrder: {
       type: 'boolean',

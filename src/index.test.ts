@@ -16,7 +16,6 @@ describe('Plugin Integration', () => {
 
     // Check that TSDoc options are defined
     expect(plugin.default.options).toHaveProperty('fencedIndent');
-    expect(plugin.default.options).toHaveProperty('forceFormatTSDoc');
   });
 
   test('formatting files without doc comments produces identical output', async () => {

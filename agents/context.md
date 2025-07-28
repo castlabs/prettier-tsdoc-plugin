@@ -77,8 +77,6 @@ Heuristics:
 
 - If the body contains `@` followed by an identifier or any `{@...}` inline
   form, treat as TSDoc.
-- If heuristics fail but the user enables `forceFormatTSDoc: true`, always
-  parse.
 - If parse throws, log (debug) and fall back to original comment normalized for
   leading `*` alignment only.
 
@@ -362,7 +360,6 @@ clutter). Example `.prettierrc`:
   "printWidth": 100,
   "plugins": ["./tools/prettier-plugin-tsdoc"],
   "tsdoc": {
-    "forceFormatTSDoc": false,
     "normalizeTagOrder": false,
     "dedupeReleaseTags": true,
     "splitModifiers": true,

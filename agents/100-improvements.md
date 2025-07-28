@@ -39,7 +39,6 @@ support, maintainability
 ```typescript
 interface PrettierOptionsWithTSDoc extends ParserOptions<any> {
   tsdoc?: TSDocPluginOptions;
-  forceFormatTSDoc?: boolean;
   logger?: {
     warn?(message: string, ...args: any[]): void;
     debug?(message: string, ...args: any[]): void;
