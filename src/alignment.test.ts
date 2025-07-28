@@ -39,15 +39,21 @@ describe('Parameter Alignment', () => {
       const formatted = docToString(result);
 
       expect(formatted).toContain('@param name - Short parameter.');
-      expect(formatted).toContain('@param second_long_param - Much longer parameter description.');
-      
+      expect(formatted).toContain(
+        '@param second_long_param - Much longer parameter description.'
+      );
+
       // Verify no extra padding
       const lines = formatted.split('\n');
-      const nameParamLine = lines.find(line => line.includes('@param name'));
-      const longParamLine = lines.find(line => line.includes('@param second_long_param'));
-      
+      const nameParamLine = lines.find((line) => line.includes('@param name'));
+      const longParamLine = lines.find((line) =>
+        line.includes('@param second_long_param')
+      );
+
       expect(nameParamLine).toBe(' * @param name - Short parameter.');
-      expect(longParamLine).toBe(' * @param second_long_param - Much longer parameter description.');
+      expect(longParamLine).toBe(
+        ' * @param second_long_param - Much longer parameter description.'
+      );
     });
 
     test('handles single parameter without alignment', () => {
@@ -61,9 +67,11 @@ describe('Parameter Alignment', () => {
       const formatted = docToString(result);
 
       expect(formatted).toContain('@param singleParam - The only parameter.');
-      
+
       const lines = formatted.split('\n');
-      const paramLine = lines.find(line => line.includes('@param singleParam'));
+      const paramLine = lines.find((line) =>
+        line.includes('@param singleParam')
+      );
       expect(paramLine).toBe(' * @param singleParam - The only parameter.');
     });
   });
@@ -86,13 +94,15 @@ describe('Parameter Alignment', () => {
       const formatted = docToString(result);
 
       const lines = formatted.split('\n');
-      const nameParamLine = lines.find(line => line.includes('@param name'));
-      const longParamLine = lines.find(line => line.includes('@param second_long_param'));
-      
+      const nameParamLine = lines.find((line) => line.includes('@param name'));
+      const longParamLine = lines.find((line) =>
+        line.includes('@param second_long_param')
+      );
+
       // Find the position of '-' in both lines
       const nameHyphenPos = nameParamLine?.indexOf(' - ');
       const longHyphenPos = longParamLine?.indexOf(' - ');
-      
+
       expect(nameHyphenPos).toBeDefined();
       expect(longHyphenPos).toBeDefined();
       expect(nameHyphenPos).toBe(longHyphenPos); // Hyphens should be aligned
@@ -124,13 +134,15 @@ describe('Parameter Alignment', () => {
       const formatted = docToString(result);
 
       const lines = formatted.split('\n');
-      const typeParamLine = lines.find(line => line.includes('@typeParam T'));
-      const longTypeParamLine = lines.find(line => line.includes('@typeParam LongTypeParamName'));
-      
+      const typeParamLine = lines.find((line) => line.includes('@typeParam T'));
+      const longTypeParamLine = lines.find((line) =>
+        line.includes('@typeParam LongTypeParamName')
+      );
+
       // Find the position of '-' in both lines
       const typeHyphenPos = typeParamLine?.indexOf(' - ');
       const longTypeHyphenPos = longTypeParamLine?.indexOf(' - ');
-      
+
       expect(typeHyphenPos).toBeDefined();
       expect(longTypeHyphenPos).toBeDefined();
       expect(typeHyphenPos).toBe(longTypeHyphenPos); // Hyphens should be aligned
@@ -152,12 +164,16 @@ describe('Parameter Alignment', () => {
       expect(formatted).toContain('@param name');
       expect(formatted).toContain('@param noDesc');
       expect(formatted).toContain('@param anotherLongParam');
-      
+
       // Parameters with descriptions should be aligned
       const lines = formatted.split('\n');
-      const nameParamLine = lines.find(line => line.includes('@param name') && line.includes('-'));
-      const longParamLine = lines.find(line => line.includes('@param anotherLongParam') && line.includes('-'));
-      
+      const nameParamLine = lines.find(
+        (line) => line.includes('@param name') && line.includes('-')
+      );
+      const longParamLine = lines.find(
+        (line) => line.includes('@param anotherLongParam') && line.includes('-')
+      );
+
       if (nameParamLine && longParamLine) {
         const nameHyphenPos = nameParamLine.indexOf(' - ');
         const longHyphenPos = longParamLine.indexOf(' - ');
@@ -198,19 +214,19 @@ function docToString(doc: any): string {
   if (typeof doc === 'string') {
     return doc;
   }
-  
+
   if (typeof doc === 'number') {
     return String(doc);
   }
-  
+
   if (doc === null || doc === undefined) {
     return '';
   }
-  
+
   if (Array.isArray(doc)) {
     return doc.map(docToString).join('');
   }
-  
+
   if (doc && typeof doc === 'object') {
     // Handle Prettier Doc builders
     if (doc.type === 'concat' || (doc.parts && Array.isArray(doc.parts))) {
@@ -228,7 +244,11 @@ function docToString(doc: any): string {
     if (doc.type === 'fill' && doc.parts) {
       return doc.parts.map(docToString).join(' ');
     }
-    if (doc.type === 'break-parent' || doc.type === 'indent' || doc.type === 'dedent') {
+    if (
+      doc.type === 'break-parent' ||
+      doc.type === 'indent' ||
+      doc.type === 'dedent'
+    ) {
       return ''; // These are formatting control tokens, not content
     }
     if (doc.contents !== undefined) {
@@ -237,7 +257,7 @@ function docToString(doc: any): string {
     if (doc.parts !== undefined) {
       return doc.parts.map(docToString).join('');
     }
-    
+
     // Last resort: check for common properties
     if (doc.value !== undefined) {
       return docToString(doc.value);
@@ -246,7 +266,7 @@ function docToString(doc: any): string {
       return docToString(doc.text);
     }
   }
-  
+
   // Debug problematic docs
   console.warn('Unable to convert doc to string:', doc);
   return '';

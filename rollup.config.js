@@ -6,7 +6,7 @@ export default {
   output: {
     file: 'dist/index.js',
     format: 'es',
-    sourcemap: true
+    sourcemap: true,
   },
   plugins: [
     resolve(),
@@ -15,8 +15,13 @@ export default {
       declaration: false,
       declarationMap: false,
       outDir: undefined,
-      noEmit: false
-    })
+      noEmit: false,
+    }),
   ],
-  external: ['prettier', '@microsoft/tsdoc', 'prettier/parser-typescript', 'prettier/parser-babel']
+  external: [
+    'prettier',
+    '@microsoft/tsdoc',
+    'prettier/parser-typescript',
+    'prettier/parser-babel',
+  ],
 };

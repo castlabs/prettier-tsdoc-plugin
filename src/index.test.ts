@@ -12,7 +12,7 @@ describe('Plugin Integration', () => {
 
     // Check that basic language support is defined
     expect(Array.isArray(plugin.default.languages)).toBe(true);
-    expect(plugin.default.languages.length).toBeGreaterThan(0);
+    expect(plugin.default.languages?.length).toBeGreaterThan(0);
 
     // Check that TSDoc options are defined
     expect(plugin.default.options).toHaveProperty('fencedIndent');

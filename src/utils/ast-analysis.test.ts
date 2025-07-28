@@ -9,7 +9,7 @@ describe('AST Analysis Utilities', () => {
   describe('analyzeCommentContext', () => {
     test('handles null comment path gracefully', () => {
       const result = analyzeCommentContext(null as any);
-      
+
       expect(result).toEqual({
         isExported: false,
         exportType: 'none',
@@ -25,7 +25,7 @@ describe('AST Analysis Utilities', () => {
       };
 
       const result = analyzeCommentContext(mockPath as any);
-      
+
       expect(result.isExported).toBe(false);
       expect(result.exportType).toBe('none');
     });
@@ -37,13 +37,13 @@ describe('AST Analysis Utilities', () => {
           type: 'ExportNamedDeclaration',
           declaration: {
             type: 'FunctionDeclaration',
-            id: { name: 'testFunction' }
-          }
+            id: { name: 'testFunction' },
+          },
         }),
       };
 
       const result = analyzeCommentContext(mockPath as any);
-      
+
       expect(result.isExported).toBe(true);
       expect(result.exportType).toBe('named');
     });
@@ -55,13 +55,13 @@ describe('AST Analysis Utilities', () => {
           type: 'ExportDefaultDeclaration',
           declaration: {
             type: 'ClassDeclaration',
-            id: { name: 'TestClass' }
-          }
+            id: { name: 'TestClass' },
+          },
         }),
       };
 
       const result = analyzeCommentContext(mockPath as any);
-      
+
       expect(result.isExported).toBe(true);
       expect(result.exportType).toBe('default');
     });
@@ -71,12 +71,12 @@ describe('AST Analysis Utilities', () => {
         getValue: () => ({ type: 'Block', value: 'test comment' }),
         getParentNode: () => ({
           type: 'FunctionDeclaration',
-          id: { name: 'internalFunction' }
+          id: { name: 'internalFunction' },
         }),
       };
 
       const result = analyzeCommentContext(mockPath as any);
-      
+
       expect(result.isExported).toBe(false);
       expect(result.exportType).toBe('none');
     });
@@ -91,7 +91,7 @@ describe('AST Analysis Utilities', () => {
 
       // Should not throw, should return default analysis
       const result = analyzeCommentContext(mockPath as any);
-      
+
       expect(result).toEqual({
         isExported: false,
         exportType: 'none',
@@ -184,7 +184,7 @@ describe('AST Analysis Utilities', () => {
       };
 
       const result = analyzeCommentContext(mockPath as any);
-      
+
       // Should return default analysis without throwing
       expect(result.isExported).toBe(false);
       expect(result.exportType).toBe('none');

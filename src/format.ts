@@ -4,47 +4,35 @@
  * This module contains the core formatting implementation for TSDoc comments.
  */
 
-import type { ParserOptions, Doc } from 'prettier';
-import { doc, format } from 'prettier';
-import type { TSDocParser, ParserContext } from '@microsoft/tsdoc';
+import type { TSDocParser } from '@microsoft/tsdoc';
+import type { AstPath, Doc, ParserOptions } from 'prettier';
+import { doc } from 'prettier';
+import {
+  createDefaultReleaseTag,
+  hasReleaseTag,
+  isReleaseTag,
+  normalizeTagName,
+  resolveOptions,
+  type TSDocPluginOptions,
+} from './config.js';
 import type { TSDocCommentModel } from './models.js';
 import { buildCommentModel } from './models.js';
 import {
-  effectiveWidth,
-  formatTextContent,
-  createCommentLine,
-  createEmptyCommentLine,
-  wrapText,
-} from './utils/text-width.js';
-import { printAligned, formatReturnsTag, ParamTagInfo } from './utils/tags.js';
-import {
-  extractMarkdownSections,
-  formatMarkdown,
-  formatFencedCode,
-  applyFencedIndent,
-  stripCommentMarks,
-  formatMarkdownBlock,
-  addCommentMarks,
-  extractIndentation,
-  isMarkdownCapableTag,
-  preserveInlineTags,
-  restoreInlineTags,
-} from './utils/markdown.js';
-import {
-  resolveOptions,
-  normalizeTagName,
-  isReleaseTag,
-  isModifierTag,
-  hasReleaseTag,
-  createDefaultReleaseTag,
-  type TSDocPluginOptions,
-} from './config.js';
-import {
   analyzeCommentContext,
   shouldAddReleaseTag,
-  type ExportAnalysis,
 } from './utils/ast-analysis.js';
-import type { AstPath } from 'prettier';
+import {
+  preserveInlineTags,
+  restoreInlineTags,
+  stripCommentMarks,
+} from './utils/markdown.js';
+import { formatReturnsTag, ParamTagInfo, printAligned } from './utils/tags.js';
+import {
+  createCommentLine,
+  createEmptyCommentLine,
+  effectiveWidth,
+  formatTextContent,
+} from './utils/text-width.js';
 
 // Debug telemetry for performance and error tracking
 interface TelemetryData {
@@ -116,7 +104,7 @@ function logDebugTelemetry(options: ParserOptions<any>): void {
 }
 
 const { builders } = doc;
-const { join, line, hardline, group } = builders;
+const { hardline, group } = builders;
 
 /**
  * Format a TSDoc comment from raw comment text.
@@ -129,7 +117,7 @@ const { join, line, hardline, group } = builders;
  */
 export function formatTSDocComment(
   commentValue: string,
-  options: ParserOptions<any>,
+  options: any,
   parser: TSDocParser,
   commentPath?: AstPath<any>
 ): Doc {
@@ -162,10 +150,14 @@ export function formatTSDocComment(
     const model = buildCommentModel(parserContext.docComment, fullComment);
 
     // Apply normalizations and transformations
-    const normalizedModel = applyNormalizations(model, tsdocOptions, commentPath);
+    const normalizedModel = applyNormalizations(
+      model,
+      tsdocOptions,
+      commentPath
+    );
 
     // Convert model to Prettier Doc
-    const result = buildPrettierDoc(normalizedModel, options, parserContext, tsdocOptions);
+    const result = buildPrettierDoc(normalizedModel, options, tsdocOptions);
 
     // Update telemetry
     telemetry.commentsProcessed++;
@@ -335,8 +327,7 @@ function deduplicateReleaseTags(
  */
 function formatTextWithMarkdown(
   text: string,
-  options: ParserOptions<any>,
-  originalIndentation: string = ''
+  options: ParserOptions<any>
 ): any {
   if (!text.trim()) {
     return null;
@@ -345,29 +336,33 @@ function formatTextWithMarkdown(
   try {
     // Strip comment marks for processing
     const cleanText = stripCommentMarks(text);
-    
+
     if (process.env.PRETTIER_TSDOC_DEBUG === '1') {
       const logger = (options as any).logger;
       if (logger?.warn) {
         logger.warn('formatTextWithMarkdown input:', JSON.stringify(text));
-        logger.warn('formatTextWithMarkdown cleanText:', JSON.stringify(cleanText));
+        logger.warn(
+          'formatTextWithMarkdown cleanText:',
+          JSON.stringify(cleanText)
+        );
       }
     }
-    
+
     // Apply enhanced markdown-aware text formatting
     const formatted = formatMarkdownText(cleanText, options);
-    
-    
+
     return formatted;
-    
   } catch (error) {
     if (process.env.PRETTIER_TSDOC_DEBUG === '1') {
       const logger = (options as any).logger;
       if (logger?.warn) {
-        logger.warn('Markdown formatting failed, falling back to basic formatting:', error instanceof Error ? error.message : String(error));
+        logger.warn(
+          'Markdown formatting failed, falling back to basic formatting:',
+          error instanceof Error ? error.message : String(error)
+        );
       }
     }
-    
+
     // Fallback to the original text formatting
     return formatTextContent(text, options);
   }
@@ -380,19 +375,19 @@ function formatMarkdownText(text: string, options: ParserOptions<any>): any {
   if (!text.trim()) {
     return null;
   }
-  
+
   // Preserve inline tags to prevent them from being split during text wrapping
   const { text: textWithTokens, tokens } = preserveInlineTags(text);
-  
+
   // Split text into lines to process properly
   const lines = textWithTokens.split('\n');
   const result: any[] = [];
   let currentParagraph: string[] = [];
-  let lastWasListItem = false;
-  
+  let _lastWasListItem = false;
+
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i].trim();
-    
+
     if (!line) {
       // Empty line - end current paragraph if any
       if (currentParagraph.length > 0) {
@@ -400,11 +395,11 @@ function formatMarkdownText(text: string, options: ParserOptions<any>): any {
         const wrapped = wrapTextToString(paragraphText, options);
         result.push(wrapped);
         currentParagraph = [];
-        
+
         // Add empty string to represent paragraph break (will become empty comment line)
         result.push('');
       }
-      lastWasListItem = false;
+      _lastWasListItem = false;
     } else if (line.match(/^[-*+]\s/)) {
       // List item - end current paragraph first
       if (currentParagraph.length > 0) {
@@ -414,14 +409,14 @@ function formatMarkdownText(text: string, options: ParserOptions<any>): any {
         currentParagraph = [];
         // Don't add extra empty line before list - spacing will be handled by the existing paragraph breaks
       }
-      
+
       // Collect all content for this list item (including continuation lines)
       const listContent: string[] = [];
       const match = line.match(/^([-*+])\s(.+)$/);
       if (match) {
         const [, marker, content] = match;
         listContent.push(content);
-        
+
         // Look ahead for continuation lines
         let j = i + 1;
         while (j < lines.length) {
@@ -439,37 +434,41 @@ function formatMarkdownText(text: string, options: ParserOptions<any>): any {
             j++;
           }
         }
-        
+
         // Join all content and wrap
         const fullContent = listContent.join(' ');
         const wrappedLines = wrapListItemContent(fullContent, options);
         if (process.env.PRETTIER_TSDOC_DEBUG === '1') {
-          console.debug('List item wrapped lines:', JSON.stringify(wrappedLines));
+          console.debug(
+            'List item wrapped lines:',
+            JSON.stringify(wrappedLines)
+          );
         }
         result.push({
           type: 'list-item',
           marker,
-          lines: wrappedLines
+          lines: wrappedLines,
         });
       }
-      lastWasListItem = true;
+      _lastWasListItem = true;
     } else {
       // Regular text line - add to current paragraph
       currentParagraph.push(line);
-      lastWasListItem = false;
+      _lastWasListItem = false;
     }
   }
-  
+
   // Handle remaining paragraph
   if (currentParagraph.length > 0) {
     const paragraphText = currentParagraph.join(' ');
     const wrapped = wrapTextToString(paragraphText, options);
     result.push(wrapped);
   }
-  
+
   // Restore inline tags in the final result
-  const finalResult = result.length > 0 ? result : [wrapTextToString(textWithTokens, options)];
-  
+  const finalResult =
+    result.length > 0 ? result : [wrapTextToString(textWithTokens, options)];
+
   return finalResult.map((item: any) => {
     if (typeof item === 'string') {
       return restoreInlineTags(item, tokens);
@@ -477,7 +476,9 @@ function formatMarkdownText(text: string, options: ParserOptions<any>): any {
       // Restore inline tags in list item lines
       return {
         ...item,
-        lines: item.lines.map((line: string) => restoreInlineTags(line, tokens))
+        lines: item.lines.map((line: string) =>
+          restoreInlineTags(line, tokens)
+        ),
       };
     }
     return item;
@@ -490,16 +491,16 @@ function formatMarkdownText(text: string, options: ParserOptions<any>): any {
 function wrapTextToString(text: string, options: ParserOptions<any>): string {
   const printWidth = options.printWidth || 80;
   const availableWidth = printWidth - 3; // Account for "* "
-  
+
   if (text.length <= availableWidth) {
     return text;
   }
-  
+
   // Simple word wrapping
   const words = text.split(/\s+/);
   const lines: string[] = [];
   let currentLine = '';
-  
+
   for (const word of words) {
     if (currentLine.length + word.length + 1 <= availableWidth) {
       currentLine += (currentLine ? ' ' : '') + word;
@@ -513,70 +514,36 @@ function wrapTextToString(text: string, options: ParserOptions<any>): string {
       }
     }
   }
-  
+
   if (currentLine) {
     lines.push(currentLine);
   }
-  
+
   return lines.join('\n');
 }
 
 /**
  * Wrap list item content into an array of lines
  */
-function wrapListItemContent(text: string, options: ParserOptions<any>): string[] {
+function wrapListItemContent(
+  text: string,
+  options: ParserOptions<any>
+): string[] {
   const printWidth = options.printWidth || 80;
   const availableWidth = printWidth - 3; // Account for " * " (3 characters) - the "- " is part of content
-  
+
   // First, normalize the text by collapsing whitespace and newlines
   const normalizedText = text.replace(/\s+/g, ' ').trim();
-  
+
   if (normalizedText.length <= availableWidth) {
     return [normalizedText];
   }
-  
+
   // Simple word wrapping
   const words = normalizedText.split(/\s+/);
   const lines: string[] = [];
   let currentLine = '';
-  
-  for (const word of words) {
-    if (currentLine.length + word.length + 1 <= availableWidth) {
-      currentLine += (currentLine ? ' ' : '') + word;
-    } else {
-      if (currentLine) {
-        lines.push(currentLine);
-        currentLine = word;
-      } else {
-        lines.push(word); // Word is too long, but include it anyway
-        currentLine = '';
-      }
-    }
-  }
-  
-  if (currentLine) {
-    lines.push(currentLine);
-  }
-  
-  return lines;
-}
 
-/**
- * Wrap text for list items with proper continuation indentation (legacy)
- */
-function wrapTextForList(text: string, options: ParserOptions<any>, baseIndent: number): string {
-  const printWidth = options.printWidth || 80;
-  const availableWidth = printWidth - 3 - baseIndent; // Account for "* " and base indentation
-  
-  if (text.length <= availableWidth) {
-    return text;
-  }
-  
-  // Simple word wrapping for list items
-  const words = text.split(/\s+/);
-  const lines: string[] = [];
-  let currentLine = '';
-  
   for (const word of words) {
     if (currentLine.length + word.length + 1 <= availableWidth) {
       currentLine += (currentLine ? ' ' : '') + word;
@@ -590,12 +557,12 @@ function wrapTextForList(text: string, options: ParserOptions<any>, baseIndent: 
       }
     }
   }
-  
+
   if (currentLine) {
     lines.push(currentLine);
   }
-  
-  return lines.join('\n' + ' '.repeat(baseIndent + 2)); // Continuation indent
+
+  return lines;
 }
 
 /**
@@ -604,7 +571,6 @@ function wrapTextForList(text: string, options: ParserOptions<any>, baseIndent: 
 function buildPrettierDoc(
   model: TSDocCommentModel,
   options: ParserOptions<any>,
-  parserContext?: any,
   tsdocOptions?: TSDocPluginOptions
 ): Doc {
   const parts: any[] = [];
@@ -619,7 +585,7 @@ function buildPrettierDoc(
     if (process.env.PRETTIER_TSDOC_DEBUG === '1') {
       console.debug('Summary content:', JSON.stringify(model.summary.content));
     }
-    
+
     const summaryContent = formatTextWithMarkdown(
       model.summary.content,
       options
@@ -636,12 +602,14 @@ function buildPrettierDoc(
           if (index > 0) {
             parts.push(hardline);
           }
-          
+
           if (typeof line === 'object' && line.type === 'list-item') {
             // Handle list items with proper continuation indentation
             const listItem = line as any;
             // First line with marker
-            parts.push(createCommentLine(`${listItem.marker} ${listItem.lines[0]}`));
+            parts.push(
+              createCommentLine(`${listItem.marker} ${listItem.lines[0]}`)
+            );
             // Continuation lines with proper indentation - align with the content after the marker
             for (let i = 1; i < listItem.lines.length; i++) {
               parts.push(hardline);
@@ -721,7 +689,11 @@ function buildPrettierDoc(
       description: p.description,
       rawNode: p.rawNode,
     }));
-    const alignedParams = printAligned(paramTags, width, tsdocOptions?.alignParamTags ?? false);
+    const alignedParams = printAligned(
+      paramTags,
+      width,
+      tsdocOptions?.alignParamTags ?? false
+    );
     for (const paramLine of alignedParams) {
       parts.push(hardline);
       parts.push(paramLine);
@@ -739,7 +711,11 @@ function buildPrettierDoc(
       description: tp.description,
       rawNode: tp.rawNode,
     }));
-    const alignedTypeParams = printAligned(typeParamTags, width, tsdocOptions?.alignParamTags ?? false);
+    const alignedTypeParams = printAligned(
+      typeParamTags,
+      width,
+      tsdocOptions?.alignParamTags ?? false
+    );
     for (const typeParamLine of alignedTypeParams) {
       parts.push(hardline);
       parts.push(typeParamLine);
@@ -761,15 +737,16 @@ function buildPrettierDoc(
 
   // Other tags (like @example, @see, etc.)
   if (model.otherTags.length > 0) {
-    const needsLineBeforeOtherTags = hasContent || hasParamLikeTags || model.returns;
-    
+    const needsLineBeforeOtherTags =
+      hasContent || hasParamLikeTags || model.returns;
+
     for (const tag of model.otherTags) {
       if (needsLineBeforeOtherTags) {
         parts.push(hardline);
         parts.push(createEmptyCommentLine());
       }
       parts.push(hardline);
-      parts.push(formatOtherTag(tag, options));
+      parts.push(formatOtherTag(tag));
     }
   }
 
@@ -781,9 +758,9 @@ function buildPrettierDoc(
 }
 
 /**
- * Format other tags like @example, @see, etc.
+ * Format other tags like `@example`, `@see`, etc.
  */
-function formatOtherTag(tag: any, options: ParserOptions<any>): any {
+function formatOtherTag(tag: any): any {
   const tagName = tag.tagName.startsWith('@') ? tag.tagName : `@${tag.tagName}`;
   const content = tag.content.trim();
 
@@ -793,7 +770,7 @@ function formatOtherTag(tag: any, options: ParserOptions<any>): any {
 
   // For @example tags, handle embedded code blocks specially
   if (tagName === '@example') {
-    return formatExampleTag(tag, options);
+    return formatExampleTag(tag);
   }
 
   // For other tags, format content with text wrapping
@@ -803,33 +780,33 @@ function formatOtherTag(tag: any, options: ParserOptions<any>): any {
 /**
  * Format @example tags with potential embedded code blocks
  */
-function formatExampleTag(tag: any, options: ParserOptions<any>): any {
+function formatExampleTag(tag: any): any {
   const content = tag.content.trim();
-  
+
   if (!content) {
     return createCommentLine('@example');
   }
 
   // Use Prettier's markdown formatter for all @example content
-  return formatExampleWithMarkdown(content, options);
+  return formatExampleWithMarkdown(content);
 }
 
 /**
  * Format @example content using enhanced code block formatting
  */
-function formatExampleWithMarkdown(content: string, options: ParserOptions<any>): any {
+function formatExampleWithMarkdown(content: string): any {
   const parts: any[] = [];
-  
+
   // Split content into lines and process each part
   const lines = content.split('\n');
   let inCodeBlock = false;
   let codeBlockLanguage = '';
   let codeBlockLines: string[] = [];
   let firstTextLine = true;
-  
+
   for (const line of lines) {
     const trimmedLine = line.trim();
-    
+
     if (trimmedLine.startsWith('```')) {
       if (!inCodeBlock) {
         // Starting a code block
@@ -841,13 +818,16 @@ function formatExampleWithMarkdown(content: string, options: ParserOptions<any>)
       } else {
         // Ending a code block - format the collected code
         inCodeBlock = false;
-        
+
         // Format the code block content using Prettier for supported languages
         if (codeBlockLines.length > 0) {
           const codeContent = codeBlockLines.join('\n');
           try {
-            const formattedCode = formatCodeBlock(codeContent, codeBlockLanguage, options);
-            
+            const formattedCode = formatCodeBlock(
+              codeContent,
+              codeBlockLanguage
+            );
+
             // Add the formatted code lines
             const formattedLines = formattedCode.split('\n');
             for (const codeLine of formattedLines) {
@@ -865,7 +845,7 @@ function formatExampleWithMarkdown(content: string, options: ParserOptions<any>)
             }
           }
         }
-        
+
         // Add closing code fence
         parts.push(hardline);
         parts.push(createCommentLine(trimmedLine));
@@ -890,27 +870,7 @@ function formatExampleWithMarkdown(content: string, options: ParserOptions<any>)
       }
     }
   }
-  
-  return parts;
-}
 
-/**
- * Fallback @example formatting when Prettier markdown fails
- */
-function formatExampleFallback(content: string): any {
-  const parts: any[] = [];
-  parts.push(createCommentLine('@example'));
-  
-  const lines = content.split('\n');
-  for (const line of lines) {
-    parts.push(hardline);
-    if (line.trim()) {
-      parts.push(createCommentLine(line));
-    } else {
-      parts.push(createEmptyCommentLine());
-    }
-  }
-  
   return parts;
 }
 
@@ -919,60 +879,66 @@ function formatExampleFallback(content: string): any {
  */
 const LANGUAGE_TO_PARSER: Record<string, string> = {
   // TypeScript/JavaScript
-  'typescript': 'typescript',
-  'ts': 'typescript', 
-  'javascript': 'babel',
-  'js': 'babel',
-  'jsx': 'babel',
-  'tsx': 'typescript',
-  
+  typescript: 'typescript',
+  ts: 'typescript',
+  javascript: 'babel',
+  js: 'babel',
+  jsx: 'babel',
+  tsx: 'typescript',
+
   // Web technologies
-  'html': 'html',
-  'css': 'css',
-  'scss': 'scss',
-  'less': 'less',
-  
+  html: 'html',
+  css: 'css',
+  scss: 'scss',
+  less: 'less',
+
   // Data formats
-  'json': 'json',
-  'json5': 'json5',
-  'yaml': 'yaml',
-  'yml': 'yaml',
-  
+  json: 'json',
+  json5: 'json5',
+  yaml: 'yaml',
+  yml: 'yaml',
+
   // Other
-  'markdown': 'markdown',
-  'md': 'markdown',
-  'graphql': 'graphql',
+  markdown: 'markdown',
+  md: 'markdown',
+  graphql: 'graphql',
 };
 
 /**
  * Format code block using Prettier with appropriate parser for the language
  */
-function formatCodeBlock(code: string, language: string, options: ParserOptions<any>): string {
+function formatCodeBlock(code: string, language: string): string {
   if (!code.trim()) {
     return code;
   }
-  
+
   const parser = LANGUAGE_TO_PARSER[language.toLowerCase()];
-  
+
   if (!parser) {
     // For unsupported languages, return as-is but with basic whitespace cleanup
     return code.trim();
   }
-  
+
   // Since Prettier's format functions are async and we're in a sync context,
   // we use enhanced basic formatting for now
   // TODO: In the future, consider restructuring to support async formatting
-  
+
   if (process.env.PRETTIER_TSDOC_DEBUG === '1') {
-    console.debug(`Formatting ${language} code with basic formatter:`, JSON.stringify(code.substring(0, 50)));
+    console.debug(
+      `Formatting ${language} code with basic formatter:`,
+      JSON.stringify(code.substring(0, 50))
+    );
   }
-  
+
   const formatted = formatCodeBasic(code, language);
-  
+
   if (process.env.PRETTIER_TSDOC_DEBUG === '1') {
-    console.debug(`Formatted ${language} code result:`, JSON.stringify(formatted.substring(0, 50)));
+    console.debug(
+      `Formatted ${language} code result:`,
+      JSON.stringify(formatted.substring(0, 50))
+    );
   }
-  
+
   return formatted;
 }
 
@@ -981,12 +947,14 @@ function formatCodeBlock(code: string, language: string, options: ParserOptions<
  */
 function formatCodeBasic(code: string, language: string): string {
   let formatted = code.trim();
-  
+
   // Basic whitespace normalization for all languages
   formatted = formatted.replace(/\s+$/gm, ''); // Remove trailing whitespace from lines
-  
+
   // Language-specific basic formatting
-  if (['typescript', 'ts', 'javascript', 'js', 'jsx', 'tsx'].includes(language)) {
+  if (
+    ['typescript', 'ts', 'javascript', 'js', 'jsx', 'tsx'].includes(language)
+  ) {
     // JavaScript/TypeScript basic formatting
     formatted = formatted.replace(/\(\s+\)/g, '()'); // Fix function call spacing
     formatted = formatted.replace(/\s*=\s*/g, ' = '); // Fix assignment spacing
@@ -995,7 +963,7 @@ function formatCodeBasic(code: string, language: string): string {
     // HTML basic formatting - add proper indentation and line breaks
     formatted = formatHtmlBasic(formatted);
   }
-  
+
   return formatted;
 }
 
@@ -1004,55 +972,60 @@ function formatCodeBasic(code: string, language: string): string {
  */
 function formatHtmlBasic(html: string): string {
   // Remove all existing whitespace between tags
-  let formatted = html.replace(/>\s+</g, '><').trim();
-  
+  const formatted = html.replace(/>\s+</g, '><').trim();
+
   // Add line breaks and indentation
   const indent = '  '; // 2 spaces
   let level = 0;
   let result = '';
   let i = 0;
-  
+
   while (i < formatted.length) {
     if (formatted[i] === '<') {
       const tagEnd = formatted.indexOf('>', i);
       if (tagEnd === -1) break;
-      
+
       const tag = formatted.slice(i, tagEnd + 1);
       const isClosingTag = tag.startsWith('</');
-      const isSelfClosing = tag.endsWith('/>') || 
-                           ['<br>', '<hr>', '<img', '<input', '<meta', '<link'].some(t => tag.startsWith(t));
-      
+      const isSelfClosing =
+        tag.endsWith('/>') ||
+        ['<br>', '<hr>', '<img', '<input', '<meta', '<link'].some((t) =>
+          tag.startsWith(t)
+        );
+
       if (isClosingTag) {
         level--;
       }
-      
+
       // Add indentation
       if (result && !result.endsWith('\n')) {
         result += '\n';
       }
       result += indent.repeat(Math.max(0, level)) + tag;
-      
+
       if (!isClosingTag && !isSelfClosing) {
         level++;
       }
-      
+
       i = tagEnd + 1;
     } else {
       // Text content between tags
       const nextTag = formatted.indexOf('<', i);
-      const textContent = formatted.slice(i, nextTag === -1 ? formatted.length : nextTag).trim();
-      
+      const textContent = formatted
+        .slice(i, nextTag === -1 ? formatted.length : nextTag)
+        .trim();
+
       if (textContent) {
         if (result && !result.endsWith('\n')) {
           result += '\n';
         }
         result += indent.repeat(level) + textContent;
       }
-      
+
       i = nextTag === -1 ? formatted.length : nextTag;
     }
   }
-  
+
   return result;
 }
 

@@ -1,20 +1,21 @@
 /**
  * Utilities for formatting and aligning parameter-like tags.
- * Handles @param, @typeParam, @returns alignment and hyphen rules.
+ * Handles \@param, \@typeParam, \@returns alignment and hyphen rules.
  */
 
 import { doc } from 'prettier';
+import type { DocNode } from '@microsoft/tsdoc';
 import { extractTextFromNode } from '../models.js';
 import { formatTextContent, createCommentLine } from './text-width.js';
 
 const { builders } = doc;
-const { fill, line } = builders;
+const { fill: _fill, line: _line } = builders;
 
 export interface ParamTagInfo {
   tagName: string;
   name: string;
   description: string;
-  rawNode: any;
+  rawNode: DocNode | null;
 }
 
 export interface AlignmentGroup {
@@ -54,7 +55,9 @@ export function computeColumnWidths(tags: ParamTagInfo[]): number {
 
   return Math.max(
     ...tags.map((tag) => {
-      const tagName = tag.tagName.startsWith('@') ? tag.tagName : `@${tag.tagName}`;
+      const tagName = tag.tagName.startsWith('@')
+        ? tag.tagName
+        : `@${tag.tagName}`;
       const prefix = `${tagName} ${tag.name}`;
       return prefix.length + (tag.description ? 3 : 0); // +3 for " - "
     })
@@ -75,7 +78,9 @@ export function printAligned(
   const result: any[] = [];
 
   for (const tag of tags) {
-    const tagName = tag.tagName.startsWith('@') ? tag.tagName : `@${tag.tagName}`;
+    const tagName = tag.tagName.startsWith('@')
+      ? tag.tagName
+      : `@${tag.tagName}`;
     const prefix = `${tagName} ${tag.name}`;
 
     if (tag.description) {
@@ -100,21 +105,28 @@ export function printAligned(
           // Normal aligned format
           // Format description with proper wrapping and continuation indent
           const fullPrefix = `${prefix}${padding}- `;
-          const wrappedLines = wrapParamDescription(tag.description, fullPrefix.length);
-          
+          const wrappedLines = wrapParamDescription(
+            tag.description,
+            fullPrefix.length
+          );
+
           // Create the first line with the full prefix
-          result.push(createCommentLine([prefix, padding, '- ', wrappedLines[0]]));
-          
+          result.push(
+            createCommentLine([prefix, padding, '- ', wrappedLines[0]])
+          );
+
           // Create continuation lines with proper indentation (align with comment content)
           for (let i = 1; i < wrappedLines.length; i++) {
             const continuationIndent = '  '; // 2 spaces to align with comment content
-            result.push(createCommentLine([continuationIndent, wrappedLines[i]]));
+            result.push(
+              createCommentLine([continuationIndent, wrappedLines[i]])
+            );
           }
         }
       } else {
         // Non-aligned format - each tag is independent
         const padding = ' ';
-        
+
         // Check if the header would exceed effective width
         if (prefix.length + 3 > effectiveWidth) {
           // Break header and description onto separate lines
@@ -125,15 +137,22 @@ export function printAligned(
         } else {
           // Simple non-aligned format
           const fullPrefix = `${prefix}${padding}- `;
-          const wrappedLines = wrapParamDescription(tag.description, fullPrefix.length);
-          
+          const wrappedLines = wrapParamDescription(
+            tag.description,
+            fullPrefix.length
+          );
+
           // Create the first line with the full prefix
-          result.push(createCommentLine([prefix, padding, '- ', wrappedLines[0]]));
-          
+          result.push(
+            createCommentLine([prefix, padding, '- ', wrappedLines[0]])
+          );
+
           // Create continuation lines with proper indentation
           for (let i = 1; i < wrappedLines.length; i++) {
             const continuationIndent = '  '; // 2 spaces to align with comment content
-            result.push(createCommentLine([continuationIndent, wrappedLines[i]]));
+            result.push(
+              createCommentLine([continuationIndent, wrappedLines[i]])
+            );
           }
         }
       }
@@ -152,16 +171,16 @@ export function printAligned(
 function wrapParamDescription(text: string, prefixLength: number): string[] {
   const printWidth = 80; // Default print width
   const availableWidth = printWidth - 3 - prefixLength; // Account for " * " and prefix
-  
+
   if (text.length <= availableWidth) {
     return [text];
   }
-  
+
   // Simple word wrapping
   const words = text.split(/\s+/);
   const lines: string[] = [];
   let currentLine = '';
-  
+
   for (const word of words) {
     if (currentLine.length + word.length + 1 <= availableWidth) {
       currentLine += (currentLine ? ' ' : '') + word;
@@ -175,11 +194,11 @@ function wrapParamDescription(text: string, prefixLength: number): string[] {
       }
     }
   }
-  
+
   if (currentLine) {
     lines.push(currentLine);
   }
-  
+
   return lines;
 }
 

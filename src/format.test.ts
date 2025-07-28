@@ -393,7 +393,7 @@ describe('Phase 8: Default Release Tags', () => {
   test('detects release tags in various tag types correctly', () => {
     const config = createTSDocConfiguration();
     const parser = new TSDocParser(config);
-    
+
     // Test with @experimental tag which is also a release tag
     const options1 = {
       printWidth: 80,

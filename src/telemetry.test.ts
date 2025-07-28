@@ -7,7 +7,7 @@ describe('Phase 7: Telemetry & Debug Features', () => {
   test('tracks telemetry data correctly', () => {
     const config = createTSDocConfiguration();
     const parser = new TSDocParser(config);
-    const options = { printWidth: 80, tabWidth: 2, useTabs: false };
+    const options: any = { printWidth: 80, tabWidth: 2, useTabs: false };
 
     // Reset telemetry before test
     resetTelemetry();
@@ -58,7 +58,7 @@ describe('Phase 7: Telemetry & Debug Features', () => {
     // Try to format something that might cause formatting errors
     try {
       formatTSDocComment('*\n * ' + 'x'.repeat(10000) + '\n ', options, parser);
-    } catch (error) {
+    } catch (_error) {
       // Expected if it fails hard
     }
 

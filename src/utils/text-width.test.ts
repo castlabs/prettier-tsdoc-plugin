@@ -15,10 +15,10 @@ describe('Text Width Utilities', () => {
     };
 
     // With no indentation, effective width = 80 - 3 (for "* ") = 77
-    expect(effectiveWidth(options, 0)).toBe(77);
+    expect(effectiveWidth(options as any, 0)).toBe(77);
 
     // With indentation level 1 (2 spaces), effective width = 80 - 2 - 3 = 75
-    expect(effectiveWidth(options, 1)).toBe(75);
+    expect(effectiveWidth(options as any, 1)).toBe(75);
   });
 
   test('enforces minimum width', () => {
@@ -29,7 +29,7 @@ describe('Text Width Utilities', () => {
     };
 
     // Even with large indentation, should maintain minimum width of 20
-    expect(effectiveWidth(options, 10)).toBe(20);
+    expect(effectiveWidth(options as any, 10)).toBe(20);
   });
 
   test('handles tabs vs spaces', () => {
@@ -46,10 +46,10 @@ describe('Text Width Utilities', () => {
     };
 
     // With spaces: 80 - (1 * 4) - 3 = 73
-    expect(effectiveWidth(spacesOptions, 1)).toBe(73);
+    expect(effectiveWidth(spacesOptions as any, 1)).toBe(73);
 
     // With tabs: 80 - 1 - 3 = 76
-    expect(effectiveWidth(tabsOptions, 1)).toBe(76);
+    expect(effectiveWidth(tabsOptions as any, 1)).toBe(76);
   });
 
   test('formats text content', () => {

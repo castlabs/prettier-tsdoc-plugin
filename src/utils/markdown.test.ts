@@ -65,7 +65,7 @@ const x = 1;
     }`;
 
     const options = { printWidth: 80, tabWidth: 2, useTabs: false };
-    const formatted = formatFencedCode(code, 'typescript', options);
+    const formatted = formatFencedCode(code, 'typescript', options as any);
 
     // Our basic formatter should at least trim and normalize semicolons
     expect(formatted).toContain('function');
@@ -80,7 +80,7 @@ const x = 1;
     function test(){console.log(x);}`;
 
     const options = { printWidth: 80, tabWidth: 2, useTabs: false };
-    const formatted = formatFencedCode(code, 'js', options);
+    const formatted = formatFencedCode(code, 'js', options as any);
 
     expect(formatted).toContain('const x=1,y=2;');
     expect(formatted).toContain('function test(){console.log(x);}');
@@ -89,7 +89,7 @@ const x = 1;
   test('handles unknown language as text', () => {
     const code = 'some unknown code';
     const options = { printWidth: 80, tabWidth: 2, useTabs: false };
-    const formatted = formatFencedCode(code, 'unknownlang', options);
+    const formatted = formatFencedCode(code, 'unknownlang', options as any);
 
     expect(formatted).toBe(code);
   });
@@ -102,7 +102,7 @@ const x = 1;
   2.    Second item`;
 
     const options = { printWidth: 80, tabWidth: 2, useTabs: false };
-    const formatted = formatMarkdown(markdown, options);
+    const formatted = formatMarkdown(markdown, options as any);
 
     expect(formatted).toContain('- Item 1');
     expect(formatted).toContain('- Item 2');
@@ -129,10 +129,10 @@ const x = 1;
     const options = { printWidth: 80 };
 
     // First call
-    const result1 = formatFencedCode(code, 'js', options);
+    const result1 = formatFencedCode(code, 'js', options as any);
 
     // Second call should return cached result
-    const result2 = formatFencedCode(code, 'js', options);
+    const result2 = formatFencedCode(code, 'js', options as any);
 
     expect(result1).toBe(result2);
   });

@@ -12,7 +12,8 @@ proper syntax highlighting preservation.
 
 1. **Language Detection and Mapping**
    - Comprehensive language-to-parser mapping table
-   - Support for TypeScript, JavaScript, HTML, CSS, JSON, YAML, Markdown, GraphQL
+   - Support for TypeScript, JavaScript, HTML, CSS, JSON, YAML, Markdown,
+     GraphQL
    - Graceful fallback for unsupported languages
 
 2. **Enhanced Code Formatters**
@@ -35,21 +36,32 @@ proper syntax highlighting preservation.
 ```typescript
 // Language mapping for automatic detection
 const LANGUAGE_TO_PARSER: Record<string, string> = {
-  'typescript': 'typescript', 'ts': 'typescript',
-  'javascript': 'babel', 'js': 'babel', 'jsx': 'babel',
-  'html': 'html', 'css': 'css', 'scss': 'scss',
-  'json': 'json', 'yaml': 'yaml', 'markdown': 'markdown',
-  'graphql': 'graphql'
+  typescript: 'typescript',
+  ts: 'typescript',
+  javascript: 'babel',
+  js: 'babel',
+  jsx: 'babel',
+  html: 'html',
+  css: 'css',
+  scss: 'scss',
+  json: 'json',
+  yaml: 'yaml',
+  markdown: 'markdown',
+  graphql: 'graphql',
 };
 
 // Enhanced formatters for specific languages
-function formatCodeBlock(code: string, language: string, options: ParserOptions<any>): string {
+function formatCodeBlock(
+  code: string,
+  language: string,
+  options: ParserOptions<any>
+): string {
   const parser = LANGUAGE_TO_PARSER[language.toLowerCase()];
-  
+
   if (!parser) {
     return code.trim(); // Unsupported language fallback
   }
-  
+
   return formatCodeBasic(code, language);
 }
 
@@ -77,7 +89,8 @@ function formatHtmlBasic(html: string): string {
 - **HTML Formatting**: Custom implementation due to Prettier async constraints
 - **Performance**: Language detection is lightweight string matching
 - **Extensibility**: Easy to add new languages by extending the mapping table
-- **Error Handling**: Graceful degradation for parsing errors or unsupported syntax
+- **Error Handling**: Graceful degradation for parsing errors or unsupported
+  syntax
 
 ## Migration Notes
 
@@ -88,7 +101,9 @@ continue to work, but now with improved multi-language support.
 ## Testing
 
 Comprehensive test suite in `src/multi-language-formatting.test.ts`:
+
 - 12 tests for individual language formatting
 - 2 integration tests with other TSDoc features
-- Coverage for TypeScript, JavaScript, HTML, CSS, JSON, and unsupported languages
+- Coverage for TypeScript, JavaScript, HTML, CSS, JSON, and unsupported
+  languages
 - Edge cases like empty code blocks and mixed content

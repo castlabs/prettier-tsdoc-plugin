@@ -8,9 +8,9 @@
  * - This is the third item and I hope that this very long line will be wrapped by the plugin and then it will continue on the next line
  *
  * @param name - The name param should receive a and maybe it should also be formatted over multiple lines.
- * @param second The second thing
+ * @param second - The second thing
  */
-export function long_line_test(name: string, second: string) {
+export function long_line_test(name: string, _second: string) {
   console.log(`Hello ${name}`);
 }
 

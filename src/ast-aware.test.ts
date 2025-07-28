@@ -18,7 +18,8 @@ describe('AST-Aware Release Tag Detection', () => {
       },
     };
 
-    const commentValue = '*\n * Function without context.\n * @param value - Input\n ';
+    const commentValue =
+      '*\n * Function without context.\n * @param value - Input\n ';
     const result = formatTSDocComment(commentValue, options, parser);
 
     expect(result).toBeDefined();
@@ -36,7 +37,8 @@ describe('AST-Aware Release Tag Detection', () => {
       },
     };
 
-    const commentValue = '*\n * Function without AST context.\n * @param value - Input\n ';
+    const commentValue =
+      '*\n * Function without AST context.\n * @param value - Input\n ';
     // Call without commentPath (AST context) - should fallback to legacy behavior
     const result = formatTSDocComment(commentValue, options, parser);
 
@@ -55,7 +57,8 @@ describe('AST-Aware Release Tag Detection', () => {
       },
     };
 
-    const commentValue = '*\n * Function with existing tag.\n * @public\n * @param value - Input\n ';
+    const commentValue =
+      '*\n * Function with existing tag.\n * @public\n * @param value - Input\n ';
     const result = formatTSDocComment(commentValue, options, parser);
 
     expect(result).toBeDefined();
@@ -73,7 +76,8 @@ describe('AST-Aware Release Tag Detection', () => {
       },
     };
 
-    const commentValue = '*\n * Function without release tag.\n * @param value - Input\n ';
+    const commentValue =
+      '*\n * Function without release tag.\n * @param value - Input\n ';
     const result = formatTSDocComment(commentValue, options, parser);
 
     expect(result).toBeDefined();
@@ -91,7 +95,8 @@ describe('AST-Aware Release Tag Detection', () => {
       },
     };
 
-    const commentValue = '*\n * Function without release tag.\n * @param value - Input\n ';
+    const commentValue =
+      '*\n * Function without release tag.\n * @param value - Input\n ';
     const result = formatTSDocComment(commentValue, options, parser);
 
     expect(result).toBeDefined();
@@ -110,7 +115,8 @@ describe('AST-Aware Release Tag Detection', () => {
       },
     };
 
-    const commentValue = '*\n * Function that might be a class member.\n * @param value - Input\n ';
+    const commentValue =
+      '*\n * Function that might be a class member.\n * @param value - Input\n ';
     const result = formatTSDocComment(commentValue, options, parser);
 
     expect(result).toBeDefined();
@@ -141,8 +147,14 @@ describe('AST Analysis Edge Cases', () => {
       },
     };
 
-    const commentValue = '*\n * Function that will cause AST error.\n * @param value - Input\n ';
-    const result = formatTSDocComment(commentValue, options, parser, mockCommentPath as any);
+    const commentValue =
+      '*\n * Function that will cause AST error.\n * @param value - Input\n ';
+    const result = formatTSDocComment(
+      commentValue,
+      options,
+      parser,
+      mockCommentPath as any
+    );
 
     expect(result).toBeDefined();
     // Should fallback gracefully and still format the comment
@@ -156,7 +168,8 @@ describe('AST Analysis Edge Cases', () => {
       // No tsdoc options - should use defaults
     };
 
-    const commentValue = '*\n * Function with default options.\n * @param value - Input\n ';
+    const commentValue =
+      '*\n * Function with default options.\n * @param value - Input\n ';
     const result = formatTSDocComment(commentValue, options, parser);
 
     expect(result).toBeDefined();
@@ -166,24 +179,40 @@ describe('AST Analysis Edge Cases', () => {
   test('respects all configuration combinations', () => {
     const testCases = [
       {
-        config: { onlyExportedAPI: true, inheritanceAware: true, defaultReleaseTag: '@internal' },
+        config: {
+          onlyExportedAPI: true,
+          inheritanceAware: true,
+          defaultReleaseTag: '@internal',
+        },
         description: 'Full AST-aware mode',
       },
       {
-        config: { onlyExportedAPI: false, inheritanceAware: true, defaultReleaseTag: '@internal' },
+        config: {
+          onlyExportedAPI: false,
+          inheritanceAware: true,
+          defaultReleaseTag: '@internal',
+        },
         description: 'Legacy mode with inheritance',
       },
       {
-        config: { onlyExportedAPI: true, inheritanceAware: false, defaultReleaseTag: '@public' },
+        config: {
+          onlyExportedAPI: true,
+          inheritanceAware: false,
+          defaultReleaseTag: '@public',
+        },
         description: 'Export-aware only, no inheritance',
       },
       {
-        config: { onlyExportedAPI: false, inheritanceAware: false, defaultReleaseTag: null },
+        config: {
+          onlyExportedAPI: false,
+          inheritanceAware: false,
+          defaultReleaseTag: null,
+        },
         description: 'All features disabled',
       },
     ];
 
-    testCases.forEach(({ config, description }) => {
+    testCases.forEach(({ config, description: _description }) => {
       const options = {
         printWidth: 80,
         tabWidth: 2,
@@ -191,7 +220,8 @@ describe('AST Analysis Edge Cases', () => {
         tsdoc: config,
       };
 
-      const commentValue = '*\n * Function for configuration test.\n * @param value - Input\n ';
+      const commentValue =
+        '*\n * Function for configuration test.\n * @param value - Input\n ';
       const result = formatTSDocComment(commentValue, options, parser);
 
       expect(result).toBeDefined();

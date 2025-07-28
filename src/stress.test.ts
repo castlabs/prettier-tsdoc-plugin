@@ -135,7 +135,10 @@ describe('Phase 7: Stress Tests & Performance', () => {
         }
       } catch (error) {
         // Expected for some malformed comments
-        console.warn('Malformed comment handled:', error.message);
+        console.warn(
+          'Malformed comment handled:',
+          error instanceof Error ? error.message : String(error)
+        );
       }
     }
 

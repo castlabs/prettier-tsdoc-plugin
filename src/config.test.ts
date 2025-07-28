@@ -268,21 +268,15 @@ describe('Default Release Tag', () => {
     };
 
     const modelWithAlpha = {
-      otherTags: [
-        { tagName: '@alpha', content: '' },
-      ],
+      otherTags: [{ tagName: '@alpha', content: '' }],
     };
 
     const modelWithInternal = {
-      otherTags: [
-        { tagName: '@internal', content: '' },
-      ],
+      otherTags: [{ tagName: '@internal', content: '' }],
     };
 
     const modelWithExperimental = {
-      otherTags: [
-        { tagName: '@experimental', content: '' },
-      ],
+      otherTags: [{ tagName: '@experimental', content: '' }],
     };
 
     expect(hasReleaseTag(modelWithPublic)).toBe(true);

@@ -445,9 +445,11 @@ npm run benchmark
 
 ## Building
 
-This project uses Rollup to create a single bundled entry point. The build process includes:
+This project uses Rollup to create a single bundled entry point. The build
+process includes:
 
-- **TypeScript compilation**: TypeScript is compiled to JavaScript with source maps
+- **TypeScript compilation**: TypeScript is compiled to JavaScript with source
+  maps
 - **Bundling**: All source files are bundled into a single `dist/index.js` file
 - **Source maps**: Generated for debugging support
 
@@ -465,6 +467,7 @@ npm test
 ```
 
 The build output consists of:
+
 - `dist/index.js` - Single bundled entry point
 - `dist/index.js.map` - Source map for debugging
 

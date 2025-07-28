@@ -1,4 +1,4 @@
-import type { Plugin, AstPath, ParserOptions, Doc } from 'prettier';
+import type { Plugin, AstPath, ParserOptions } from 'prettier';
 import { TSDocParser } from '@microsoft/tsdoc';
 import { createTSDocConfiguration } from './parser-config.js';
 import { isTSDocCandidate } from './detection.js';
@@ -39,7 +39,7 @@ function getTSDocParser(extraTags: string[] = []): TSDocParser {
 /**
  * Handle comment printing for TSDoc comments.
  */
-function printComment(
+function _printComment(
   commentPath: AstPath<any>,
   options: ParserOptions<any>
 ): string {
@@ -55,7 +55,7 @@ function printComment(
 
   // For block comments, we need to wrap with /** and */
   const isBlockComment = comment.type === 'Block';
-  
+
   // Check if this is a TSDoc candidate
   if (!isTSDocCandidate(comment, (options as any).forceFormatTSDoc || false)) {
     // Return the original comment with proper wrapping
@@ -71,14 +71,19 @@ function printComment(
     const parser = getTSDocParser(extraTags);
 
     // Format the comment and convert to string
-    const formattedDoc = formatTSDocComment(comment.value, options, parser, commentPath);
+    const formattedDoc = formatTSDocComment(
+      comment.value,
+      options,
+      parser,
+      commentPath
+    );
     const formattedContent = docToString(formattedDoc);
-    
+
     // For block comments, wrap with /** and */
     if (isBlockComment) {
       return `/*${formattedContent}*/`;
     }
-    
+
     return formattedContent;
   } catch (error) {
     // Gracefully handle formatting errors
@@ -102,19 +107,19 @@ function docToString(doc: any): string {
   if (typeof doc === 'string') {
     return doc;
   }
-  
+
   if (typeof doc === 'number') {
     return String(doc);
   }
-  
+
   if (doc === null || doc === undefined) {
     return '';
   }
-  
+
   if (Array.isArray(doc)) {
     return doc.map(docToString).join('');
   }
-  
+
   if (doc && typeof doc === 'object') {
     // Handle Prettier Doc builders
     if (doc.type === 'concat' || (doc.parts && Array.isArray(doc.parts))) {
@@ -132,7 +137,11 @@ function docToString(doc: any): string {
     if (doc.type === 'fill' && doc.parts) {
       return doc.parts.map(docToString).join(' ');
     }
-    if (doc.type === 'break-parent' || doc.type === 'indent' || doc.type === 'dedent') {
+    if (
+      doc.type === 'break-parent' ||
+      doc.type === 'indent' ||
+      doc.type === 'dedent'
+    ) {
       return ''; // These are formatting control tokens, not content
     }
     if (doc.contents !== undefined) {
@@ -141,7 +150,7 @@ function docToString(doc: any): string {
     if (doc.parts !== undefined) {
       return doc.parts.map(docToString).join('');
     }
-    
+
     // Last resort: check for common properties
     if (doc.value !== undefined) {
       return docToString(doc.value);
@@ -150,7 +159,7 @@ function docToString(doc: any): string {
       return docToString(doc.text);
     }
   }
-  
+
   // Only return [object Object] if we truly can't extract anything
   if (process.env.PRETTIER_TSDOC_DEBUG === '1') {
     console.warn('Unable to convert doc to string:', doc);
@@ -177,46 +186,52 @@ function preprocessSource(text: string, options: ParserOptions<any>): string {
 
   // Match /** ... */ comments
   const tsdocRegex = /\/\*\*([\s\S]*?)\*\//g;
-  
+
   return text.replace(tsdocRegex, (match, commentContent) => {
     try {
-      // Create mock comment object for detection 
+      // Create mock comment object for detection
       // The comment content from regex doesn't include /** and */, but detection expects the * pattern
       const trimmedContent = commentContent.replace(/^\s*/, '');
       const mockComment = {
         value: `*\n${trimmedContent}`,
-        type: 'CommentBlock'
+        type: 'CommentBlock',
       };
-      
+
       // Check if this is a TSDoc candidate
       if (!isTSDocCandidate(mockComment, true)) {
         if (process.env.PRETTIER_TSDOC_DEBUG === '1') {
           const logger = (options as any).logger;
           if (logger?.warn) {
-            logger.warn('Not a TSDoc candidate:', JSON.stringify(mockComment.value.substring(0, 50)));
+            logger.warn(
+              'Not a TSDoc candidate:',
+              JSON.stringify(mockComment.value.substring(0, 50))
+            );
           }
         }
         return match; // Return original if not TSDoc
       }
-      
+
       if (process.env.PRETTIER_TSDOC_DEBUG === '1') {
         const logger = (options as any).logger;
         if (logger?.warn) {
-          logger.warn('Processing TSDoc comment:', JSON.stringify(mockComment.value.substring(0, 50)));
+          logger.warn(
+            'Processing TSDoc comment:',
+            JSON.stringify(mockComment.value.substring(0, 50))
+          );
         }
       }
-      
+
       // Get parser
       const extraTags = (options as any)?.tsdoc?.extraTags || [];
       const parser = getTSDocParser(extraTags);
-      
+
       // Format the comment
       const formattedDoc = formatTSDocComment(commentContent, options, parser);
       const formatted = docToString(formattedDoc);
-      
+
       // Return the formatted comment (already includes /** and */)
       return formatted;
-    } catch (error) {
+    } catch (_error) {
       // Return original on error
       return match;
     }
@@ -307,19 +322,22 @@ const plugin: Plugin = {
       type: 'string',
       category: 'TSDoc',
       default: '@internal',
-      description: 'Default release tag to add when no release tag is present (use null to disable)',
+      description:
+        'Default release tag to add when no release tag is present (use null to disable)',
     },
     onlyExportedAPI: {
       type: 'boolean',
       category: 'TSDoc',
       default: true,
-      description: 'Only add release tags to exported API constructs (AST-aware detection)',
+      description:
+        'Only add release tags to exported API constructs (AST-aware detection)',
     },
     inheritanceAware: {
       type: 'boolean',
       category: 'TSDoc',
       default: true,
-      description: 'Respect inheritance rules - skip tagging class/interface members',
+      description:
+        'Respect inheritance rules - skip tagging class/interface members',
     },
   },
 };

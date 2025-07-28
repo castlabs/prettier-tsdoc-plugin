@@ -1,8 +1,8 @@
-import type { ParserOptions } from 'prettier';
+import type { ParserOptions, Doc } from 'prettier';
 import { doc } from 'prettier';
 
 const { builders } = doc;
-const { fill, line, softline } = builders;
+const { fill, line: _line, softline: _softline } = builders;
 
 /**
  * Calculate the effective width available for comment content.
@@ -72,7 +72,10 @@ export function createEmptyCommentLine(): string {
 /**
  * Convert TSDoc text content to wrapped format, handling line breaks and markdown.
  */
-export function formatTextContent(text: string, options?: any): any {
+export function formatTextContent(
+  text: string,
+  options?: ParserOptions<any>
+): Doc | string | null {
   if (!text.trim()) {
     return null;
   }
@@ -94,7 +97,10 @@ export function formatTextContent(text: string, options?: any): any {
 /**
  * Format markdown content while preserving structure.
  */
-function formatMarkdownContent(text: string, options?: any): any {
+function formatMarkdownContent(
+  text: string,
+  _options?: ParserOptions<any>
+): Doc | string | null {
   // For now, preserve the markdown structure more carefully
   // Split by lines and handle each type
   const lines = text.split('\n');

@@ -36,7 +36,11 @@ function docToString(doc: any): string {
     if (doc.type === 'fill' && doc.parts) {
       return doc.parts.map(docToString).join(' ');
     }
-    if (doc.type === 'break-parent' || doc.type === 'indent' || doc.type === 'dedent') {
+    if (
+      doc.type === 'break-parent' ||
+      doc.type === 'indent' ||
+      doc.type === 'dedent'
+    ) {
       return ''; // These are formatting control tokens, not content
     }
     if (doc.contents !== undefined) {
@@ -73,7 +77,7 @@ describe('Multi-Language Code Block Formatting', () => {
 
     const result = formatTSDocComment(commentValue, options, parser);
     const output = docToString(result);
-    
+
     expect(output).toContain('```typescript');
     expect(output).toContain('const result = processData()'); // Spaces should be cleaned up
     expect(output).toContain('console.log(result)');
@@ -91,7 +95,7 @@ describe('Multi-Language Code Block Formatting', () => {
 
     const result = formatTSDocComment(commentValue, options, parser);
     const output = docToString(result);
-    
+
     expect(output).toContain('```html');
     expect(output).toContain('<html>');
     expect(output).toContain('  <head>');
@@ -112,7 +116,7 @@ describe('Multi-Language Code Block Formatting', () => {
 
     const result = formatTSDocComment(commentValue, options, parser);
     const output = docToString(result);
-    
+
     expect(output).toContain('```javascript');
     expect(output).toContain('function test()'); // Spaces cleaned up
     expect(output).toContain('return "hello"');
@@ -131,7 +135,7 @@ describe('Multi-Language Code Block Formatting', () => {
 
     const result = formatTSDocComment(commentValue, options, parser);
     const output = docToString(result);
-    
+
     expect(output).toContain('```python');
     expect(output).toContain('def hello():');
     expect(output).toContain('return "world"');
@@ -149,7 +153,7 @@ describe('Multi-Language Code Block Formatting', () => {
 
     const result = formatTSDocComment(commentValue, options, parser);
     const output = docToString(result);
-    
+
     expect(output).toContain('@example This is the description');
     expect(output).not.toMatch(/@example\s*\n.*This is the description/);
   });
@@ -170,7 +174,7 @@ describe('Multi-Language Code Block Formatting', () => {
 
     const result = formatTSDocComment(commentValue, options, parser);
     const output = docToString(result);
-    
+
     expect(output).toContain('```typescript');
     expect(output).toContain('const a = 1');
     expect(output).toContain('```html');
@@ -190,7 +194,7 @@ describe('Multi-Language Code Block Formatting', () => {
 
     const result = formatTSDocComment(commentValue, options, parser);
     const output = docToString(result);
-    
+
     // Focus on the code formatting which is the main feature being tested
     expect(output).toContain('@example Simple usage example');
     expect(output).toContain('```typescript');
@@ -207,7 +211,7 @@ describe('Multi-Language Code Block Formatting', () => {
 
     const result = formatTSDocComment(commentValue, options, parser);
     const output = docToString(result);
-    
+
     expect(output).toContain('```typescript');
     expect(output).toContain('```');
   });
@@ -223,7 +227,7 @@ describe('Multi-Language Code Block Formatting', () => {
 
     const result = formatTSDocComment(commentValue, options, parser);
     const output = docToString(result);
-    
+
     expect(output).toContain('```css');
     expect(output).toContain('.container');
     // Basic CSS formatting would normalize spacing
@@ -241,7 +245,7 @@ describe('Multi-Language Code Block Formatting', () => {
 
     const result = formatTSDocComment(commentValue, options, parser);
     const output = docToString(result);
-    
+
     expect(output).toContain('```json');
     expect(output).toContain('{"name":"test","value":123}');
     expect(output).toContain('```');
@@ -263,7 +267,7 @@ describe('Multi-Language Code Block Formatting', () => {
 
     const result = formatTSDocComment(commentValue, options, parser);
     const output = docToString(result);
-    
+
     expect(output).toContain('@example Usage instructions');
     expect(output).toContain('First, initialize the component:');
     expect(output).toContain('const comp = new Component()');
@@ -291,14 +295,14 @@ describe('Multi-Language Code Block Formatting', () => {
 
     const result = formatTSDocComment(commentValue, options, parser);
     const output = docToString(result);
-    
+
     // TypeScript formatting
     expect(output).toContain('const value = getDataFromAPI()');
-    
+
     // HTML formatting with indentation
     expect(output).toContain('<div>');
     expect(output).toContain('  <span>');
-    
+
     // JavaScript formatting
     expect(output).toContain('function display(val)');
     expect(output).toContain('return val.toString()');
@@ -324,7 +328,7 @@ describe('Integration with Other TSDoc Features', () => {
 
     const result = formatTSDocComment(commentValue, options, parser);
     const output = docToString(result);
-    
+
     expect(output).toContain('@param data');
     expect(output).toContain('@param config');
     expect(output).toContain('@returns');
@@ -348,7 +352,7 @@ describe('Integration with Other TSDoc Features', () => {
 
     const result = formatTSDocComment(commentValue, options, parser);
     const output = docToString(result);
-    
+
     // Focus on the main functionality - code block formatting
     expect(output).toContain('```typescript');
     expect(output).toContain('try {');

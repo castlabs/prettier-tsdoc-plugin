@@ -23,12 +23,12 @@ export interface TSDocPluginOptions {
   normalizeTagOrder?: boolean;
 
   /**
-   * Whether to deduplicate release tags (@public, @beta, @alpha, etc).
+   * Whether to deduplicate release tags (\@public, \@beta, \@alpha, etc).
    */
   dedupeReleaseTags?: boolean;
 
   /**
-   * Whether to split modifiers (@public, @readonly) to separate lines.
+   * Whether to split modifiers (\@public, \@readonly) to separate lines.
    */
   splitModifiers?: boolean;
 
@@ -45,7 +45,7 @@ export interface TSDocPluginOptions {
   /**
    * Tag spelling normalization mapping.
    * Keys are input tags, values are normalized output tags.
-   * Example: { "@return": "@returns", "@prop": "@property" }
+   * Example: \{ "\@return": "\@returns", "\@prop": "\@property" \}
    */
   normalizeTags?: Record<string, string>;
 
@@ -58,7 +58,7 @@ export interface TSDocPluginOptions {
 
   /**
    * Whether to align parameter descriptions in parameter-like tags.
-   * When true, aligns the '-' character across @param tags.
+   * When true, aligns the '-' character across \@param tags.
    * When false, each parameter is formatted independently.
    */
   alignParamTags?: boolean;
@@ -66,7 +66,7 @@ export interface TSDocPluginOptions {
   /**
    * Default release tag to add when no release tag is present.
    * Set to null to disable automatic release tag insertion.
-   * @default '@internal'
+   * \@default '\@internal'
    */
   defaultReleaseTag?: string | null;
 
@@ -74,7 +74,7 @@ export interface TSDocPluginOptions {
    * Whether to use AST analysis to only add release tags to exported API constructs.
    * When true, only exported declarations receive default release tags.
    * When false, all TSDoc comments receive default release tags (legacy behavior).
-   * @default true
+   * \@default true
    */
   onlyExportedAPI?: boolean;
 
@@ -82,7 +82,7 @@ export interface TSDocPluginOptions {
    * Whether to respect inheritance rules for release tags.
    * When true, class/interface members and namespace members inherit from their container.
    * When false, all declarations are candidates for release tags.
-   * @default true
+   * \@default true
    */
   inheritanceAware?: boolean;
 }
@@ -151,19 +151,45 @@ export function resolveOptions(
     ...DEFAULT_OPTIONS,
     ...tsdocOptions,
     // Also check for top-level options (for Prettier config)
-    ...(userOptions.fencedIndent !== undefined && { fencedIndent: userOptions.fencedIndent }),
-    ...(userOptions.forceFormatTSDoc !== undefined && { forceFormatTSDoc: userOptions.forceFormatTSDoc }),
-    ...(userOptions.normalizeTagOrder !== undefined && { normalizeTagOrder: userOptions.normalizeTagOrder }),
-    ...(userOptions.dedupeReleaseTags !== undefined && { dedupeReleaseTags: userOptions.dedupeReleaseTags }),
-    ...(userOptions.splitModifiers !== undefined && { splitModifiers: userOptions.splitModifiers }),
-    ...(userOptions.singleSentenceSummary !== undefined && { singleSentenceSummary: userOptions.singleSentenceSummary }),
-    ...(userOptions.releaseTagStrategy !== undefined && { releaseTagStrategy: userOptions.releaseTagStrategy }),
-    ...(userOptions.alignParamTags !== undefined && { alignParamTags: userOptions.alignParamTags }),
-    ...(userOptions.defaultReleaseTag !== undefined && { defaultReleaseTag: userOptions.defaultReleaseTag }),
-    ...(userOptions.onlyExportedAPI !== undefined && { onlyExportedAPI: userOptions.onlyExportedAPI }),
-    ...(userOptions.inheritanceAware !== undefined && { inheritanceAware: userOptions.inheritanceAware }),
-    ...(userOptions.extraTags !== undefined && { extraTags: userOptions.extraTags }),
-    ...(userOptions.normalizeTags !== undefined && { normalizeTags: userOptions.normalizeTags }),
+    ...(userOptions.fencedIndent !== undefined && {
+      fencedIndent: userOptions.fencedIndent,
+    }),
+    ...(userOptions.forceFormatTSDoc !== undefined && {
+      forceFormatTSDoc: userOptions.forceFormatTSDoc,
+    }),
+    ...(userOptions.normalizeTagOrder !== undefined && {
+      normalizeTagOrder: userOptions.normalizeTagOrder,
+    }),
+    ...(userOptions.dedupeReleaseTags !== undefined && {
+      dedupeReleaseTags: userOptions.dedupeReleaseTags,
+    }),
+    ...(userOptions.splitModifiers !== undefined && {
+      splitModifiers: userOptions.splitModifiers,
+    }),
+    ...(userOptions.singleSentenceSummary !== undefined && {
+      singleSentenceSummary: userOptions.singleSentenceSummary,
+    }),
+    ...(userOptions.releaseTagStrategy !== undefined && {
+      releaseTagStrategy: userOptions.releaseTagStrategy,
+    }),
+    ...(userOptions.alignParamTags !== undefined && {
+      alignParamTags: userOptions.alignParamTags,
+    }),
+    ...(userOptions.defaultReleaseTag !== undefined && {
+      defaultReleaseTag: userOptions.defaultReleaseTag,
+    }),
+    ...(userOptions.onlyExportedAPI !== undefined && {
+      onlyExportedAPI: userOptions.onlyExportedAPI,
+    }),
+    ...(userOptions.inheritanceAware !== undefined && {
+      inheritanceAware: userOptions.inheritanceAware,
+    }),
+    ...(userOptions.extraTags !== undefined && {
+      extraTags: userOptions.extraTags,
+    }),
+    ...(userOptions.normalizeTags !== undefined && {
+      normalizeTags: userOptions.normalizeTags,
+    }),
   };
 }
 
@@ -207,15 +233,23 @@ export function isModifierTag(tagName: string): boolean {
 /**
  * Check if there are any existing release tags in the comment model.
  */
-export function hasReleaseTag(model: { otherTags: { tagName: string }[] }): boolean {
+export function hasReleaseTag(model: {
+  otherTags: { tagName: string }[];
+}): boolean {
   // Check otherTags for any release tags
-  return model.otherTags.some((tag: any) => isReleaseTag(tag.tagName));
+  return model.otherTags.some((tag: { tagName: string }) =>
+    isReleaseTag(tag.tagName)
+  );
 }
 
 /**
  * Create a default release tag for insertion when no release tag exists.
  */
-export function createDefaultReleaseTag(defaultTag: string): { tagName: string; content: string; rawNode: any } {
+export function createDefaultReleaseTag(defaultTag: string): {
+  tagName: string;
+  content: string;
+  rawNode: any;
+} {
   return {
     tagName: defaultTag,
     content: '',

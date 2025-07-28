@@ -51,7 +51,6 @@ export interface TSDocCommentModel {
  */
 export function extractTextFromNode(node: any): string {
   if (!node) return '';
-  
 
   if (typeof node === 'string') {
     return node;
@@ -60,7 +59,7 @@ export function extractTextFromNode(node: any): string {
   if (node.kind === 'PlainText') {
     return node.text || '';
   }
-  
+
   if (node.kind === 'SoftBreak') {
     return '\n';
   }
@@ -70,7 +69,7 @@ export function extractTextFromNode(node: any): string {
     // Reconstruct the original {@link URL | text} or {@link URL} syntax
     const urlArgument = node.urlDestination || '';
     const linkText = node.linkText || '';
-    
+
     if (linkText && linkText !== urlArgument) {
       return `{@link ${urlArgument} | ${linkText}}`;
     } else {
@@ -81,9 +80,11 @@ export function extractTextFromNode(node: any): string {
   // Handle other inline tags like {@inheritDoc}, {@label}, etc.
   if (node.kind && node.kind.endsWith('Tag') && node.tagName) {
     // Generic inline tag handling - preserve the original syntax
-    const tagName = node.tagName.startsWith('@') ? node.tagName : `@${node.tagName}`;
+    const tagName = node.tagName.startsWith('@')
+      ? node.tagName
+      : `@${node.tagName}`;
     const content = node.content || node.text || '';
-    
+
     if (content) {
       return `{${tagName} ${content}}`;
     } else {
@@ -98,7 +99,10 @@ export function extractTextFromNode(node: any): string {
   if (node.kind === 'Section' && node.nodes) {
     // For sections, preserve line breaks between different elements
     // Allow up to 2 consecutive newlines (paragraph breaks) but collapse more than that
-    return node.nodes.map(extractTextFromNode).join('\n').replace(/\n{3,}/g, '\n\n');
+    return node.nodes
+      .map(extractTextFromNode)
+      .join('\n')
+      .replace(/\n{3,}/g, '\n\n');
   }
 
   if (node.nodes) {
@@ -112,7 +116,10 @@ export function extractTextFromNode(node: any): string {
 /**
  * Extract full @example content including code blocks by parsing raw comment text
  */
-function extractFullExampleContent(exampleBlock: any, docComment: any, rawComment?: string): string {
+function extractFullExampleContent(
+  exampleBlock: any,
+  rawComment?: string
+): string {
   if (!rawComment) {
     // Debug logging would need options parameter here, but this is deep in parsing
     // For now, only log in strict debug mode
@@ -122,27 +129,32 @@ function extractFullExampleContent(exampleBlock: any, docComment: any, rawCommen
     // Fallback to normal extraction
     return extractTextFromNode(exampleBlock.content);
   }
-  
+
   // Find the @example tag in the raw text (stop at next @ tag or closing comment)
-  const exampleTagMatch = rawComment.match(/@example\s+(.*?)(?=@\w+|\*\/\s*$|$)/s);
-  
+  const exampleTagMatch = rawComment.match(
+    /@example\s+(.*?)(?=@\w+|\*\/\s*$|$)/s
+  );
+
   if (exampleTagMatch) {
     let fullContent = exampleTagMatch[1].trim();
-    
+
     // Clean up comment prefixes from each line
     fullContent = fullContent
       .split('\n')
       .map((line: string) => line.replace(/^\s*\*\s?/, ''))
       .join('\n')
       .trim();
-    
+
     if (process.env.PRETTIER_TSDOC_DEBUG === '1') {
-      console.debug('Extracted full @example content:', JSON.stringify(fullContent));
+      console.debug(
+        'Extracted full @example content:',
+        JSON.stringify(fullContent)
+      );
     }
-    
+
     return fullContent;
   }
-  
+
   // Fallback to normal extraction
   return extractTextFromNode(exampleBlock.content);
 }
@@ -150,7 +162,10 @@ function extractFullExampleContent(exampleBlock: any, docComment: any, rawCommen
 /**
  * Build the intermediate model from a parsed TSDoc comment.
  */
-export function buildCommentModel(docComment: any, rawComment?: string): TSDocCommentModel {
+export function buildCommentModel(
+  docComment: any,
+  rawComment?: string
+): TSDocCommentModel {
   const model: TSDocCommentModel = {
     params: [],
     typeParams: [],
@@ -247,12 +262,12 @@ export function buildCommentModel(docComment: any, rawComment?: string): TSDocCo
     for (const block of docComment.customBlocks) {
       if (block.blockTag && block.blockTag.tagName) {
         let content = extractTextFromNode(block.content);
-        
+
         // For @example tags, try to get the full content including code blocks
         if (block.blockTag.tagName === '@example') {
-          content = extractFullExampleContent(block, docComment, rawComment);
+          content = extractFullExampleContent(block, rawComment);
         }
-        
+
         if (process.env.PRETTIER_TSDOC_DEBUG === '1') {
           console.debug(`Custom block found: ${block.blockTag.tagName}`);
           console.debug(`Content: ${JSON.stringify(content)}`);

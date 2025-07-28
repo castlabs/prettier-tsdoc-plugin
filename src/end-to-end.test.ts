@@ -11,45 +11,55 @@ describe('End-to-End Integration Tests', () => {
     // Read the example file
     const examplePath = resolve(process.cwd(), 'examples/file_1.ts');
     const originalContent = readFileSync(examplePath, 'utf8');
-    
+
     // Extract the TSDoc comment from the file
     const commentRegex = /\/\*\*([\s\S]*?)\*\//;
     const match = originalContent.match(commentRegex);
     expect(match).toBeTruthy();
-    
+
     const commentContent = match![1];
     expect(commentContent).toContain('@param');
-    
+
     // Test the complete pipeline
     const config = createTSDocConfiguration();
     const parser = new TSDocParser(config);
     const options = { printWidth: 80, tabWidth: 2, useTabs: false };
-    
+
     // Step 1: Detection - format comment content to match parser output
     const formattedCommentContent = `*${commentContent}`;
-    const mockComment = { value: formattedCommentContent, type: 'CommentBlock' };
-    console.log('Comment content:', JSON.stringify(formattedCommentContent.substring(0, 100)));
+    const mockComment = {
+      value: formattedCommentContent,
+      type: 'CommentBlock',
+    };
+    console.log(
+      'Comment content:',
+      JSON.stringify(formattedCommentContent.substring(0, 100))
+    );
     const isCandidate = isTSDocCandidate(mockComment, false);
     console.log('Is TSDoc candidate:', isCandidate);
     expect(isCandidate).toBe(true);
-    
+
     // Step 2: Formatting
-    const formatted = formatTSDocComment(formattedCommentContent, options, parser);
+    const formatted = formatTSDocComment(
+      formattedCommentContent,
+      options,
+      parser
+    );
     expect(formatted).toBeDefined();
-    
+
     console.log('✅ Complete TSDoc pipeline working for example file');
   });
 
   test('demonstrates tag normalization functionality', () => {
     const config = createTSDocConfiguration();
     const parser = new TSDocParser(config);
-    const options = { 
-      printWidth: 80, 
-      tabWidth: 2, 
+    const options = {
+      printWidth: 80,
+      tabWidth: 2,
       useTabs: false,
       tsdoc: {
-        normalizeTags: { '@return': '@returns' }
-      }
+        normalizeTags: { '@return': '@returns' },
+      },
     };
 
     const commentWithReturnTag = `*
@@ -60,21 +70,21 @@ describe('End-to-End Integration Tests', () => {
 
     const formatted = formatTSDocComment(commentWithReturnTag, options, parser);
     expect(formatted).toBeDefined();
-    
+
     console.log('✅ Tag normalization functionality working');
   });
 
   test('demonstrates release tag deduplication', () => {
     const config = createTSDocConfiguration();
     const parser = new TSDocParser(config);
-    const options = { 
-      printWidth: 80, 
-      tabWidth: 2, 
+    const options = {
+      printWidth: 80,
+      tabWidth: 2,
       useTabs: false,
       tsdoc: {
         dedupeReleaseTags: true,
-        releaseTagStrategy: 'keep-first'
-      }
+        releaseTagStrategy: 'keep-first',
+      },
     };
 
     const commentWithDuplicateTags = `*
@@ -85,22 +95,26 @@ describe('End-to-End Integration Tests', () => {
  * @beta
  `;
 
-    const formatted = formatTSDocComment(commentWithDuplicateTags, options, parser);
+    const formatted = formatTSDocComment(
+      commentWithDuplicateTags,
+      options,
+      parser
+    );
     expect(formatted).toBeDefined();
-    
+
     console.log('✅ Release tag deduplication functionality working');
   });
 
   test('demonstrates fenced code block formatting', () => {
     const config = createTSDocConfiguration();
     const parser = new TSDocParser(config);
-    const options = { 
-      printWidth: 80, 
-      tabWidth: 2, 
+    const options = {
+      printWidth: 80,
+      tabWidth: 2,
       useTabs: false,
       tsdoc: {
-        fencedIndent: 'space'
-      }
+        fencedIndent: 'space',
+      },
     };
 
     const commentWithCode = `*
@@ -114,7 +128,7 @@ describe('End-to-End Integration Tests', () => {
 
     const formatted = formatTSDocComment(commentWithCode, options, parser);
     expect(formatted).toBeDefined();
-    
+
     console.log('✅ Fenced code block formatting functionality working');
   });
 
@@ -134,23 +148,23 @@ describe('End-to-End Integration Tests', () => {
 
     const formatted = formatTSDocComment(commentWithMarkdown, options, parser);
     expect(formatted).toBeDefined();
-    
+
     console.log('✅ Markdown list formatting functionality working');
   });
 
   test('validates all 7 phases are integrated correctly', () => {
     const config = createTSDocConfiguration();
     const parser = new TSDocParser(config);
-    const options = { 
-      printWidth: 80, 
-      tabWidth: 2, 
+    const options = {
+      printWidth: 80,
+      tabWidth: 2,
       useTabs: false,
       tsdoc: {
         fencedIndent: 'space',
         dedupeReleaseTags: true,
         normalizeTags: { '@return': '@returns', '@prop': '@property' },
-        releaseTagStrategy: 'keep-first'
-      }
+        releaseTagStrategy: 'keep-first',
+      },
     };
 
     // Complex comment that tests all phases
@@ -179,7 +193,7 @@ describe('End-to-End Integration Tests', () => {
 
     const formatted = formatTSDocComment(complexComment, options, parser);
     expect(formatted).toBeDefined();
-    
+
     console.log('✅ All 7 phases integrated successfully:');
     console.log('  ✓ Phase 1: Bootstrap');
     console.log('  ✓ Phase 2: Parser Detection');

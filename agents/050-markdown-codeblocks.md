@@ -24,10 +24,10 @@ and re-integrating them with proper comment alignment.
    - Remove comment marks (`*`) while preserving original indentation context.
 
 3. **Markdown Processing Pipeline**
-   - ~~Pass clean text to Prettier's markdown formatter using `textToDoc`~~ 
-     **UPDATED**: Due to Prettier's async nature, implemented enhanced basic 
+   - ~~Pass clean text to Prettier's markdown formatter using `textToDoc`~~
+     **UPDATED**: Due to Prettier's async nature, implemented enhanced basic
      formatting with language-specific processors
-   - **Multi-language Code Block Support**: Comprehensive language detection and 
+   - **Multi-language Code Block Support**: Comprehensive language detection and
      formatting for TypeScript, JavaScript, HTML, CSS, JSON, YAML, etc.
    - Preserve inline tags (`{@link}`, `{@inheritDoc}`, etc.) as unbreakable
      tokens during text wrapping
@@ -57,13 +57,17 @@ and re-integrating them with proper comment alignment.
 
 ```typescript
 // Multi-language code block formatting
-function formatCodeBlock(code: string, language: string, options: ParserOptions<any>): string {
+function formatCodeBlock(
+  code: string,
+  language: string,
+  options: ParserOptions<any>
+): string {
   const parser = LANGUAGE_TO_PARSER[language.toLowerCase()];
-  
+
   if (!parser) {
     return code.trim(); // Unsupported language fallback
   }
-  
+
   // Due to Prettier's async nature, use enhanced basic formatting
   return formatCodeBasic(code, language);
 }
@@ -78,14 +82,17 @@ function formatCodeBasic(code: string, language: string): string {
 }
 
 // Inline tag preservation during text wrapping
-function formatTextWithMarkdown(text: string, options: ParserOptions<any>): any {
+function formatTextWithMarkdown(
+  text: string,
+  options: ParserOptions<any>
+): any {
   const { text: textWithTokens, tokens } = preserveInlineTags(text);
-  
+
   // Process markdown with proper list handling and text wrapping
   const formatted = formatMarkdownText(textWithTokens, options);
-  
+
   // Restore inline tags
-  return finalResult.map(item => restoreInlineTags(item, tokens));
+  return finalResult.map((item) => restoreInlineTags(item, tokens));
 }
 ```
 
@@ -95,7 +102,8 @@ function formatTextWithMarkdown(text: string, options: ParserOptions<any>): any 
   processed as separate markdown blocks
 - ✅ Markdown lists have proper indentation and line breaks
 - ✅ Long lines wrap at `printWidth` with continuation indentation
-- ✅ Fenced code blocks are formatted using enhanced basic formatters for multiple languages (HTML, TypeScript, JavaScript, CSS, JSON, etc.)
+- ✅ Fenced code blocks are formatted using enhanced basic formatters for
+  multiple languages (HTML, TypeScript, JavaScript, CSS, JSON, etc.)
 - ✅ Inline tags (`{@link}`, etc.) never break across lines
 - ✅ Comment block maintains original indentation alignment with following code
 - ✅ Formatting failures fall back gracefully to original text
@@ -106,12 +114,14 @@ function formatTextWithMarkdown(text: string, options: ParserOptions<any>): any 
 - **Block Tags**: Include all TSDoc core tags plus TypeDoc/AEDoc extensions
   (`@param`, `@typeParam`, `@returns`, `@throws`, `@example`, `@deprecated`,
   `@see`, `@since`, `@category`, `@group`, `@alpha`, `@beta`, `@internal`, etc.)
-- **Inline Tag Preservation**: Implement tokenization system to preserve `{@link}`, 
-  `{@inheritDoc}`, `{@label}`, etc. as atomic units during text wrapping
+- **Inline Tag Preservation**: Implement tokenization system to preserve
+  `{@link}`, `{@inheritDoc}`, `{@label}`, etc. as atomic units during text
+  wrapping
 - **Language Support**: Multi-language code block formatting with comprehensive
-  language-to-parser mapping for TypeScript, JavaScript, HTML, CSS, JSON, YAML, etc.
-- **Enhanced HTML Formatting**: Custom HTML formatter with proper tag indentation
-  and line breaks to overcome Prettier async limitations
+  language-to-parser mapping for TypeScript, JavaScript, HTML, CSS, JSON, YAML,
+  etc.
+- **Enhanced HTML Formatting**: Custom HTML formatter with proper tag
+  indentation and line breaks to overcome Prettier async limitations
 - **Indentation**: Preserve the comment's original indentation relative to the
   commented code
 - **Performance**: Cache formatted results for identical text blocks to improve
