@@ -11,10 +11,24 @@ enabled by default.
 
 ## Deliverables
 
-1. **Blank Line Before Examples**
+1. **Blank Lines**
    - Implement logic to ensure that `@example` block tags are always preceded by
      exactly one empty comment line (`*`). This rule applies even if there are
-     multiple consecutive `@example` blocks.
+     multiple consecutive `@example` blocks. `@example` tags are treated
+     separately from the main meta-data block and always appear last with their
+     own spacing.
+   - Implement logic to ensure that there exactly one empty comment line after
+     the description, before the tags that are in a group defined in 3. The
+     purpose of this is to separate the description from parameters and other
+     annotation that provide additional meta-data. This includes all meta-data
+     tags: `@param`, `@typeParam`, `@returns`, `@throws`, `@deprecated`, `@see`,
+     and release tags (`@public`, `@internal`, `@beta`, etc.). These all get
+     treated as one meta-data block with a single blank line before the entire
+     block.
+   - **Important**: Comments should never start or end with empty lines. When
+     there is no description/summary (i.e., the comment starts immediately with
+     meta-data annotations like `@param`), the first tag should appear
+     immediately after `/**` without any blank lines.
 
 2. **Canonical Tag Ordering**
    - When `normalizeTagOrder: true` is set, reorder TSDoc block tags into
@@ -138,7 +152,65 @@ grouping logic.
  */
 ````
 
-### Example 3: Multiple `@example` Blocks
+### Example 3: Comments Without Description
+
+This example demonstrates that comments starting with meta-data annotations
+should not have blank lines at the beginning.
+
+**Before Formatting:**
+
+```typescript
+/**
+ * @param input - The string to process.
+ * @returns A processed string.
+ */
+```
+
+**After Formatting (`normalizeTagOrder: true`):**
+
+```typescript
+/**
+ * @param input - The string to process.
+ * @returns A processed string.
+ */
+```
+
+Note: No blank line is added after `/**` when there is no description.
+
+### Example 4: Release Tags in Meta-data Block
+
+This example demonstrates that release tags are part of the meta-data block and
+don't get extra spacing.
+
+**Before Formatting:**
+
+```typescript
+/**
+ * An internal API function.
+ * @param input The input parameter.
+ * @returns The result.
+ * @internal
+ * @see https://example.com
+ */
+```
+
+**After Formatting (`normalizeTagOrder: true`):**
+
+```typescript
+/**
+ * An internal API function.
+ *
+ * @param input - The input parameter.
+ * @returns The result.
+ * @see https://example.com
+ * @internal
+ */
+```
+
+Note: Single blank line before the entire meta-data block, no extra spacing
+between different types of meta-data tags.
+
+### Example 5: Multiple `@example` Blocks
 
 This example demonstrates that each `@example` is preceded by a blank line and
 all are grouped at the end.

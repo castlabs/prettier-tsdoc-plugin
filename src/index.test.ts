@@ -42,7 +42,7 @@ console.log(result);`;
     expect(formatted).toBe(standardFormatted);
   });
 
-  test('formatting files with TSDoc comments preserves content (no transformation yet)', async () => {
+  test('formatting files with TSDoc comments applies phase 110 transformations', async () => {
     const plugin = await import('./index.js');
 
     const code = `/**
@@ -66,12 +66,28 @@ function add(a: number, b: number) {
       plugins: [plugin.default],
     });
 
-    // Since we don't transform yet, output should be identical to standard Prettier
-    const standardFormatted = await format(code, {
-      parser: 'typescript',
-    });
+    // With Phase 110 implemented, we should have:
+    // 1. Blank line between description and parameters (when normalizeTagOrder: true)
+    // 2. Blank line before @example
+    const expectedFormat = `/**
+ * Adds two numbers together.
+ *
+ * @param a - The first number
+ * @param b - The second number
+ * @returns The sum of a and b
+ *
+ * @example
+ * \`\`\`ts
+ * const result = add(1, 2);
+ * console.log(result); // 3
+ * \`\`\`
+ */
+function add(a: number, b: number) {
+  return a + b;
+}
+`;
 
-    expect(formatted).toBe(standardFormatted);
+    expect(formatted).toBe(expectedFormat);
   });
 
   test('plugin handles malformed TSDoc gracefully', async () => {

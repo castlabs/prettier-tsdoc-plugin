@@ -307,6 +307,229 @@ function mixedFunction(input: string): string {
     });
   });
 
+  describe('Blank Line Before Meta-data Block', () => {
+    it('should add blank line between description and parameters when normalizeTagOrder is enabled', async () => {
+      const input = `
+/**
+ * This function does something important.
+ * @param name The name parameter.
+ * @returns The result.
+ */
+function importantFunction(name: string): string {
+  return name;
+}
+`;
+
+      const result = await formatTSDoc(input, { normalizeTagOrder: true });
+
+      // Should have blank line between description and @param
+      expect(result).toContain(
+        '* This function does something important.\n *\n * @param name'
+      );
+    });
+
+    it('should add blank line between description and @returns when normalizeTagOrder is enabled', async () => {
+      const input = `
+/**
+ * This function only returns something.
+ * @returns The result.
+ */
+function simpleFunction(): string {
+  return 'result';
+}
+`;
+
+      const result = await formatTSDoc(input, { normalizeTagOrder: true });
+
+      // Should have blank line between description and @returns
+      expect(result).toContain(
+        '* This function only returns something.\n *\n * @returns'
+      );
+    });
+
+    it('should add blank line between description and @typeParam when normalizeTagOrder is enabled', async () => {
+      const input = `
+/**
+ * A generic function with type parameters.
+ * @typeParam T The type parameter.
+ * @param value The input value.
+ */
+function genericFunction<T>(value: T): T {
+  return value;
+}
+`;
+
+      const result = await formatTSDoc(input, { normalizeTagOrder: true });
+
+      // Should have blank line between description and @param/@typeParam group
+      expect(result).toContain(
+        '* A generic function with type parameters.\n *\n * @param value'
+      );
+    });
+
+    it('should not add blank line when normalizeTagOrder is disabled', async () => {
+      const input = `
+/**
+ * This function does something important.
+ * @param name The name parameter.
+ * @returns The result.
+ */
+function importantFunction(name: string): string {
+  return name;
+}
+`;
+
+      const result = await formatTSDoc(input, { normalizeTagOrder: false });
+
+      // Should NOT have blank line between description and @param when disabled
+      expect(result).not.toContain(
+        '* This function does something important.\n *\n * @param name'
+      );
+      expect(result).toContain(
+        '* This function does something important.\n * @param name'
+      );
+    });
+
+    it('should not add blank line when there is no description', async () => {
+      const input = `
+/**
+ * @param name The name parameter.
+ * @returns The result.
+ */
+function noDescriptionFunction(name: string): string {
+  return name;
+}
+`;
+
+      const result = await formatTSDoc(input, { normalizeTagOrder: true });
+
+      // Should not have blank line when there's no description above
+      expect(result).not.toContain('/**\n *\n * @param');
+      expect(result).toContain('/**\n * @param');
+    });
+
+    it('should handle both remarks and parameters with proper spacing', async () => {
+      const input = `
+/**
+ * This function has both a summary and remarks.
+ * 
+ * @remarks
+ * These are additional remarks about the function.
+ * @param name The name parameter.
+ * @returns The result.
+ */
+function complexFunction(name: string): string {
+  return name;
+}
+`;
+
+      const result = await formatTSDoc(input, { normalizeTagOrder: true });
+
+      // Should have blank line between remarks and parameters
+      expect(result).toContain(
+        '* These are additional remarks about the function.\n *\n * @param name'
+      );
+    });
+  });
+
+  describe('Release Tag Spacing', () => {
+    it('should include release tags in general meta-data block without extra spacing', async () => {
+      const input = `
+/**
+ * This function has release tags.
+ * @param name The name parameter.
+ * @returns The result.
+ * @internal
+ * @beta
+ */
+function testFunction(name: string): string {
+  return name;
+}
+`;
+
+      const result = await formatTSDoc(input, { normalizeTagOrder: true });
+
+      // Should have single blank line after description, then all meta-data tags
+      // (params, returns, release tags) without extra spacing between them
+      expect(result).toContain(
+        '* This function has release tags.\n *\n * @param name'
+      );
+
+      // Release tags should not have extra blank lines before them
+      // (Note: @internal comes before @beta in canonical ordering)
+      expect(result).toContain(
+        '* @returns The result.\n * @internal\n * @beta'
+      );
+
+      // Should not have double blank lines before release tags
+      expect(result).not.toContain('* @returns The result.\n *\n * @internal');
+      expect(result).not.toContain('* @returns The result.\n *\n * @beta');
+    });
+
+    it('should handle release tags as first meta-data with proper spacing', async () => {
+      const input = `
+/**
+ * Function with only release tags.
+ * @internal
+ * @beta
+ */
+function testFunction(): void {}
+`;
+
+      const result = await formatTSDoc(input, { normalizeTagOrder: true });
+
+      // Should have single blank line after description, then release tags
+      // (Note: @internal comes before @beta in canonical ordering)
+      expect(result).toContain(
+        '* Function with only release tags.\n *\n * @internal\n * @beta'
+      );
+
+      // Should not have extra spacing between release tags
+      expect(result).not.toContain('* @internal\n *\n * @beta');
+    });
+
+    it('should handle mixed release tags and other meta-data tags without extra spacing', async () => {
+      const input = `
+/**
+ * Complex function with mixed tags.
+ * @param input The input.
+ * @deprecated Use newFunction instead.
+ * @internal
+ * @see https://example.com
+ * @returns The result.
+ */
+function complexFunction(input: string): string {
+  return input;
+}
+`;
+
+      const result = await formatTSDoc(input, { normalizeTagOrder: true });
+
+      // Should have single blank line after description
+      expect(result).toContain(
+        '* Complex function with mixed tags.\n *\n * @param input'
+      );
+
+      // All meta-data tags should be grouped together without extra spacing
+      const lines = result.split('\n');
+      const tagLines = lines.filter((line) => line.includes(' * @'));
+
+      // Verify canonical order and no extra spacing
+      expect(tagLines[0]).toContain('@param');
+      expect(tagLines[1]).toContain('@returns');
+      expect(tagLines[2]).toContain('@deprecated');
+      expect(tagLines[3]).toContain('@see');
+      expect(tagLines[4]).toContain('@internal');
+
+      // Verify no blank lines between meta-data tags
+      for (let i = 0; i < tagLines.length - 1; i++) {
+        const currentIndex = lines.indexOf(tagLines[i]);
+        const nextIndex = lines.indexOf(tagLines[i + 1]);
+        expect(nextIndex - currentIndex).toBe(1); // Should be consecutive
+      }
+    });
+  });
+
   describe('Edge Cases', () => {
     it('should handle empty tags correctly', async () => {
       const input = `

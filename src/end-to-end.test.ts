@@ -3,51 +3,61 @@ import { formatTSDocComment } from './format.js';
 import { createTSDocConfiguration } from './parser-config.js';
 import { TSDocParser } from '@microsoft/tsdoc';
 import { isTSDocCandidate } from './detection.js';
-import { readFileSync } from 'fs';
-import { resolve } from 'path';
 
 describe('End-to-End Integration Tests', () => {
-  test('processes example file through complete TSDoc pipeline', () => {
-    // Read the example file
-    const examplePath = resolve(process.cwd(), 'examples/file_1.ts');
-    const originalContent = readFileSync(examplePath, 'utf8');
+  test('processes realistic TSDoc comment through complete pipeline', () => {
+    // Use a realistic TSDoc comment similar to what would be in an example file
+    const realisticComment = `*
+ * Adds two numbers together with optional formatting.
+ * 
+ * This function demonstrates various TSDoc features including
+ * parameter documentation, return types, and code examples.
+ * 
+ * @param a - The first number to add
+ * @param b - The second number to add  
+ * @param options - Optional formatting configuration
+ * @returns The sum of the two numbers, optionally formatted
+ * 
+ * @example
+ * \`\`\`typescript
+ * const result = add(5, 3);
+ * console.log(result); // 8
+ * 
+ * const formatted = add(5, 3, { format: true });
+ * console.log(formatted); // "8.00"
+ * \`\`\`
+ * 
+ * @public
+ * @since 1.0.0
+ `;
 
-    // Extract the TSDoc comment from the file
-    const commentRegex = /\/\*\*([\s\S]*?)\*\//;
-    const match = originalContent.match(commentRegex);
-    expect(match).toBeTruthy();
-
-    const commentContent = match![1];
-    expect(commentContent).toContain('@param');
+    expect(realisticComment).toContain('@param');
+    expect(realisticComment).toContain('@returns');
+    expect(realisticComment).toContain('@example');
 
     // Test the complete pipeline
     const config = createTSDocConfiguration();
     const parser = new TSDocParser(config);
     const options = { printWidth: 80, tabWidth: 2, useTabs: false };
 
-    // Step 1: Detection - format comment content to match parser output
-    const formattedCommentContent = `*${commentContent}`;
+    // Step 1: Detection
     const mockComment = {
-      value: formattedCommentContent,
+      value: realisticComment,
       type: 'CommentBlock',
     };
     console.log(
       'Comment content:',
-      JSON.stringify(formattedCommentContent.substring(0, 100))
+      JSON.stringify(realisticComment.substring(0, 100))
     );
     const isCandidate = isTSDocCandidate(mockComment, false);
     console.log('Is TSDoc candidate:', isCandidate);
     expect(isCandidate).toBe(true);
 
     // Step 2: Formatting
-    const formatted = formatTSDocComment(
-      formattedCommentContent,
-      options,
-      parser
-    );
+    const formatted = formatTSDocComment(realisticComment, options, parser);
     expect(formatted).toBeDefined();
 
-    console.log('✅ Complete TSDoc pipeline working for example file');
+    console.log('✅ Complete TSDoc pipeline working for realistic comment');
   });
 
   test('demonstrates tag normalization functionality', () => {

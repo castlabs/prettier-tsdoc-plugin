@@ -785,6 +785,12 @@ function buildPrettierDoc(
   const hasParamLikeTags =
     model.params.length > 0 || model.typeParams.length > 0 || model.returns;
 
+  // Check if we have meta-data tags (non-example tags in otherTags)
+  const hasMetaDataTags = model.otherTags.some(
+    (tag) => tag.tagName !== '@example'
+  );
+  const hasAnyMetaData = hasParamLikeTags || hasMetaDataTags;
+
   // Blank line before remarks (if both summary and remarks exist)
   if (model.summary && model.remarks) {
     parts.push(hardline);
@@ -803,18 +809,15 @@ function buildPrettierDoc(
     );
   }
 
-  // Blank line before parameters (if we have content above and param tags below)
-  // Disabled for now to match standard Prettier behavior
-  // if (hasContent && hasParamLikeTags) {
-  //   parts.push(hardline);
-  //   parts.push(createEmptyCommentLine());
-  // }
+  // Blank line before meta-data block (parameters and other annotations)
+  // when normalizeTagOrder is enabled (Phase 110 requirement)
+  if (tsdocOptions?.normalizeTagOrder && hasContent && hasAnyMetaData) {
+    parts.push(hardline);
+    parts.push(createEmptyCommentLine());
+  }
 
   // @param tags
   if (model.params.length > 0) {
-    if (!hasContent) {
-      parts.push(hardline);
-    }
     const paramTags: ParamTagInfo[] = model.params.map((p) => ({
       tagName: p.tagName,
       name: p.name,
@@ -834,9 +837,6 @@ function buildPrettierDoc(
 
   // @typeParam tags
   if (model.typeParams.length > 0) {
-    if (!hasContent && model.params.length === 0) {
-      parts.push(hardline);
-    }
     const typeParamTags: ParamTagInfo[] = model.typeParams.map((tp) => ({
       tagName: tp.tagName,
       name: tp.name,
@@ -856,46 +856,47 @@ function buildPrettierDoc(
 
   // @returns tag
   if (model.returns) {
-    if (
-      !hasContent &&
-      model.params.length === 0 &&
-      model.typeParams.length === 0
-    ) {
-      parts.push(hardline);
-    }
     parts.push(hardline);
     parts.push(formatReturnsTag(model.returns));
   }
 
   // Other tags (like @example, @see, etc.)
   if (model.otherTags.length > 0) {
-    const needsLineBeforeOtherTags =
-      hasContent || hasParamLikeTags || model.returns;
+    // Separate meta-data tags from example tags
+    const metaDataTags: any[] = [];
+    const exampleTags: any[] = [];
 
-    // Add blank line before otherTags section (only once)
-    // Disabled for now to match standard Prettier behavior
-    if (needsLineBeforeOtherTags) {
-      parts.push(hardline);
-      parts.push(createEmptyCommentLine());
+    for (const tag of model.otherTags) {
+      if (tag.tagName === '@example') {
+        exampleTags.push(tag);
+      } else {
+        metaDataTags.push(tag);
+      }
     }
 
-    for (let i = 0; i < model.otherTags.length; i++) {
-      const tag = model.otherTags[i];
-      const isExampleTag = tag.tagName === '@example';
+    // Process meta-data tags (release tags, @deprecated, @see, etc.)
+    // These are part of the meta-data block and don't need special spacing
+    for (const tag of metaDataTags) {
+      parts.push(hardline);
+      parts.push(formatOtherTag(tag));
+    }
 
-      // Add blank line before @example tags (Phase 110 requirement)
-      if (isExampleTag) {
-        // Always add blank line before @example, even if it's the first other tag
-        // or if there are previous non-example tags
-        if (i === 0 && !needsLineBeforeOtherTags) {
-          // First tag is @example and we haven't added initial blank line
-          parts.push(hardline);
-          parts.push(createEmptyCommentLine());
-        } else if (i > 0) {
-          // Not the first tag, add blank line before this @example
+    // Process @example tags with special spacing (Phase 110 requirement)
+    for (let i = 0; i < exampleTags.length; i++) {
+      const tag = exampleTags[i];
+
+      // Always add blank line before @example tags
+      if (i === 0) {
+        // First @example tag - check if we need to add initial blank line
+        const hasAnyPreviousContent = hasContent || hasAnyMetaData;
+        if (hasAnyPreviousContent) {
           parts.push(hardline);
           parts.push(createEmptyCommentLine());
         }
+      } else {
+        // Not the first @example tag, add blank line before this one
+        parts.push(hardline);
+        parts.push(createEmptyCommentLine());
       }
 
       parts.push(hardline);
