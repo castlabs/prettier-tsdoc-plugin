@@ -81,6 +81,14 @@ export interface TSDocPluginOptions {
    * @defaultValue `true`
    */
   inheritanceAware?: boolean;
+
+  /**
+   * Whether to enable legacy Closure Compiler annotation transformations.
+   * When true, automatically modernizes legacy annotations to standard TSDoc/JSDoc syntax.
+   *
+   * @defaultValue `true`
+   */
+  closureCompilerCompat?: boolean;
 }
 
 /**
@@ -178,6 +186,7 @@ export const DEFAULT_OPTIONS: Required<TSDocPluginOptions> = {
   defaultReleaseTag: '@internal',
   onlyExportedAPI: true,
   inheritanceAware: true,
+  closureCompilerCompat: true,
 };
 
 /**
@@ -227,6 +236,9 @@ export function resolveOptions(
     }),
     ...(userOptions.normalizeTags !== undefined && {
       normalizeTags: userOptions.normalizeTags,
+    }),
+    ...(userOptions.closureCompilerCompat !== undefined && {
+      closureCompilerCompat: userOptions.closureCompilerCompat,
     }),
   };
 }

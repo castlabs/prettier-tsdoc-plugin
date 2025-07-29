@@ -54,24 +54,84 @@ export function extractTextFromNode(node: any): string {
 
   // Handle inline tags like {@link} - preserve the original syntax
   if (node.kind === 'LinkTag') {
-    // Reconstruct the original {@link URL | text} or {@link URL} syntax
-    const urlArgument = node.urlDestination || '';
-    const linkText = node.linkText || '';
+    // Try to get the link destination from different sources
+    let linkDestination = '';
 
-    if (linkText && linkText !== urlArgument) {
-      return `{@link ${urlArgument} | ${linkText}}`;
+    // 1. Check for URL destination (for http/https links)
+    if (node._urlDestinationExcerpt) {
+      linkDestination = node._urlDestinationExcerpt._content.toString();
+    } else if (node.urlDestination) {
+      // Fallback to old property name for compatibility
+      linkDestination = node.urlDestination;
+    }
+    // 2. Check for code destination (for symbol references like "hello", "MyClass")
+    else if (
+      node._codeDestination &&
+      node._codeDestination._memberReferences &&
+      node._codeDestination._memberReferences.length > 0
+    ) {
+      // Build the full member reference path (e.g., "MyNamespace.MyClass.method")
+      const memberRefParts = [];
+      for (const memberRef of node._codeDestination._memberReferences) {
+        if (
+          memberRef._memberIdentifier &&
+          memberRef._memberIdentifier._identifierExcerpt
+        ) {
+          memberRefParts.push(
+            memberRef._memberIdentifier._identifierExcerpt._content.toString()
+          );
+        }
+      }
+      linkDestination = memberRefParts.join('.');
+    } else if (
+      node.codeDestination &&
+      node.codeDestination.memberReferences &&
+      node.codeDestination.memberReferences.length > 0
+    ) {
+      // Fallback to old property names for compatibility
+      const memberRef = node.codeDestination.memberReferences[0];
+      if (memberRef.memberIdentifier && memberRef.memberIdentifier.identifier) {
+        linkDestination = memberRef.memberIdentifier.identifier;
+      }
+    }
+
+    // Get the link text (for syntax like {@link URL | text})
+    let linkText = '';
+    if (node._linkTextExcerpt) {
+      linkText = node._linkTextExcerpt._content.toString();
+    } else if (node.linkText) {
+      // Fallback to old property name for compatibility
+      linkText = node.linkText;
+    }
+
+    if (linkText && linkText !== linkDestination) {
+      return `{@link ${linkDestination} | ${linkText}}`;
     } else {
-      return `{@link ${urlArgument}}`;
+      return `{@link ${linkDestination}}`;
     }
   }
 
   // Handle other inline tags like {@inheritDoc}, {@label}, etc.
-  if (node.kind && node.kind.endsWith('Tag') && node.tagName) {
+  if (
+    node.kind &&
+    typeof node.kind === 'string' &&
+    node.kind.endsWith('Tag') &&
+    node.tagName
+  ) {
     // Generic inline tag handling - preserve the original syntax
     const tagName = node.tagName.startsWith('@')
       ? node.tagName
       : `@${node.tagName}`;
-    const content = node.content || node.text || '';
+
+    // Try to get content from different sources
+    let content = '';
+    if (node._tagContentExcerpt) {
+      content = node._tagContentExcerpt._content.toString();
+    } else if (node.content) {
+      content = node.content;
+    } else if (node.text) {
+      content = node.text;
+    }
 
     if (content) {
       return `{${tagName} ${content}}`;
@@ -80,22 +140,25 @@ export function extractTextFromNode(node: any): string {
     }
   }
 
-  if (node.kind === 'Paragraph' && node.nodes) {
-    return node.nodes.map(extractTextFromNode).join('');
+  if (node.kind === 'Paragraph' && (node.nodes || node._nodes)) {
+    const nodes = node.nodes || node._nodes;
+    return nodes.map(extractTextFromNode).join('');
   }
 
-  if (node.kind === 'Section' && node.nodes) {
+  if (node.kind === 'Section' && (node.nodes || node._nodes)) {
     // For sections, preserve line breaks between different elements
     // Allow up to 2 consecutive newlines (paragraph breaks) but collapse more than that
-    return node.nodes
+    const nodes = node.nodes || node._nodes;
+    return nodes
       .map(extractTextFromNode)
       .join('\n')
       .replace(/\n{3,}/g, '\n\n');
   }
 
-  if (node.nodes) {
+  if (node.nodes || node._nodes) {
     // For node collections, try to preserve structure
-    return node.nodes.map(extractTextFromNode).join('');
+    const nodes = node.nodes || node._nodes;
+    return nodes.map(extractTextFromNode).join('');
   }
 
   return node.text || node.content || '';

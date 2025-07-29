@@ -97,6 +97,11 @@ export function createTSDocConfiguration(
       allowMultiple: false,
     },
     {
+      tagName: '@see',
+      syntaxKind: TSDocTagSyntaxKind.BlockTag,
+      allowMultiple: true,
+    },
+    {
       tagName: '@since',
       syntaxKind: TSDocTagSyntaxKind.BlockTag,
       allowMultiple: false,

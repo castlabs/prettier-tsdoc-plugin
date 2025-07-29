@@ -36,6 +36,7 @@ import {
   formatTextContent,
 } from './utils/text-width.js';
 import { debugLog } from './utils/common.js';
+import { applyLegacyTransformations } from './utils/legacy-transforms.js';
 
 // Debug telemetry for performance and error tracking
 interface TelemetryData {
@@ -131,11 +132,21 @@ export function formatTSDocComment(
     // Resolve TSDoc-specific options
     const tsdocOptions = resolveOptions(options);
 
-    // Parse the comment - handle case where commentValue already starts with *
-    const cleanCommentValue = commentValue.startsWith('*')
+    // Apply legacy transformations before parsing
+    let processedCommentValue = commentValue.startsWith('*')
       ? commentValue.substring(1)
       : commentValue;
-    const fullComment = `/**${cleanCommentValue}*/`;
+
+    // Apply legacy Closure Compiler transformations if enabled
+    const legacyOptions = {
+      closureCompilerCompat: tsdocOptions.closureCompilerCompat,
+    };
+    processedCommentValue = applyLegacyTransformations(
+      processedCommentValue,
+      legacyOptions
+    );
+
+    const fullComment = `/**${processedCommentValue}*/`;
 
     if (process.env.PRETTIER_TSDOC_DEBUG === '1') {
       debugLog('Full comment to parse:', JSON.stringify(fullComment));

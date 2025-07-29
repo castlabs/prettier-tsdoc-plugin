@@ -51,10 +51,12 @@ A Prettier plugin that formats TSDoc comments consistently.
   - Automatic insertion of default release tags (`@internal` by default)
   - Deduplication of duplicate release tags (`@public`, `@beta`, etc.)
   - Preservation of existing release tags
+- **Legacy Migration Support**: Automatic transformation of legacy Closure
+  Compiler annotations to modern TSDoc syntax
 - **Multi-language Code Formatting**: Enhanced support for TypeScript,
   JavaScript, HTML, CSS, and more
 - **Performance Optimized**: Efficient parsing with telemetry and debug support
-- **Highly Configurable**: 13+ configuration options via Prettier config
+- **Highly Configurable**: 14+ configuration options via Prettier config
 - **TypeDoc/AEDoc Compatible**: Support for extended tag sets beyond core TSDoc
 
 ## Installation
@@ -91,6 +93,7 @@ configuration:
     "defaultReleaseTag": "@internal",
     "onlyExportedAPI": true,
     "inheritanceAware": true,
+    "closureCompilerCompat": true,
     "extraTags": [],
     "normalizeTags": {
       "@return": "@returns",
@@ -114,6 +117,7 @@ configuration:
 | `defaultReleaseTag`     | `string` \| `null`              | `"@internal"`  | Default release tag when none exists (null to disable)           |
 | `onlyExportedAPI`       | `boolean`                       | `true`         | Only add release tags to exported API constructs (AST-aware)     |
 | `inheritanceAware`      | `boolean`                       | `true`         | Respect inheritance rules - skip tagging class/interface members |
+| `closureCompilerCompat` | `boolean`                       | `true`         | Enable legacy Closure Compiler annotation transformations        |
 | `extraTags`             | `string[]`                      | `[]`           | Additional custom tags to recognize                              |
 | `normalizeTags`         | `Record<string, string>`        | `{}`           | Custom tag spelling normalizations                               |
 | `releaseTagStrategy`    | `"keep-first"` \| `"keep-last"` | `"keep-first"` | Strategy for release tag deduplication                           |
@@ -325,6 +329,137 @@ export class Widget {
   }
 }
 ```
+
+### Legacy Closure Compiler Support
+
+**Phase 130 Feature** - The plugin provides automatic transformation of legacy
+Google Closure Compiler annotations to modern TSDoc/JSDoc syntax, making it easy
+to migrate older JavaScript codebases to modern tooling.
+
+#### Configuration
+
+```json
+{
+  "tsdoc": {
+    "closureCompilerCompat": true // Default: true - enabled by default
+  }
+}
+```
+
+#### Supported Transformations
+
+The plugin automatically modernizes the following legacy annotations:
+
+##### 1. Visibility and Export Tags
+
+- `@export` → `@public`
+- `@protected` → `@internal`
+- `@private` → `@internal`
+
+##### 2. Typed Tags (Type Information Removal)
+
+- `@param {type} name` → `@param name`
+- `@throws {Error}` → `@throws` (when type is the only content)
+- `@this {type}` → `@this`
+
+##### 3. Class Heritage Tags (Complete Removal)
+
+- `@extends {BaseClass}` → _(removed)_
+- `@implements {IInterface}` → _(removed)_
+
+**Note**: Only curly-brace syntax is removed. Modern TypeDoc overrides like
+`@extends BaseClass` (without braces) are preserved.
+
+##### 4. Redundant Language Tags (Complete Removal)
+
+- `@constructor` → _(removed)_
+- `@const` → _(removed)_
+- `@define` → _(removed)_
+- `@noalias` → _(removed)_
+- `@nosideeffects` → _(removed)_
+
+##### 5. @see Tag Normalization
+
+- `@see http://example.com` → `@see {@link http://example.com}`
+- `@see MyClass` → `@see {@link MyClass}` (code constructs only)
+- `@see Also check the documentation` → _(unchanged - descriptive text
+  preserved)_
+
+#### Migration Examples
+
+**Before (Legacy Closure Compiler):**
+
+```typescript
+/**
+ * Creates a new widget with configuration.
+ * @constructor
+ * @param {string} id - The unique identifier for the widget.
+ * @param {object} [options] - Configuration options.
+ * @extends {BaseWidget}
+ * @implements {IWidget}
+ * @export
+ * @see MyOtherClass
+ * @see http://example.com/docs
+ */
+```
+
+**After (Modern TSDoc):**
+
+```typescript
+/**
+ * Creates a new widget with configuration.
+ *
+ * @param id - The unique identifier for the widget.
+ * @param [options] - Configuration options.
+ * @public
+ * @see {@link MyOtherClass}
+ * @see {@link http://example.com/docs}
+ */
+```
+
+#### Smart Pattern Recognition
+
+The transformation engine uses intelligent pattern recognition to avoid false
+positives:
+
+- **Code blocks are protected**: Transformations skip content inside ``` fenced
+  blocks
+- **Prose detection**: `@see First reference` is NOT transformed (common English
+  words)
+- **Code construct detection**: `@see MyClass` IS transformed (follows naming
+  patterns)
+- **Partial transformations**: `@throws {Error} When invalid` preserves the
+  description
+
+#### Integration with Other Features
+
+Legacy transformations work seamlessly with all other plugin features:
+
+- **Tag ordering**: Transformed tags participate in canonical ordering
+- **Release tag deduplication**: Duplicate tags are removed after transformation
+- **Parameter alignment**: Transformed `@param` tags align properly
+- **Markdown formatting**: Content formatting applies after transformation
+
+#### Disabling Legacy Support
+
+To disable legacy transformations (e.g., for modern codebases):
+
+```json
+{
+  "tsdoc": {
+    "closureCompilerCompat": false
+  }
+}
+```
+
+#### Migration Workflow
+
+1. **Enable the plugin** with default settings (`closureCompilerCompat: true`)
+2. **Run Prettier** on your legacy codebase - transformations happen
+   automatically
+3. **Review changes** - the process is conservative and avoids false positives
+4. **Commit transformed code** - all legacy annotations are now modern TSDoc
+5. **Optional**: Disable `closureCompilerCompat` once migration is complete
 
 ## Examples
 
@@ -566,10 +701,12 @@ enabled by default:
 #### Unexpected tag changes
 
 1. **Tag normalization**: Built-in normalizations are applied by default
-2. **AST-aware release tag insertion**: Only exported declarations get default
+2. **Legacy Closure Compiler transformations**: Enabled by default
+   (`closureCompilerCompat: true`)
+3. **AST-aware release tag insertion**: Only exported declarations get default
    tags
-3. **Inheritance rules**: Class/interface members inherit from container
-4. **Custom normalizations**: Check your `normalizeTags` configuration
+4. **Inheritance rules**: Class/interface members inherit from container
+5. **Custom normalizations**: Check your `normalizeTags` configuration
 
 #### Release tags not being added
 
@@ -594,6 +731,7 @@ interface TSDocPluginOptions {
   defaultReleaseTag?: string | null;
   onlyExportedAPI?: boolean;
   inheritanceAware?: boolean;
+  closureCompilerCompat?: boolean;
   extraTags?: string[];
   normalizeTags?: Record<string, string>;
   releaseTagStrategy?: 'keep-first' | 'keep-last';
@@ -602,7 +740,7 @@ interface TSDocPluginOptions {
 
 ## Development Status
 
-Phase 110 (Newline and Tag Management) - ✅ COMPLETED
+Phase 130 (Legacy Closure Compiler Support) - ✅ COMPLETED
 
 All phases of the implementation plan have been completed successfully:
 
@@ -615,6 +753,7 @@ All phases of the implementation plan have been completed successfully:
 - ✅ Phase 7: Edge Cases & Performance
 - ✅ Phase 8: Release Tags
 - ✅ Phase 110: Newline and Tag Management
+- ✅ Phase 130: Legacy Closure Compiler Support
 
 See [agents/context.md](./agents/context.md) for the detailed specification.
 

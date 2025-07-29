@@ -15,6 +15,8 @@ import type { PrettierOptionsWithTSDoc } from './types.js';
 import { parserCache, PerformanceMonitor } from './utils/cache.js';
 import { debugLog, logWarning } from './utils/common.js';
 import { safeDocToString } from './utils/doc-to-string.js';
+import { applyLegacyTransformations } from './utils/legacy-transforms.js';
+import { resolveOptions } from './config.js';
 
 /**
  * Cache for TSDoc parsers with performance monitoring
@@ -87,7 +89,14 @@ export function preprocessTypescript(
       );
 
       // Extract the comment value (strip /** and */)
-      const commentValue = extractCommentValue(commentText);
+      let commentValue = extractCommentValue(commentText);
+
+      // Apply legacy transformations before TSDoc detection and processing
+      const tsdocOptions = resolveOptions(options);
+      const legacyOptions = {
+        closureCompilerCompat: tsdocOptions.closureCompilerCompat,
+      };
+      commentValue = applyLegacyTransformations(commentValue, legacyOptions);
 
       // Check if this is a TSDoc candidate
       if (!isTSDocCandidate({ type: 'CommentBlock', value: commentValue })) {

@@ -98,6 +98,8 @@ export class Thing {
    * This class has a constructor
    *
    * @param name - The name
+   * @see {@link hello}
+   * @see {@link http://example.com}
    */
   constructor(name: string) {
     this.name = name;
@@ -119,7 +121,7 @@ export class Thing {
  * This is an oldschool function
  *
  * @param value - The value
- * @internal
+ * @public
  */
 export function oldschool(value: string) {
   console.log(`The value: ${value}`);

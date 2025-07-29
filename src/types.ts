@@ -21,6 +21,7 @@ export interface TSDocPluginOptions {
   inheritanceAware?: boolean;
   extraTags?: string[];
   normalizeTags?: Record<string, string>;
+  closureCompilerCompat?: boolean;
 }
 
 /**

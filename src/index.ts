@@ -105,6 +105,12 @@ const plugin: Plugin = {
       description:
         'Respect inheritance rules - skip tagging class/interface members',
     },
+    closureCompilerCompat: {
+      type: 'boolean',
+      category: 'TSDoc',
+      default: true,
+      description: 'Enable legacy Closure Compiler annotation transformations',
+    },
   },
 };
 
