@@ -519,6 +519,10 @@ function formatMarkdownText(text: string, options: ParserOptions<any>): any {
   let currentParagraph: string[] = [];
   let _lastWasListItem = false;
 
+  if (process.env.PRETTIER_TSDOC_DEBUG === '1') {
+    debugLog('formatMarkdownText input lines:', JSON.stringify(lines));
+  }
+
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i].trim();
 
@@ -529,10 +533,11 @@ function formatMarkdownText(text: string, options: ParserOptions<any>): any {
         const wrapped = wrapTextToString(paragraphText, options);
         result.push(wrapped);
         currentParagraph = [];
-
-        // Add empty string to represent paragraph break (will become empty comment line)
-        result.push('');
       }
+
+      // Always add empty string for paragraph breaks, regardless of whether we had a current paragraph
+      // This ensures proper spacing after lists, code blocks, etc.
+      result.push('');
       _lastWasListItem = false;
     } else if (line.match(/^[-*+]\s/)) {
       // List item - end current paragraph first
@@ -553,6 +558,7 @@ function formatMarkdownText(text: string, options: ParserOptions<any>): any {
 
         // Look ahead for continuation lines
         let j = i + 1;
+        let lastConsumedIndex = i; // Track the last line we actually consumed
         while (j < lines.length) {
           const nextLine = lines[j].trim();
           if (!nextLine) {
@@ -564,10 +570,12 @@ function formatMarkdownText(text: string, options: ParserOptions<any>): any {
           } else {
             // Continuation line - add to this list item
             listContent.push(nextLine);
-            i = j; // Skip this line in the main loop
+            lastConsumedIndex = j; // Update the last consumed index
             j++;
           }
         }
+        // Set i to the last line we actually consumed, so the main loop continues correctly
+        i = lastConsumedIndex;
 
         // Join all content and wrap
         const fullContent = listContent.join(' ');

@@ -13,5 +13,7 @@
   "searchInDocuments": true,
   "treatValidationWarningsAsErrors": true,
   "treatWarningsAsErrors": true,
-  "useFirstParagraphOfCommentAsSummary": true
+  "useFirstParagraphOfCommentAsSummary": true,
+  "disableGit": true,
+  "disableSources": true
 }
