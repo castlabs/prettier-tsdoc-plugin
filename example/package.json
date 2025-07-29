@@ -1,0 +1,24 @@
+{
+  "name": "example",
+  "version": "1.0.0",
+  "type": "module",
+  "main": "dist/index.js",
+  "scripts": {
+    "tsc": "tsc",
+    "api": "api-extractor run --local",
+    "typedoc": "typedoc",
+    "prettier:check": "prettier --check .",
+    "prettier": "prettier --log-level warn --write .",
+    "lint": "eslint .",
+    "lint:fix": "eslint --fix ."
+  },
+  "devDependencies": {
+    "@microsoft/api-extractor": "^7.52.9",
+    "eslint": "^9.32.0",
+    "eslint-config-prettier": "^10.1.8",
+    "eslint-plugin-tsdoc": "^0.4.0",
+    "typedoc": "^0.28.8",
+    "typescript": "^5.8.3",
+    "typescript-eslint": "^8.38.0"
+  }
+}

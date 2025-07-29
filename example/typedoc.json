@@ -1,0 +1,17 @@
+{
+  "$schema": "https://typedoc.org/schema.json",
+  "entryPointStrategy": "expand",
+  "readme": "./README.md",
+  "entryPoints": ["./src"],
+  "out": "./dist/docs",
+  "cleanOutputDir": true,
+  "hideGenerator": true,
+  "lang": "en",
+  "markdownLinkExternal": true,
+  "name": "Example Project",
+  "searchInComments": true,
+  "searchInDocuments": true,
+  "treatValidationWarningsAsErrors": true,
+  "treatWarningsAsErrors": true,
+  "useFirstParagraphOfCommentAsSummary": true
+}
