@@ -9,6 +9,7 @@ import type { AstPath, Doc, ParserOptions } from 'prettier';
 import { doc } from 'prettier';
 import {
   createDefaultReleaseTag,
+  getTagOrderPriority,
   hasReleaseTag,
   isReleaseTag,
   normalizeTagName,
@@ -34,6 +35,7 @@ import {
   effectiveWidth,
   formatTextContent,
 } from './utils/text-width.js';
+import { debugLog } from './utils/common.js';
 
 // Debug telemetry for performance and error tracking
 interface TelemetryData {
@@ -131,6 +133,11 @@ export function formatTSDocComment(
 
     // Parse the comment
     const fullComment = `/**${commentValue}*/`;
+
+    if (process.env.PRETTIER_TSDOC_DEBUG === '1') {
+      debugLog('Full comment to parse:', JSON.stringify(fullComment));
+    }
+
     const parserContext = parser.parseString(fullComment);
 
     // Check for parse errors
@@ -138,18 +145,26 @@ export function formatTSDocComment(
       telemetry.parseErrors++;
 
       if (process.env.PRETTIER_TSDOC_DEBUG === '1') {
-        const logger = (options as any).logger;
-        if (logger?.warn) {
-          logger.warn(
-            'TSDoc parse warnings:',
-            parserContext.log.messages.map((m) => m.text)
-          );
-        }
+        debugLog(
+          'TSDoc parse warnings:',
+          parserContext.log.messages.map((m) => m.text)
+        );
       }
     }
 
     // Build intermediate model
     const model = buildCommentModel(parserContext.docComment, fullComment);
+
+    if (process.env.PRETTIER_TSDOC_DEBUG === '1') {
+      debugLog('Built model:', {
+        summary: model.summary?.content,
+        params: model.params.map((p) => `${p.tagName} ${p.name}`),
+        returns: model.returns?.tagName,
+        otherTags: model.otherTags.map(
+          (t) => `${t.tagName}: ${t.content.substring(0, 50)}`
+        ),
+      });
+    }
 
     // Apply normalizations and transformations
     const normalizedModel = applyNormalizations(
@@ -256,7 +271,7 @@ function applyNormalizations(
     let shouldInsertTag = !options.onlyExportedAPI;
 
     if (process.env.PRETTIER_TSDOC_DEBUG === '1') {
-      console.debug('Release tag conditions:', {
+      debugLog('Release tag conditions:', {
         defaultReleaseTag: options.defaultReleaseTag,
         hasReleaseTag: hasReleaseTag(normalizedModel),
         onlyExportedAPI: options.onlyExportedAPI,
@@ -271,7 +286,7 @@ function applyNormalizations(
         shouldInsertTag = shouldAddReleaseTag(analysis, false);
 
         if (process.env.PRETTIER_TSDOC_DEBUG === '1') {
-          console.debug('AST Analysis Result:', {
+          debugLog('AST Analysis Result:', {
             isExported: analysis.isExported,
             exportType: analysis.exportType,
             isContainerMember: analysis.isContainerMember,
@@ -296,7 +311,7 @@ function applyNormalizations(
         shouldInsertTag = !isClassMember;
 
         if (process.env.PRETTIER_TSDOC_DEBUG === '1') {
-          console.debug('Heuristic Analysis Result:', {
+          debugLog('Heuristic Analysis Result:', {
             isLikelyClassMember: isClassMember,
             shouldInsertTag,
           });
@@ -312,7 +327,7 @@ function applyNormalizations(
         shouldInsertTag = exportContext.isExported && !isClassMember;
 
         if (process.env.PRETTIER_TSDOC_DEBUG === '1') {
-          console.debug('Using export context for release tag decision:', {
+          debugLog('Using export context for release tag decision:', {
             isExported: exportContext.isExported,
             isLikelyClassMember: isClassMember,
             shouldInsertTag,
@@ -324,7 +339,7 @@ function applyNormalizations(
         shouldInsertTag = false;
 
         if (process.env.PRETTIER_TSDOC_DEBUG === '1') {
-          console.debug(
+          debugLog(
             'onlyExportedAPI enabled but no AST or export context - skipping tag insertion for safety'
           );
         }
@@ -337,14 +352,14 @@ function applyNormalizations(
       shouldInsertTag = !isClassMember;
 
       if (process.env.PRETTIER_TSDOC_DEBUG === '1') {
-        console.debug('Inheritance-aware heuristic analysis:', {
+        debugLog('Inheritance-aware heuristic analysis:', {
           isLikelyClassMember: isClassMember,
           shouldInsertTag,
         });
       }
     } else {
       if (process.env.PRETTIER_TSDOC_DEBUG === '1') {
-        console.debug('Skipping analysis - using legacy behavior');
+        debugLog('Skipping analysis - using legacy behavior');
       }
     }
 
@@ -361,7 +376,7 @@ function applyNormalizations(
     const isClassMember = isLikelyClassMember(commentValue);
     if (isClassMember) {
       if (process.env.PRETTIER_TSDOC_DEBUG === '1') {
-        console.debug('Removing release tags from detected class member');
+        debugLog('Removing release tags from detected class member');
       }
       // Remove all release tags from class members since they should inherit from container
       normalizedModel.otherTags = normalizedModel.otherTags.filter(
@@ -375,6 +390,16 @@ function applyNormalizations(
     normalizedModel.otherTags = deduplicateReleaseTags(
       normalizedModel.otherTags,
       options.releaseTagStrategy || 'keep-first'
+    );
+  }
+
+  // Apply tag ordering if enabled
+  if (process.env.PRETTIER_TSDOC_DEBUG === '1') {
+    debugLog('normalizeTagOrder option:', options.normalizeTagOrder);
+  }
+  if (options.normalizeTagOrder) {
+    normalizedModel.otherTags = sortTagsByCanonicalOrder(
+      normalizedModel.otherTags
     );
   }
 
@@ -408,6 +433,25 @@ function deduplicateReleaseTags(
 
   // If we processed in reverse for keep-last, reverse back
   return strategy === 'keep-last' ? result.reverse() : result;
+}
+
+/**
+ * Sort tags according to canonical order defined in Phase 110 specification.
+ * Tags within the same group maintain their relative order.
+ */
+function sortTagsByCanonicalOrder(tags: any[]): any[] {
+  // Create a stable sort that preserves relative order within groups
+  return [...tags].sort((a, b) => {
+    const priorityA = getTagOrderPriority(a.tagName);
+    const priorityB = getTagOrderPriority(b.tagName);
+
+    if (priorityA === priorityB) {
+      // Same priority group - maintain relative order (stable sort)
+      return 0;
+    }
+
+    return priorityA - priorityB;
+  });
 }
 
 /**
@@ -529,10 +573,7 @@ function formatMarkdownText(text: string, options: ParserOptions<any>): any {
         const fullContent = listContent.join(' ');
         const wrappedLines = wrapListItemContent(fullContent, options);
         if (process.env.PRETTIER_TSDOC_DEBUG === '1') {
-          console.debug(
-            'List item wrapped lines:',
-            JSON.stringify(wrappedLines)
-          );
+          debugLog('List item wrapped lines:', JSON.stringify(wrappedLines));
         }
         result.push({
           type: 'list-item',
@@ -673,7 +714,7 @@ function buildPrettierDoc(
   if (model.summary) {
     // Debug: log the raw summary content
     if (process.env.PRETTIER_TSDOC_DEBUG === '1') {
-      console.debug('Summary content:', JSON.stringify(model.summary.content));
+      debugLog('Summary content:', JSON.stringify(model.summary.content));
     }
 
     const summaryContent = formatTextWithMarkdown(
@@ -683,7 +724,7 @@ function buildPrettierDoc(
     if (summaryContent) {
       parts.push(hardline);
       if (process.env.PRETTIER_TSDOC_DEBUG === '1') {
-        console.debug('Summary content array:', JSON.stringify(summaryContent));
+        debugLog('Summary content array:', JSON.stringify(summaryContent));
       }
       if (Array.isArray(summaryContent)) {
         // Handle array of lines/content
@@ -838,7 +879,25 @@ function buildPrettierDoc(
       parts.push(createEmptyCommentLine());
     }
 
-    for (const tag of model.otherTags) {
+    for (let i = 0; i < model.otherTags.length; i++) {
+      const tag = model.otherTags[i];
+      const isExampleTag = tag.tagName === '@example';
+
+      // Add blank line before @example tags (Phase 110 requirement)
+      if (isExampleTag) {
+        // Always add blank line before @example, even if it's the first other tag
+        // or if there are previous non-example tags
+        if (i === 0 && !needsLineBeforeOtherTags) {
+          // First tag is @example and we haven't added initial blank line
+          parts.push(hardline);
+          parts.push(createEmptyCommentLine());
+        } else if (i > 0) {
+          // Not the first tag, add blank line before this @example
+          parts.push(hardline);
+          parts.push(createEmptyCommentLine());
+        }
+      }
+
       parts.push(hardline);
       parts.push(formatOtherTag(tag));
     }
@@ -960,7 +1019,7 @@ function formatExampleWithMarkdown(content: string): any {
           } catch (error) {
             // Fallback to original code if formatting fails
             if (process.env.PRETTIER_TSDOC_DEBUG === '1') {
-              console.debug('Code formatting failed:', error);
+              debugLog('Code formatting failed:', error);
             }
             for (const codeLine of codeBlockLines) {
               parts.push(hardline);
@@ -1047,7 +1106,7 @@ function formatCodeBlock(code: string, language: string): string {
   // TODO: In the future, consider restructuring to support async formatting
 
   if (process.env.PRETTIER_TSDOC_DEBUG === '1') {
-    console.debug(
+    debugLog(
       `Formatting ${language} code with basic formatter:`,
       JSON.stringify(code.substring(0, 50))
     );
@@ -1056,7 +1115,7 @@ function formatCodeBlock(code: string, language: string): string {
   const formatted = formatCodeBasic(code, language);
 
   if (process.env.PRETTIER_TSDOC_DEBUG === '1') {
-    console.debug(
+    debugLog(
       `Formatted ${language} code result:`,
       JSON.stringify(formatted.substring(0, 50))
     );

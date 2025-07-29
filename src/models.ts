@@ -9,6 +9,7 @@ import type {
   ReturnsTag,
   OtherTag,
 } from './types.js';
+import { debugLog } from './utils/common.js';
 
 // Re-export types for backward compatibility
 export type {
@@ -108,11 +109,7 @@ function extractFullExampleContent(
   rawComment?: string
 ): string {
   if (!rawComment) {
-    // Debug logging would need options parameter here, but this is deep in parsing
-    // For now, only log in strict debug mode
-    if (process.env.PRETTIER_TSDOC_DEBUG === '1') {
-      console.debug('No raw comment provided, using fallback');
-    }
+    debugLog('No raw comment provided, using fallback');
     // Fallback to normal extraction
     return extractTextFromNode(exampleBlock.content);
   }
@@ -132,12 +129,7 @@ function extractFullExampleContent(
       .join('\n')
       .trim();
 
-    if (process.env.PRETTIER_TSDOC_DEBUG === '1') {
-      console.debug(
-        'Extracted full @example content:',
-        JSON.stringify(fullContent)
-      );
-    }
+    debugLog('Extracted full @example content:', JSON.stringify(fullContent));
 
     return fullContent;
   }
@@ -158,6 +150,21 @@ export function buildCommentModel(
     typeParams: [],
     otherTags: [],
   };
+
+  debugLog('DocComment structure:', {
+    summarySection: !!docComment.summarySection,
+    remarksBlock: !!docComment.remarksBlock,
+    params: !!docComment.params,
+    typeParams: !!docComment.typeParams,
+    returnsBlock: !!docComment.returnsBlock,
+    customBlocks: docComment.customBlocks?.length || 0,
+    modifierTagSet: docComment.modifierTagSet?.nodes?.length || 0,
+    deprecatedBlock: !!docComment.deprecatedBlock,
+    seeBlocks: docComment.seeBlocks?.length || 0,
+  });
+
+  // List all properties to find where @see might be stored
+  debugLog('All docComment properties:', Object.keys(docComment));
 
   // Extract summary from the summary section
   if (docComment.summarySection) {
@@ -227,13 +234,39 @@ export function buildCommentModel(
     }
   }
 
+  // Extract @deprecated tag (TSDoc treats this as a special block)
+  if (docComment.deprecatedBlock) {
+    const deprecatedText = extractTextFromNode(
+      docComment.deprecatedBlock._content || docComment.deprecatedBlock.content
+    );
+    debugLog('Deprecated block found:', JSON.stringify(deprecatedText));
+    model.otherTags.push({
+      tagName: '@deprecated',
+      content: deprecatedText.trim(),
+      rawNode: docComment.deprecatedBlock,
+    });
+  }
+
+  // Extract @see tags (TSDoc treats these as special blocks)
+  if (docComment.seeBlocks && docComment.seeBlocks.length > 0) {
+    for (const seeBlock of docComment.seeBlocks) {
+      const seeText = extractTextFromNode(
+        seeBlock._content || seeBlock.content
+      );
+      debugLog('See block found:', JSON.stringify(seeText));
+      model.otherTags.push({
+        tagName: '@see',
+        content: seeText.trim(),
+        rawNode: seeBlock,
+      });
+    }
+  }
+
   // Extract modifier tags from modifierTagSet (includes release tags like @public, @internal, etc)
   if (docComment.modifierTagSet && docComment.modifierTagSet.nodes) {
     for (const modifierTag of docComment.modifierTagSet.nodes) {
       if (modifierTag.tagName) {
-        if (process.env.PRETTIER_TSDOC_DEBUG === '1') {
-          console.debug(`Modifier tag found: ${modifierTag.tagName}`);
-        }
+        debugLog(`Modifier tag found: ${modifierTag.tagName}`);
         model.otherTags.push({
           tagName: modifierTag.tagName,
           content: '', // Modifier tags typically have no content
@@ -254,10 +287,8 @@ export function buildCommentModel(
           content = extractFullExampleContent(block, rawComment);
         }
 
-        if (process.env.PRETTIER_TSDOC_DEBUG === '1') {
-          console.debug(`Custom block found: ${block.blockTag.tagName}`);
-          console.debug(`Content: ${JSON.stringify(content)}`);
-        }
+        debugLog(`Custom block found: ${block.blockTag.tagName}`);
+        debugLog(`Content: ${JSON.stringify(content)}`);
         model.otherTags.push({
           tagName: block.blockTag.tagName,
           content: content.trim(),

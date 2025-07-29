@@ -8,6 +8,7 @@
  */
 
 import type { AstPath } from 'prettier';
+import { debugLog } from './common.js';
 
 export interface ExportAnalysis {
   isExported: boolean;
@@ -31,12 +32,12 @@ export function analyzeCommentContext(
     const parentNode = getCommentParent(commentPath);
 
     if (process.env.PRETTIER_TSDOC_DEBUG === '1') {
-      console.debug('AST Analysis - Parent node:', parentNode?.type);
+      debugLog('AST Analysis - Parent node:', parentNode?.type);
     }
 
     if (!parentNode) {
       if (process.env.PRETTIER_TSDOC_DEBUG === '1') {
-        console.debug('AST Analysis - No parent node found');
+        debugLog('AST Analysis - No parent node found');
       }
       return createDefaultAnalysis();
     }
@@ -59,7 +60,7 @@ export function analyzeCommentContext(
     };
 
     if (process.env.PRETTIER_TSDOC_DEBUG === '1') {
-      console.debug('AST Analysis Result:', result);
+      debugLog('AST Analysis Result:', result);
     }
 
     return result;
@@ -175,13 +176,13 @@ function analyzeContainerInheritance(
 } {
   if (!node) {
     if (process.env.PRETTIER_TSDOC_DEBUG === '1') {
-      console.debug('Container Analysis - No node provided');
+      debugLog('Container Analysis - No node provided');
     }
     return { isContainerMember: false, shouldInherit: false };
   }
 
   if (process.env.PRETTIER_TSDOC_DEBUG === '1') {
-    console.debug('Container Analysis - Analyzing node type:', node.type);
+    debugLog('Container Analysis - Analyzing node type:', node.type);
   }
 
   // Check if this is a class member
@@ -191,7 +192,7 @@ function analyzeContainerInheritance(
   ]);
   if (classContainer) {
     if (process.env.PRETTIER_TSDOC_DEBUG === '1') {
-      console.debug(
+      debugLog(
         'Container Analysis - Found class container:',
         classContainer.type
       );
@@ -209,7 +210,7 @@ function analyzeContainerInheritance(
   ]);
   if (interfaceContainer) {
     if (process.env.PRETTIER_TSDOC_DEBUG === '1') {
-      console.debug(
+      debugLog(
         'Container Analysis - Found interface container:',
         interfaceContainer.type
       );
@@ -228,7 +229,7 @@ function analyzeContainerInheritance(
   ]);
   if (namespaceContainer) {
     if (process.env.PRETTIER_TSDOC_DEBUG === '1') {
-      console.debug(
+      debugLog(
         'Container Analysis - Found namespace container:',
         namespaceContainer.type
       );
@@ -241,7 +242,7 @@ function analyzeContainerInheritance(
   }
 
   if (process.env.PRETTIER_TSDOC_DEBUG === '1') {
-    console.debug('Container Analysis - No container found');
+    debugLog('Container Analysis - No container found');
   }
   return { isContainerMember: false, shouldInherit: false };
 }
@@ -261,7 +262,7 @@ function findContainerOfType(
     // Check the immediate parent
     const parent = commentPath.getParentNode();
     if (process.env.PRETTIER_TSDOC_DEBUG === '1') {
-      console.debug(
+      debugLog(
         'findContainerOfType - Parent:',
         parent?.type,
         'Looking for:',
@@ -273,10 +274,7 @@ function findContainerOfType(
 
     if (containerTypes.includes(parent.type)) {
       if (process.env.PRETTIER_TSDOC_DEBUG === '1') {
-        console.debug(
-          'findContainerOfType - Found matching parent:',
-          parent.type
-        );
+        debugLog('findContainerOfType - Found matching parent:', parent.type);
       }
       return parent;
     }
@@ -284,12 +282,12 @@ function findContainerOfType(
     // Try to get grandparent for more context
     const grandparent = commentPath.getParentNode(1);
     if (process.env.PRETTIER_TSDOC_DEBUG === '1') {
-      console.debug('findContainerOfType - Grandparent:', grandparent?.type);
+      debugLog('findContainerOfType - Grandparent:', grandparent?.type);
     }
 
     if (grandparent && containerTypes.includes(grandparent.type)) {
       if (process.env.PRETTIER_TSDOC_DEBUG === '1') {
-        console.debug(
+        debugLog(
           'findContainerOfType - Found matching grandparent:',
           grandparent.type
         );
@@ -434,7 +432,7 @@ export function isLikelyClassMember(commentContent: string): boolean {
   if (!commentContent) return false;
 
   if (process.env.PRETTIER_TSDOC_DEBUG === '1') {
-    console.debug(
+    debugLog(
       'Analyzing comment for class member heuristics:',
       JSON.stringify(commentContent.substring(0, 100))
     );
@@ -467,19 +465,16 @@ export function isLikelyClassMember(commentContent: string): boolean {
   // If multiple lines show significant indentation, likely a class member
   if (hasSignificantIndentation && indentedLineCount >= 2) {
     if (process.env.PRETTIER_TSDOC_DEBUG === '1') {
-      console.debug(
-        'Detected likely class member based on indentation pattern:',
-        {
-          indentedLineCount,
-          hasSignificantIndentation,
-        }
-      );
+      debugLog('Detected likely class member based on indentation pattern:', {
+        indentedLineCount,
+        hasSignificantIndentation,
+      });
     }
     return true;
   }
 
   if (process.env.PRETTIER_TSDOC_DEBUG === '1') {
-    console.debug('No class member indentation pattern detected:', {
+    debugLog('No class member indentation pattern detected:', {
       indentedLineCount,
       hasSignificantIndentation,
     });

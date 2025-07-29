@@ -40,6 +40,8 @@ A Prettier plugin that formats TSDoc comments consistently.
 - **Tag Normalization**: Normalize common tag spelling variants (e.g., `@return`
   → `@returns`)
 - **Parameter Alignment**: Align parameter descriptions across `@param` tags
+- **Tag Ordering**: Canonical ordering of TSDoc tags for improved readability
+- **Example Formatting**: Automatic blank lines before `@example` tags
 - **Markdown & Code Support**: Format markdown and fenced code blocks within
   comments
 - **Release Tag Management**:
@@ -81,7 +83,7 @@ configuration:
   "plugins": ["prettier-tsdoc-plugin"],
   "tsdoc": {
     "fencedIndent": "space",
-    "normalizeTagOrder": false,
+    "normalizeTagOrder": true,
     "dedupeReleaseTags": true,
     "splitModifiers": true,
     "singleSentenceSummary": false,
@@ -104,7 +106,7 @@ configuration:
 | Option                  | Type                            | Default        | Description                                                      |
 | ----------------------- | ------------------------------- | -------------- | ---------------------------------------------------------------- |
 | `fencedIndent`          | `"space"` \| `"none"`           | `"space"`      | Indentation style for fenced code blocks                         |
-| `normalizeTagOrder`     | `boolean`                       | `false`        | Normalize tag order based on conventional patterns               |
+| `normalizeTagOrder`     | `boolean`                       | `true`         | Normalize tag order based on conventional patterns (see below)   |
 | `dedupeReleaseTags`     | `boolean`                       | `true`         | Deduplicate release tags (`@public`, `@beta`, etc.)              |
 | `splitModifiers`        | `boolean`                       | `true`         | Split modifiers to separate lines                                |
 | `singleSentenceSummary` | `boolean`                       | `false`        | Enforce single sentence summaries                                |
@@ -125,6 +127,65 @@ The plugin includes these built-in normalizations:
 
 You can add custom normalizations or override built-in ones using the
 `normalizeTags` option.
+
+### Tag Ordering
+
+When `normalizeTagOrder` is enabled (default: `true`), TSDoc tags are reordered
+into a canonical structure for improved readability:
+
+#### Canonical Tag Order
+
+1. **Input Parameters**: `@param` and `@typeParam` tags
+2. **Output**: `@returns` tag
+3. **Error Conditions**: `@throws` tags
+4. **Deprecation Notices**: `@deprecated` tag
+5. **Cross-references**: `@see` tags
+6. **Release Tags**: `@public`, `@internal`, `@beta`, etc.
+7. **Examples**: `@example` tags (always last, with automatic blank lines)
+
+#### Example
+
+**Before** (mixed order):
+
+````typescript
+/**
+ * A complex function.
+ * @see https://example.com
+ * @beta
+ * @throws {Error} If input is invalid
+ * @returns The result
+ * @param a The first number
+ * @deprecated Use newFunction instead
+ * @example
+ * ```ts
+ * complexFunction(1, 2);
+ * ```
+ */
+````
+
+**After** (canonical order):
+
+````typescript
+/**
+ * A complex function.
+ *
+ * @param a - The first number
+ * @returns The result
+ * @throws {Error} If input is invalid
+ * @deprecated Use newFunction instead
+ * @see https://example.com
+ * @beta
+ *
+ * @example
+ * ```ts
+ * complexFunction(1, 2);
+ * ```
+ */
+````
+
+**Note**: When `normalizeTagOrder` is `false`, the original tag order is
+preserved as much as possible, though TSDoc's parsing structure may still impose
+some organization.
 
 ### Release Tags
 
@@ -541,9 +602,9 @@ interface TSDocPluginOptions {
 
 ## Development Status
 
-Phase 8 (Release Tags) - ✅ COMPLETED
+Phase 110 (Newline and Tag Management) - ✅ COMPLETED
 
-All 8 phases of the implementation plan have been completed successfully:
+All phases of the implementation plan have been completed successfully:
 
 - ✅ Phase 1: Bootstrap
 - ✅ Phase 2: Parser Detection
@@ -553,6 +614,7 @@ All 8 phases of the implementation plan have been completed successfully:
 - ✅ Phase 6: Configuration & Normalization
 - ✅ Phase 7: Edge Cases & Performance
 - ✅ Phase 8: Release Tags
+- ✅ Phase 110: Newline and Tag Management
 
 See [agents/context.md](./agents/context.md) for the detailed specification.
 

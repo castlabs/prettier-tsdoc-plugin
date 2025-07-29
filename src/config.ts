@@ -119,9 +119,55 @@ export const MODIFIER_TAGS = new Set([
   '@virtual',
 ]);
 
+/**
+ * Canonical tag ordering groups according to Phase 110 specification.
+ * Tags within the same group maintain their relative order.
+ */
+export const TAG_ORDER_GROUPS = {
+  PARAMS: 1, // @param & @typeParam
+  RETURNS: 2, // @returns
+  THROWS: 3, // @throws
+  DEPRECATED: 4, // @deprecated
+  SEE: 5, // @see
+  RELEASE_TAGS: 6, // @public, @internal, @beta, etc.
+  EXAMPLES: 7, // @example - always last
+} as const;
+
+/**
+ * Get the canonical order priority for a given tag name.
+ * Returns a numeric priority where lower numbers come first.
+ * Tags not explicitly listed get a default priority.
+ */
+export function getTagOrderPriority(tagName: string): number {
+  const normalizedTag = tagName.startsWith('@') ? tagName : `@${tagName}`;
+
+  switch (normalizedTag) {
+    case '@param':
+    case '@typeParam':
+      return TAG_ORDER_GROUPS.PARAMS;
+    case '@returns':
+      return TAG_ORDER_GROUPS.RETURNS;
+    case '@throws':
+      return TAG_ORDER_GROUPS.THROWS;
+    case '@deprecated':
+      return TAG_ORDER_GROUPS.DEPRECATED;
+    case '@see':
+      return TAG_ORDER_GROUPS.SEE;
+    case '@example':
+      return TAG_ORDER_GROUPS.EXAMPLES;
+    default:
+      // Release tags
+      if (isReleaseTag(normalizedTag)) {
+        return TAG_ORDER_GROUPS.RELEASE_TAGS;
+      }
+      // Other tags get a default priority between SEE and EXAMPLES
+      return TAG_ORDER_GROUPS.SEE + 0.5;
+  }
+}
+
 export const DEFAULT_OPTIONS: Required<TSDocPluginOptions> = {
   fencedIndent: 'space',
-  normalizeTagOrder: false,
+  normalizeTagOrder: true,
   dedupeReleaseTags: true,
   splitModifiers: true,
   singleSentenceSummary: false,

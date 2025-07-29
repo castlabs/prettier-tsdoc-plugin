@@ -5,6 +5,7 @@
 
 import type { ParserOptions } from 'prettier';
 import { format, doc } from 'prettier';
+import { debugLog } from './common.js';
 
 const { builders: _builders } = doc;
 
@@ -430,7 +431,7 @@ export async function formatMarkdownBlock(
   } catch (error) {
     // Log only in debug mode since this is a utility function without access to options
     if (process.env.PRETTIER_TSDOC_DEBUG === '1') {
-      console.debug(
+      debugLog(
         'Markdown formatting failed:',
         error instanceof Error ? error.message : String(error)
       );

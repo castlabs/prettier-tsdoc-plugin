@@ -57,7 +57,7 @@ function internal() {
     // Should add release tag to exported function but not internal function
     expect(formatted).toMatch(/export function exported\(\) \{/);
     expect(formatted).toMatch(/@internal/);
-    
+
     // Count @internal occurrences - should be exactly 1 (for the exported function)
     const internalMatches = formatted.match(/@internal/g);
     expect(internalMatches).toHaveLength(1);
@@ -91,7 +91,7 @@ export class TestClass {
     // Exported class should get @internal tag, but method should not
     // (because methods inherit from class)
     expect(formatted).toMatch(/@internal/);
-    
+
     // Should have exactly one @internal tag (on the class, not the method)
     const internalMatches = formatted.match(/@internal/g);
     expect(internalMatches).toHaveLength(1);

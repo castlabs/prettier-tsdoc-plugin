@@ -82,8 +82,10 @@ function preprocessSource(
       }
 
       // Detect if this is an exported construct
-      const isExported = followingCode ? /^\s*export\s+/.test(followingCode) : false;
-      
+      const isExported = followingCode
+        ? /^\s*export\s+/.test(followingCode)
+        : false;
+
       // Create export context for release tag analysis
       const exportContext = {
         isExported,
@@ -95,7 +97,13 @@ function preprocessSource(
       const parser = getTSDocParser(extraTags);
 
       // Format the comment with export context
-      const formattedDoc = formatTSDocComment(commentContent, options, parser, undefined, exportContext);
+      const formattedDoc = formatTSDocComment(
+        commentContent,
+        options,
+        parser,
+        undefined,
+        exportContext
+      );
       const formatted = safeDocToString(formattedDoc);
 
       // Return the formatted comment with the following code
@@ -144,7 +152,7 @@ const plugin: Plugin = {
     normalizeTagOrder: {
       type: 'boolean',
       category: 'TSDoc',
-      default: false,
+      default: true,
       description: 'Normalize tag order based on conventional patterns',
     },
     dedupeReleaseTags: {
