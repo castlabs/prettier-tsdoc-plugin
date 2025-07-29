@@ -985,8 +985,6 @@ function formatExampleWithMarkdown(content: string): any {
   let inCodeBlock = false;
   let codeBlockLanguage = '';
   let codeBlockLines: string[] = [];
-  let firstTextLine = true;
-
   for (const line of lines) {
     const trimmedLine = line.trim();
 
@@ -1039,14 +1037,8 @@ function formatExampleWithMarkdown(content: string): any {
     } else {
       // Regular content outside code blocks
       if (trimmedLine) {
-        if (firstTextLine) {
-          // First text line goes on same line as @example
-          parts.push(createCommentLine(`@example ${line}`));
-          firstTextLine = false;
-        } else {
-          parts.push(hardline);
-          parts.push(createCommentLine(line));
-        }
+        parts.push(hardline);
+        parts.push(createCommentLine(line));
       } else {
         parts.push(hardline);
         parts.push(createEmptyCommentLine());

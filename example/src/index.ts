@@ -19,7 +19,8 @@
  * ```typescript
  * const a = internal()
  * ```
- * * @example And does this text now become part of the example?
+ *
+ * And does this text now become part of the example?
  */
 export function long_line_test(name: string, second: string) {
   console.log(`Hello ${name} ${second}`);

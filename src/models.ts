@@ -103,39 +103,156 @@ export function extractTextFromNode(node: any): string {
 
 /**
  * Extract full @example content including code blocks by parsing raw comment text
+ *
+ * The issue we're solving: TSDoc parser sometimes doesn't capture the full content
+ * of @example blocks, especially when they contain code fences. We need to extract
+ * the content manually but respect the proper scope boundaries of @example tags.
  */
 function extractFullExampleContent(
   exampleBlock: any,
   rawComment?: string
 ): string {
-  if (!rawComment) {
-    debugLog('No raw comment provided, using fallback');
-    // Fallback to normal extraction
-    return extractTextFromNode(exampleBlock.content);
+  // First, try the normal extraction - if it gives us good content, use it
+  const normalExtraction = extractTextFromNode(exampleBlock.content);
+
+  if (!rawComment || normalExtraction.includes('```')) {
+    // If we have the raw comment but normal extraction already includes code blocks,
+    // or if we don't have raw comment, use normal extraction
+    debugLog(
+      'Using normal extraction for @example:',
+      JSON.stringify(normalExtraction)
+    );
+    return normalExtraction;
   }
 
-  // Find the @example tag in the raw text (stop at next @ tag or closing comment)
-  const exampleTagMatch = rawComment.match(
-    /@example\s+(.*?)(?=@\w+|\*\/\s*$|$)/s
+  debugLog('Normal extraction lacks code blocks, trying raw extraction');
+  debugLog(
+    'Raw comment snippet:',
+    JSON.stringify(rawComment.substring(0, 200))
   );
 
-  if (exampleTagMatch) {
-    let fullContent = exampleTagMatch[1].trim();
-
-    // Clean up comment prefixes from each line
-    fullContent = fullContent
-      .split('\n')
-      .map((line: string) => line.replace(/^\s*\*\s?/, ''))
-      .join('\n')
-      .trim();
-
-    debugLog('Extracted full @example content:', JSON.stringify(fullContent));
-
-    return fullContent;
+  // Only do manual extraction if normal extraction seems incomplete
+  // Find the @example tag in the raw comment
+  const exampleTagIndex = rawComment.indexOf('@example');
+  if (exampleTagIndex === -1) {
+    debugLog('Could not find @example in raw comment, using normal extraction');
+    return normalExtraction;
   }
 
-  // Fallback to normal extraction
-  return extractTextFromNode(exampleBlock.content);
+  // Extract from @example to the end of comment
+  const contentAfterExample = rawComment.substring(exampleTagIndex);
+
+  // Find the next block-level tag that would terminate this @example
+  const blockTerminatorTags = [
+    '@param',
+    '@typeParam',
+    '@returns',
+    '@return',
+    '@remarks',
+    '@example',
+    '@see',
+    '@throws',
+    '@deprecated',
+    '@category',
+    '@categoryDescription',
+    '@group',
+    '@groupDescription',
+    '@default',
+    '@document',
+    '@expandType',
+    '@import',
+    '@inlineType',
+    '@license',
+    '@module',
+    '@property',
+    '@prop',
+    '@since',
+    '@sortStrategy',
+    '@summary',
+    '@template',
+    '@type',
+    '@abstract',
+    '@alpha',
+    '@beta',
+    '@public',
+    '@internal',
+    '@experimental',
+    '@event',
+    '@eventProperty',
+    '@hidden',
+    '@inline',
+    '@override',
+    '@readonly',
+    '@sealed',
+    '@virtual',
+    '@preventExpand',
+    '@preventInline',
+  ];
+
+  // Look for the next tag after the first @example
+  let nextTagIndex = -1;
+  let nextTag = '';
+
+  // Start looking after the first line of @example
+  const firstLineEnd = contentAfterExample.indexOf('\n');
+  const searchStart = firstLineEnd > 0 ? firstLineEnd : 0;
+
+  for (const tag of blockTerminatorTags) {
+    const tagPattern = new RegExp(
+      `^\\s*\\*\\s*${tag.replace('@', '\\@')}\\b`,
+      'm'
+    );
+    const match = contentAfterExample.substring(searchStart).match(tagPattern);
+    if (match && match.index !== undefined) {
+      const actualIndex = searchStart + match.index;
+      if (nextTagIndex === -1 || actualIndex < nextTagIndex) {
+        nextTagIndex = actualIndex;
+        nextTag = tag;
+      }
+    }
+  }
+
+  // Extract content up to the next tag (or end if no tag found)
+  let exampleContent;
+  if (nextTagIndex > 0) {
+    exampleContent = contentAfterExample.substring(0, nextTagIndex);
+    debugLog(`Found terminating tag ${nextTag} at index ${nextTagIndex}`);
+  } else {
+    // Look for comment end
+    const commentEndIndex = contentAfterExample.lastIndexOf('*/');
+    exampleContent =
+      commentEndIndex > 0
+        ? contentAfterExample.substring(0, commentEndIndex)
+        : contentAfterExample;
+    debugLog('No terminating tag found, using content until comment end');
+  }
+
+  // Remove the @example tag itself and clean up
+  exampleContent = exampleContent.replace(/^@example\s*/, '');
+
+  // Clean up comment prefixes from each line
+  const cleanedContent = exampleContent
+    .split('\n')
+    .map((line: string) => line.replace(/^\s*\*\s?/, ''))
+    .join('\n')
+    .trim();
+
+  debugLog(
+    'Extracted @example content via raw parsing:',
+    JSON.stringify(cleanedContent)
+  );
+
+  // If the manually extracted content is substantially longer and contains code blocks,
+  // prefer it over normal extraction
+  if (
+    cleanedContent.length > normalExtraction.length &&
+    cleanedContent.includes('```')
+  ) {
+    return cleanedContent;
+  }
+
+  // Otherwise, stick with normal extraction
+  return normalExtraction;
 }
 
 /**
