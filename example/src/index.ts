@@ -43,6 +43,26 @@ export function long_line_test(name: string, second: string) {
 function internal() {
   console.log('This is an internal function');
 }
+
+/**
+ * Well this is just a small function that we have in place for internal usage
+ * only. The point here is that this line should be split into two.
+ *
+ * The other thing that we are going to add to this function is an example with
+ * some TypeScript code. But before we do this lets try a {@link http://verylongurls.that.goes.way.over.com | long link} that
+ * should not be split.
+ *
+ * @internal
+ *
+ * @example This is an example
+ * ```typescript
+ * const a = internal()
+ * ```
+ */
+export function external_function() {
+  console.log('This is an internal function');
+}
+
 /**
  * This is a function that renders HTML such as:
  *
@@ -94,4 +114,13 @@ export class Thing {
   public hello(who: string): string {
     return this.name + ' ' + who;
   }
+}
+/**
+ * This is an oldschool function
+ *
+ * @param value - The value
+ * @internal
+ */
+export function oldschool(value: string) {
+  console.log(`The value: ${value}`);
 }

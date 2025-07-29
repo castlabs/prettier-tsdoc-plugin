@@ -131,8 +131,11 @@ export function formatTSDocComment(
     // Resolve TSDoc-specific options
     const tsdocOptions = resolveOptions(options);
 
-    // Parse the comment
-    const fullComment = `/**${commentValue}*/`;
+    // Parse the comment - handle case where commentValue already starts with *
+    const cleanCommentValue = commentValue.startsWith('*')
+      ? commentValue.substring(1)
+      : commentValue;
+    const fullComment = `/**${cleanCommentValue}*/`;
 
     if (process.env.PRETTIER_TSDOC_DEBUG === '1') {
       debugLog('Full comment to parse:', JSON.stringify(fullComment));
@@ -819,6 +822,15 @@ function buildPrettierDoc(
 
   // Blank line before meta-data block (parameters and other annotations)
   // when normalizeTagOrder is enabled (Phase 110 requirement)
+  if (process.env.PRETTIER_TSDOC_DEBUG === '1') {
+    debugLog('Blank line decision:', {
+      normalizeTagOrder: tsdocOptions?.normalizeTagOrder,
+      hasContent,
+      hasAnyMetaData,
+      condition:
+        tsdocOptions?.normalizeTagOrder && hasContent && hasAnyMetaData,
+    });
+  }
   if (tsdocOptions?.normalizeTagOrder && hasContent && hasAnyMetaData) {
     parts.push(hardline);
     parts.push(createEmptyCommentLine());

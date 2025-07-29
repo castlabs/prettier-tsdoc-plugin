@@ -23,5 +23,6 @@ export default {
     '@microsoft/tsdoc',
     'prettier/parser-typescript',
     'prettier/parser-babel',
+    'typescript',
   ],
 };
