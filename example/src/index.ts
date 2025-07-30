@@ -1,4 +1,17 @@
 /**
+ * This is the first line. And this is a followup And this is the second line
+ * that I will now make extra long in the hopes that this will wrap properly.
+ *
+ * And this then is a completely separate paragraphs. But look at this code:
+ *
+ * ```typescript
+ * const melon = food()
+ * ```
+ *
+ * @packageDocumentation
+ */
+
+/**
  * This is one of the comments we would like to have formatted and we create a
  * long line that the formatter should wrap for us.
  *
@@ -10,6 +23,12 @@
  *   the plugin and then it will continue on the next line
  *
  * Here is one example, now let see what happens to the parameters
+ *
+ * Let me also add a simple codeblock here
+ *
+ * ```typescript
+ * const foo = bla()
+ * ```
  *
  * @param name - The name param should receive a and maybe it should also be
  *   formatted over multiple lines.
@@ -51,6 +70,9 @@ function internal() {
  * The other thing that we are going to add to this function is an example with
  * some TypeScript code. But before we do this lets try a {@link http://verylongurls.that.goes.way.over.com | long link} that
  * should not be split.
+ *
+ * Something with a `let x = 1;` code comment and a long line that `let y=2;` in
+ * wraps around another comment.
  *
  * @internal
  *

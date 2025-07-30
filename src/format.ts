@@ -77,6 +77,22 @@ export function getTelemetry(): Readonly<TelemetryData> {
 }
 
 /**
+ * Check if a comment model represents a standalone file-level block
+ * that shouldn't receive automatic release tags.
+ */
+function isStandaloneFileLevelBlock(model: TSDocCommentModel): boolean {
+  // File-level tags that indicate a standalone comment block
+  const fileLevelTags = [
+    '@packageDocumentation',
+    '@fileoverview', // This gets transformed to @packageDocumentation but we check both
+    '@license',
+    '@module',
+  ];
+
+  return model.otherTags.some((tag) => fileLevelTags.includes(tag.tagName));
+}
+
+/**
  * Log debug telemetry if debug mode is enabled
  */
 function logDebugTelemetry(options: ParserOptions<any>): void {
@@ -328,8 +344,15 @@ function applyNormalizations(
     tagName: normalizeTagName(tag.tagName, options),
   }));
 
+  // Check if this is a standalone file-level block that shouldn't get release tags
+  const isFileLevelBlock = isStandaloneFileLevelBlock(normalizedModel);
+
   // Apply default release tag insertion using AST-aware analysis
-  if (options.defaultReleaseTag && !hasReleaseTag(normalizedModel)) {
+  if (
+    options.defaultReleaseTag &&
+    !hasReleaseTag(normalizedModel) &&
+    !isFileLevelBlock
+  ) {
     // Default to false when onlyExportedAPI is true but no AST context is available
     // This ensures we don't add release tags to non-exported code when we can't determine export status
     let shouldInsertTag = !options.onlyExportedAPI;
@@ -582,6 +605,9 @@ function formatMarkdownText(text: string, options: ParserOptions<any>): any {
   const result: any[] = [];
   let currentParagraph: string[] = [];
   let _lastWasListItem = false;
+  let inCodeBlock = false;
+  let codeBlockLanguage = '';
+  let codeBlockLines: string[] = [];
 
   if (process.env.PRETTIER_TSDOC_DEBUG === '1') {
     debugLog('formatMarkdownText input lines:', JSON.stringify(lines));
@@ -590,7 +616,72 @@ function formatMarkdownText(text: string, options: ParserOptions<any>): any {
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i].trim();
 
-    if (!line) {
+    if (line.startsWith('```')) {
+      // Fenced code block start or end
+      if (!inCodeBlock) {
+        // Starting a code block - end current paragraph first
+        if (currentParagraph.length > 0) {
+          const paragraphText = currentParagraph.join(' ');
+          const wrapped = wrapTextToString(paragraphText, options);
+          result.push(wrapped);
+          currentParagraph = [];
+        }
+
+        // Start code block
+        inCodeBlock = true;
+        codeBlockLanguage = line.slice(3).trim() || 'text';
+        codeBlockLines = [];
+        result.push({
+          type: 'code-fence-start',
+          content: line,
+        });
+      } else {
+        // Ending a code block - format the collected code
+        inCodeBlock = false;
+
+        // Format the code block content using Prettier for supported languages
+        if (codeBlockLines.length > 0) {
+          const codeContent = codeBlockLines.join('\n');
+          try {
+            const formattedCode = formatCodeBlock(
+              codeContent,
+              codeBlockLanguage
+            );
+
+            // Add the formatted code lines
+            const formattedLines = formattedCode.split('\n');
+            for (const codeLine of formattedLines) {
+              result.push({
+                type: 'code-line',
+                content: codeLine,
+              });
+            }
+          } catch (error) {
+            // Fallback to original code if formatting fails
+            if (process.env.PRETTIER_TSDOC_DEBUG === '1') {
+              debugLog('Code formatting failed:', error);
+            }
+            for (const codeLine of codeBlockLines) {
+              result.push({
+                type: 'code-line',
+                content: codeLine,
+              });
+            }
+          }
+        }
+
+        // Add closing code fence
+        result.push({
+          type: 'code-fence-end',
+          content: line,
+        });
+      }
+      _lastWasListItem = false;
+    } else if (inCodeBlock) {
+      // Inside a code block - collect the line (preserve original line with indentation)
+      codeBlockLines.push(lines[i]); // Use original line, not trimmed
+      _lastWasListItem = false;
+    } else if (!line) {
       // Empty line - end current paragraph if any
       if (currentParagraph.length > 0) {
         const paragraphText = currentParagraph.join(' ');
@@ -683,6 +774,18 @@ function formatMarkdownText(text: string, options: ParserOptions<any>): any {
           restoreInlineTags(line, tokens)
         ),
       };
+    } else if (
+      item &&
+      typeof item === 'object' &&
+      (item.type === 'code-fence-start' ||
+        item.type === 'code-fence-end' ||
+        item.type === 'code-line')
+    ) {
+      // Code block elements - restore inline tags in content
+      return {
+        ...item,
+        content: restoreInlineTags(item.content, tokens),
+      };
     }
     return item;
   });
@@ -749,8 +852,15 @@ function wrapTextWithBackticks(text: string, availableWidth: number): string {
       const codeSpan = '`' + part + '`';
 
       // Check if adding this code span would exceed the line width
-      if (currentLine.length + codeSpan.length <= availableWidth) {
-        currentLine += codeSpan;
+      const needsSpaceBeforeBacktick =
+        currentLine && !currentLine.endsWith(' ');
+      const spaceForBacktick = needsSpaceBeforeBacktick ? 1 : 0;
+
+      if (
+        currentLine.length + codeSpan.length + spaceForBacktick <=
+        availableWidth
+      ) {
+        currentLine += (needsSpaceBeforeBacktick ? ' ' : '') + codeSpan;
       } else {
         // Code span is too long for current line
         if (currentLine.trim()) {
@@ -762,17 +872,53 @@ function wrapTextWithBackticks(text: string, availableWidth: number): string {
         }
       }
     } else {
-      // Regular text - can be wrapped normally
+      // Regular text - handle space preservation carefully
       if (!part) continue; // Skip empty parts
 
-      const words = part.split(/\s+/).filter((w) => w); // Remove empty strings
-      for (const word of words) {
-        if (currentLine.length + word.length + 1 <= availableWidth) {
-          currentLine += (currentLine ? ' ' : '') + word;
+      // If this part comes after a backtick (even indices > 0), and the part starts with a space,
+      // we need to ensure proper spacing
+      const startsWithSpace = part.match(/^\s/);
+
+      // Extract words but preserve the information about leading space
+      const words = part
+        .trim()
+        .split(/\s+/)
+        .filter((w) => w);
+
+      for (let wordIndex = 0; wordIndex < words.length; wordIndex++) {
+        const word = words[wordIndex];
+        let needsSpace = false;
+
+        if (wordIndex === 0) {
+          // First word of this part
+          if (i > 0 && i % 2 === 0 && startsWithSpace && currentLine) {
+            // This part comes after a backtick and starts with space
+            needsSpace = true;
+          } else if (currentLine && !currentLine.endsWith(' ')) {
+            // Normal spacing between words
+            needsSpace = true;
+          }
+        } else {
+          // Subsequent words always need space if there's content on the line
+          needsSpace = !!(currentLine && !currentLine.endsWith(' '));
+        }
+
+        const spaceNeeded = needsSpace ? 1 : 0;
+
+        if (currentLine.length + word.length + spaceNeeded <= availableWidth) {
+          currentLine += (needsSpace ? ' ' : '') + word;
         } else {
           if (currentLine.trim()) {
             result.push(currentLine);
-            currentLine = word;
+            // For wrapped lines, preserve leading space context ONLY if we're starting
+            // a new line with the FIRST word from a part that follows a backtick
+            const shouldPreserveSpace =
+              i > 0 && i % 2 === 0 && startsWithSpace && wordIndex === 0;
+            if (shouldPreserveSpace) {
+              currentLine = ' ' + word;
+            } else {
+              currentLine = word;
+            }
           } else {
             currentLine = word;
           }
@@ -882,6 +1028,14 @@ function buildPrettierDoc(
               parts.push(` *   ${listItem.lines[i]}`); // Space, asterisk, 3 spaces to align with content after "- "
             }
             // List item is complete - no additional hardline needed as it's handled globally
+          } else if (
+            typeof line === 'object' &&
+            (line.type === 'code-fence-start' ||
+              line.type === 'code-fence-end' ||
+              line.type === 'code-line')
+          ) {
+            // Handle code block elements
+            parts.push(createCommentLine(line.content));
           } else if (typeof line === 'string' && line.trim()) {
             // Split multi-line strings into individual lines
             const lines = line.split('\n');

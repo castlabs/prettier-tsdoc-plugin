@@ -157,9 +157,38 @@ export function extractTextFromNode(node: any): string {
     }
   }
 
+  // Handle DocFencedCode nodes (code blocks like ```typescript)
+  if (
+    node.kind === 'FencedCode' ||
+    (node._openingFenceExcerpt &&
+      node._codeExcerpt &&
+      node._closingFenceExcerpt)
+  ) {
+    // Extract the language if available
+    let language = '';
+    if (node._languageExcerpt) {
+      language = node._languageExcerpt._content.toString().trim();
+    }
+
+    // Extract the code content
+    let code = '';
+    if (node._codeExcerpt) {
+      code = node._codeExcerpt._content.toString();
+    }
+
+    // Return the formatted code block
+    if (language) {
+      return `\`\`\`${language}\n${code}\`\`\``;
+    } else {
+      return `\`\`\`\n${code}\`\`\``;
+    }
+  }
+
   if (node.kind === 'Paragraph' && (node.nodes || node._nodes)) {
     const nodes = node.nodes || node._nodes;
-    return nodes.map(extractTextFromNode).join('');
+    const extractedTexts = nodes.map(extractTextFromNode);
+    const result = extractedTexts.join('');
+    return result;
   }
 
   if (node.kind === 'Section' && (node.nodes || node._nodes)) {
@@ -473,11 +502,30 @@ export function buildCommentModel(
     }
   }
 
+  // Handle @fileoverview transformation first
+  let fileoverviewContent = '';
+
   // Extract other custom blocks (for block tags like @example, @see, etc)
   if (docComment.customBlocks) {
     for (const block of docComment.customBlocks) {
       if (block.blockTag && block.blockTag.tagName) {
         let content = extractTextFromNode(block.content);
+
+        // Special handling for @fileoverview - transform to @packageDocumentation
+        if (block.blockTag.tagName === '@fileoverview') {
+          fileoverviewContent = content.trim();
+          debugLog(
+            `@fileoverview found, content: ${JSON.stringify(fileoverviewContent)}`
+          );
+
+          // Add @packageDocumentation tag instead
+          model.otherTags.push({
+            tagName: '@packageDocumentation',
+            content: '',
+            rawNode: block,
+          });
+          continue; // Skip adding @fileoverview to otherTags
+        }
 
         // For @example tags, try to get the full content including code blocks
         if (block.blockTag.tagName === '@example') {
@@ -492,6 +540,21 @@ export function buildCommentModel(
           rawNode: block,
         });
       }
+    }
+  }
+
+  // If @fileoverview content was found, move it to summary (or append to existing summary)
+  if (fileoverviewContent) {
+    if (model.summary) {
+      // Append fileoverview content to existing summary
+      model.summary.content =
+        model.summary.content + '\n' + fileoverviewContent;
+    } else {
+      // Create new summary from fileoverview content
+      model.summary = {
+        type: 'summary',
+        content: fileoverviewContent,
+      };
     }
   }
 

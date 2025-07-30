@@ -359,7 +359,30 @@ export function formatMarkdown(
     return formatCache.get(cacheKey)!;
   }
 
-  // Apply basic markdown normalization
+  // If content contains backticks (inline code), use a more careful approach
+  if (content.includes('`')) {
+    // Try to format as markdown while preserving inline code spacing
+    try {
+      // Use synchronous formatting with a simple approach
+      let formatted = content
+        .replace(/\s+/g, ' ') // Normalize multiple spaces to single spaces
+        .trim();
+
+      // Ensure proper spacing around backticks
+      formatted = formatted
+        .replace(/(\w)`/g, '$1 `') // Add space before backtick if missing
+        .replace(/`(\w)/g, '` $1'); // Add space after backtick if missing
+
+      formatCache.set(cacheKey, formatted);
+      return formatted;
+    } catch {
+      // Fallback to original content if formatting fails
+      formatCache.set(cacheKey, content);
+      return content;
+    }
+  }
+
+  // Apply basic markdown normalization for text without backticks
   let formatted = content.trim();
 
   // Normalize list formatting

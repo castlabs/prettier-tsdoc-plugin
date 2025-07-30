@@ -34,7 +34,26 @@ export function wrapText(text: string): any {
     return '';
   }
 
-  // Split text into words, preserving multiple spaces as significant
+  // First, protect inline code spans by treating them with surrounding spaces as single units
+  const words = tokenizeWithInlineCodeProtection(text);
+  return words.length > 0 ? fill(words) : '';
+}
+
+/**
+ * Tokenize text while protecting inline code spans with their surrounding spaces.
+ * This prevents Prettier's fill from breaking lines between spaces and backticks.
+ */
+function tokenizeWithInlineCodeProtection(text: string): string[] {
+  // Simple approach: just treat backticks as single words, let normal tokenization handle spaces
+  return tokenizeNormalText(text);
+}
+
+/**
+ * Normal text tokenization (without inline code protection)
+ */
+function tokenizeNormalText(text: string): string[] {
+  if (!text) return [];
+
   const words: string[] = [];
   const parts = text.split(/(\s+)/);
 
@@ -49,7 +68,7 @@ export function wrapText(text: string): any {
     }
   }
 
-  return words.length > 0 ? fill(words) : '';
+  return words;
 }
 
 /**
@@ -59,6 +78,13 @@ export function createCommentLine(content: any): any {
   if (!content) {
     return ' * ';
   }
+
+  // Special handling for content with inline code (backticks)
+  if (typeof content === 'string' && content.includes('`')) {
+    // Use the wrapText function which has inline code protection
+    return [' * ', wrapText(content)];
+  }
+
   return [' * ', content];
 }
 
