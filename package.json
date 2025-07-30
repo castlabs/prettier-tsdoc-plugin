@@ -12,11 +12,12 @@
   "scripts": {
     "build": "rollup -c",
     "typecheck": "tsc --noEmit",
-    "prettier": "prettier --write .",
+    "prettier": "prettier --log-level warn --write .",
     "test": "vitest --run",
     "test:watch": "vitest",
     "lint": "eslint .",
-    "lint:fix": "eslint --fix ."
+    "lint:fix": "eslint --fix .",
+    "check": "npm run prettier && npm run typecheck && npm run lint:fix && npm run build && npm run test"
   },
   "dependencies": {
     "@microsoft/tsdoc": "^0.15.1",

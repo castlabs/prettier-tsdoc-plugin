@@ -114,4 +114,7 @@ const plugin: Plugin = {
   },
 };
 
+export { createTSDocConfiguration } from './parser-config.js';
+export { formatTSDocComment } from './format.js';
+export { safeDocToString } from './utils/doc-to-string.js';
 export default plugin;

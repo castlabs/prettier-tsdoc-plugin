@@ -133,9 +133,59 @@ export function formatTSDocComment(
     const tsdocOptions = resolveOptions(options);
 
     // Apply legacy transformations before parsing
-    let processedCommentValue = commentValue.startsWith('*')
-      ? commentValue.substring(1)
-      : commentValue;
+    // Handle different input formats:
+    // 1. Raw comment content: " * This is a comment..."
+    // 2. Already formatted comment: "/**\n * This is a comment...\n */"
+    let processedCommentValue: string;
+
+    // Check if this is a full formatted comment (ignoring leading/trailing whitespace)
+    const trimmedComment = commentValue.trim();
+    if (trimmedComment.startsWith('/**') && trimmedComment.endsWith('*/')) {
+      // Already a full formatted comment - extract the content
+      const rawContent = trimmedComment
+        .substring(3, trimmedComment.length - 2) // Remove /** and */
+        .replace(/^\n/, '') // Remove leading newline after /**
+        .replace(/\n$/, ''); // Remove trailing newline before */
+
+      // Clean up the comment markers from each line and reconstruct properly
+      const lines = rawContent.split('\n');
+      const cleanedLines: string[] = [];
+
+      for (const line of lines) {
+        // Remove leading whitespace and asterisk with optional space
+        const cleaned = line.replace(/^\s*\*\s?/, '');
+        cleanedLines.push(cleaned);
+      }
+
+      // Filter out empty trailing lines and reconstruct with proper formatting
+      while (
+        cleanedLines.length > 0 &&
+        cleanedLines[cleanedLines.length - 1].trim() === ''
+      ) {
+        cleanedLines.pop();
+      }
+
+      // Reconstruct the content in the format expected by TSDoc parser
+      // This should match the format of raw comment content: "\n * content\n * more content\n"
+      if (cleanedLines.length > 0) {
+        processedCommentValue = '\n * ' + cleanedLines.join('\n * ') + '\n';
+      } else {
+        processedCommentValue = '';
+      }
+
+      if (process.env.PRETTIER_TSDOC_DEBUG === '1') {
+        debugLog(
+          'Extracted and cleaned comment content:',
+          JSON.stringify(processedCommentValue)
+        );
+      }
+    } else if (commentValue.startsWith('*')) {
+      // Raw comment content starting with *
+      processedCommentValue = commentValue.substring(1);
+    } else {
+      // Raw comment content without leading *
+      processedCommentValue = commentValue;
+    }
 
     // Apply legacy Closure Compiler transformations if enabled
     const legacyOptions = {
@@ -640,6 +690,7 @@ function formatMarkdownText(text: string, options: ParserOptions<any>): any {
 
 /**
  * Wrap text to string format for comment content
+ * Preserves inline code spans (backticks) and prevents them from being split across lines
  */
 function wrapTextToString(text: string, options: ParserOptions<any>): string {
   const printWidth = options.printWidth || 80;
@@ -649,7 +700,12 @@ function wrapTextToString(text: string, options: ParserOptions<any>): string {
     return text;
   }
 
-  // Simple word wrapping
+  // Check if text contains backticks - if so, be more careful about wrapping
+  if (text.includes('`')) {
+    return wrapTextWithBackticks(text, availableWidth);
+  }
+
+  // Simple word wrapping for text without backticks
   const words = text.split(/\s+/);
   const lines: string[] = [];
   let currentLine = '';
@@ -673,6 +729,63 @@ function wrapTextToString(text: string, options: ParserOptions<any>): string {
   }
 
   return lines.join('\n');
+}
+
+/**
+ * Special text wrapping that preserves inline code spans (backticks)
+ */
+function wrapTextWithBackticks(text: string, availableWidth: number): string {
+  // Split on backticks to find code spans
+  const parts = text.split('`');
+  const result: string[] = [];
+  let currentLine = '';
+
+  for (let i = 0; i < parts.length; i++) {
+    const part = parts[i];
+    const isCodeSpan = i % 2 === 1; // Odd indices are inside backticks
+
+    if (isCodeSpan) {
+      // This is inside backticks - keep it together
+      const codeSpan = '`' + part + '`';
+
+      // Check if adding this code span would exceed the line width
+      if (currentLine.length + codeSpan.length <= availableWidth) {
+        currentLine += codeSpan;
+      } else {
+        // Code span is too long for current line
+        if (currentLine.trim()) {
+          result.push(currentLine);
+          currentLine = codeSpan;
+        } else {
+          // Even on a new line it's too long, but include it anyway
+          currentLine = codeSpan;
+        }
+      }
+    } else {
+      // Regular text - can be wrapped normally
+      if (!part) continue; // Skip empty parts
+
+      const words = part.split(/\s+/).filter((w) => w); // Remove empty strings
+      for (const word of words) {
+        if (currentLine.length + word.length + 1 <= availableWidth) {
+          currentLine += (currentLine ? ' ' : '') + word;
+        } else {
+          if (currentLine.trim()) {
+            result.push(currentLine);
+            currentLine = word;
+          } else {
+            currentLine = word;
+          }
+        }
+      }
+    }
+  }
+
+  if (currentLine.trim()) {
+    result.push(currentLine);
+  }
+
+  return result.join('\n');
 }
 
 /**

@@ -37,16 +37,21 @@ export function applyLegacyTransformations(
 
   let transformed = comment;
 
+  // Note: {@code} transformation is handled at the node extraction level in models.ts
+  // This provides better integration with TSDoc parsing
+
   // Protect code blocks from transformation by replacing them with placeholders
   const { text: protectedText, codeBlocks } = protectCodeBlocks(transformed);
   transformed = protectedText;
 
-  // Apply transformations in order
+  // Apply other transformations in order
   transformed = transformVisibilityTags(transformed);
   transformed = transformTypedTags(transformed);
   transformed = transformClassHeritageTags(transformed);
   transformed = transformRedundantTags(transformed);
   transformed = transformSeeTag(transformed);
+  transformed = transformModernizeTags(transformed);
+  //transformed = transformFileOverviewTag(transformed);
 
   // Restore code blocks
   transformed = restoreCodeBlocks(transformed, codeBlocks);
@@ -236,6 +241,105 @@ function transformSeeTag(comment: string): string {
       return match;
     }
   );
+
+  return transformed;
+}
+
+// Note: {@code} transformation is handled at the node extraction level in models.ts
+
+/**
+ * Transform modern tag equivalents:
+ * - \@tutorial → \@document
+ * - \@default → @defaultValue
+ */
+function transformModernizeTags(comment: string): string {
+  let transformed = comment;
+
+  // Transform @tutorial to @document
+  transformed = transformed.replace(/^(\s*\*\s*)@tutorial\b/gm, '$1@document');
+
+  // Transform @default to @defaultValue
+  // Use a more comprehensive regex that matches the full tag
+  transformed = transformed.replace(
+    /^(\s*\*\s*)@default(\s|$)/gm,
+    '$1@defaultValue$2'
+  );
+
+  return transformed;
+}
+
+/**
+ * Transform \@fileoverview to \@packageDocumentation:
+ * - Extracts the content after \@fileoverview
+ * - Moves it to become the summary content
+ * - Adds @packageDocumentation at the end
+ *
+ * This transformation is more complex as it requires restructuring the comment.
+ */
+function transformFileOverviewTag(comment: string): string {
+  let transformed = comment;
+
+  // Simple approach: find @fileoverview line and extract just that line's content
+  const fileOverviewRegex = /^(\s*\*\s*)@fileoverview\s+(.+)$/gm;
+  const matches = [...transformed.matchAll(fileOverviewRegex)];
+
+  if (matches.length > 0) {
+    // Extract all fileoverview content
+    const fileOverviewContents = matches.map((match) => match[2].trim());
+    const allFileOverviewContent = fileOverviewContents.join(' ').trim();
+
+    // Remove all @fileoverview lines
+    transformed = transformed.replace(fileOverviewRegex, '');
+
+    // Clean up empty lines left behind
+    transformed = transformed.replace(/^\s*\*\s*\n/gm, '');
+
+    // If the comment is now empty, create a proper structure (return comment value, not full comment)
+    if (transformed.trim() === '') {
+      return `* ${allFileOverviewContent}\n *\n * @packageDocumentation\n `;
+    }
+
+    // Add the fileoverview content to the existing summary
+    // Find where to insert content (after any existing summary, before any tags)
+    const beforeTagsMatch = transformed.match(/([\s\S]*?)(\n\s*\*\s*@)/);
+    if (beforeTagsMatch) {
+      // There are tags, insert before them
+      const [, beforeTags, _tagStart] = beforeTagsMatch;
+      const existingSummary = beforeTags.trim();
+
+      if (existingSummary) {
+        // There's existing content, append fileoverview content
+        const newContent = `${existingSummary}\n *\n * ${allFileOverviewContent}`;
+        transformed = transformed.replace(beforeTags, newContent);
+      } else {
+        // No existing content, just add fileoverview content
+        transformed = transformed.replace(
+          beforeTags,
+          `\n * ${allFileOverviewContent}\n *`
+        );
+      }
+    } else {
+      // No tags, just append to the end
+      if (transformed.includes('*/')) {
+        transformed = transformed.replace(
+          /(\s*\*\/)$/,
+          `\n *\n * ${allFileOverviewContent}$1`
+        );
+      } else {
+        transformed += `\n * ${allFileOverviewContent}`;
+      }
+    }
+
+    // Add @packageDocumentation at the end
+    if (transformed.includes('*/')) {
+      transformed = transformed.replace(
+        /(\s*\*\/)$/,
+        '\n *\n * @packageDocumentation$1'
+      );
+    } else {
+      transformed += '\n *\n * @packageDocumentation';
+    }
+  }
 
   return transformed;
 }

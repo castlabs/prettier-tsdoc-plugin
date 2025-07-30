@@ -52,6 +52,17 @@ export function extractTextFromNode(node: any): string {
     return '\n';
   }
 
+  // Handle CodeSpan nodes (existing backticks from previous formatting)
+  if (node.kind === 'CodeSpan') {
+    // Try to get the code content from the excerpt
+    if (node._codeExcerpt) {
+      const code = node._codeExcerpt._content.toString();
+      return `\`${code}\``;
+    }
+    // Fallback - return empty backticks if no content found
+    return '``';
+  }
+
   // Handle inline tags like {@link} - preserve the original syntax
   if (node.kind === 'LinkTag') {
     // Try to get the link destination from different sources
@@ -111,14 +122,14 @@ export function extractTextFromNode(node: any): string {
     }
   }
 
-  // Handle other inline tags like {@inheritDoc}, {@label}, etc.
+  // Handle other inline tags like {@inheritDoc}, {@label}, {@code}, etc.
   if (
     node.kind &&
     typeof node.kind === 'string' &&
     node.kind.endsWith('Tag') &&
     node.tagName
   ) {
-    // Generic inline tag handling - preserve the original syntax
+    // Get the tag name
     const tagName = node.tagName.startsWith('@')
       ? node.tagName
       : `@${node.tagName}`;
@@ -133,6 +144,12 @@ export function extractTextFromNode(node: any): string {
       content = node.text;
     }
 
+    // Special handling for {@code} tags - convert directly to backticks
+    if (tagName === '@code' && content) {
+      return `\`${content}\``;
+    }
+
+    // Generic inline tag handling - preserve the original syntax
     if (content) {
       return `{${tagName} ${content}}`;
     } else {

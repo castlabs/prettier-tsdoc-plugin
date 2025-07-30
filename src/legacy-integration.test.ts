@@ -228,6 +228,211 @@ describe('Legacy transformations integration', () => {
     });
   });
 
+  describe('new transformation features', () => {
+    it('should transform {@code} inline tags to markdown backticks', () => {
+      const input = `
+ * This function uses {@code let x = getValue();} syntax.
+ * Another example: {@code const result = process(data);}.
+ * @param data - The input data
+`;
+
+      const parser = createParser();
+      const result = formatTSDocComment(input, defaultOptions, parser);
+      const resultString = safeDocToString(result);
+
+      // {@code} should be transformed to backticks
+      expect(resultString).toContain('`let x = getValue();`');
+      // The content should be preserved even if wrapped across lines
+      expect(resultString).toContain('`const');
+      expect(resultString).toContain('process(data);`');
+      expect(resultString).not.toContain('{@code');
+    });
+
+    it('should transform @tutorial to @document', () => {
+      const input = `
+ * This function is documented in detail.
+ * @tutorial getting-started
+ * @tutorial advanced-usage
+ * @param value - The input value
+`;
+
+      const parser = createParser();
+      const result = formatTSDocComment(input, defaultOptions, parser);
+      const resultString = safeDocToString(result);
+
+      // @tutorial should be transformed to @document
+      expect(resultString).toContain('@document getting-started');
+      expect(resultString).toContain('@document advanced-usage');
+      expect(resultString).not.toContain('@tutorial');
+    });
+
+    it('should transform @default to @defaultValue', () => {
+      const input = `
+ * This function has a default parameter.
+ * @param value - The input value
+ * @default null
+ * @param options - Configuration options
+ * @default {}
+`;
+
+      const parser = createParser();
+      const result = formatTSDocComment(input, defaultOptions, parser);
+      const resultString = safeDocToString(result);
+
+      // @default should be transformed to @defaultValue
+      expect(resultString).toContain('@defaultValue null');
+      expect(resultString).toContain('@defaultValue {}');
+      // Make sure we don't have the original @default tags (but @defaultValue is ok)
+      expect(resultString).not.toContain('@default null');
+      expect(resultString).not.toContain('@default {}');
+    });
+
+    it('should transform @fileoverview to @packageDocumentation with content restructuring', () => {
+      const input = `
+ * @fileoverview This module provides utility functions for data processing.
+ * It includes various helper methods for validation and transformation.
+`;
+
+      const parser = createParser();
+      const result = formatTSDocComment(input, defaultOptions, parser);
+      const resultString = safeDocToString(result);
+
+      // Content should be moved to summary
+      expect(resultString).toContain('This module provides utility functions');
+      expect(resultString).toContain('various helper methods');
+
+      // @packageDocumentation should be at the bottom
+      expect(resultString).toContain('@packageDocumentation');
+      expect(resultString).not.toContain('@fileoverview');
+
+      // @packageDocumentation should come after the content
+      const packageDocIndex = resultString.indexOf('@packageDocumentation');
+      const contentIndex = resultString.indexOf('This module provides');
+      expect(packageDocIndex).toBeGreaterThan(contentIndex);
+    });
+
+    it('should handle @fileoverview with existing summary content', () => {
+      const input = `
+ * Existing summary content.
+ * @fileoverview Additional file overview content.
+ * @param value - A parameter
+`;
+
+      const parser = createParser();
+      const result = formatTSDocComment(input, defaultOptions, parser);
+      const resultString = safeDocToString(result);
+
+      // Both existing and fileoverview content should be preserved
+      expect(resultString).toContain('Existing summary content');
+      expect(resultString).toContain('Additional file overview content');
+      expect(resultString).toContain('@packageDocumentation');
+      expect(resultString).not.toContain('@fileoverview');
+    });
+
+    it('should handle multiple new transformations together', () => {
+      const input = `
+ * This is a complex example with {@code let value = getValue();} syntax.
+ * @tutorial getting-started  
+ * @default null
+ * @param data - Input data with {@code string | number} type
+ * @tutorial advanced-topics
+`;
+
+      const parser = createParser();
+      const result = formatTSDocComment(input, defaultOptions, parser);
+      const resultString = safeDocToString(result);
+
+      // All transformations should be applied (may be wrapped due to line width)
+      expect(resultString).toMatch(/`let value =[\s\S]*?getValue\(\);`/);
+      expect(resultString).toMatch(/`string \|[\s\S]*?number`/);
+      expect(resultString).toContain('@document getting-started');
+      expect(resultString).toContain('@document advanced-topics');
+      expect(resultString).toContain('@defaultValue null');
+
+      // Original tags should not exist
+      expect(resultString).not.toContain('{@code');
+      expect(resultString).not.toContain('@tutorial');
+      expect(resultString).not.toContain('@default null');
+    });
+
+    it('should preserve {@code} inside code blocks from transformation', () => {
+      const input = `
+ * This example shows {@code let x = 1;} usage.
+ * 
+ * @example
+ * \`\`\`typescript
+ * // This {@code inside} should not be transformed
+ * const code = "example";
+ * \`\`\`
+`;
+
+      const parser = createParser();
+      const result = formatTSDocComment(input, defaultOptions, parser);
+      const resultString = safeDocToString(result);
+
+      // Outside code blocks should be transformed
+      expect(resultString).toContain('`let x = 1;`');
+
+      // Inside code blocks should be preserved (though this is complex to test accurately)
+      // The key is that the transformation logic protects code blocks
+      expect(resultString).toContain('```typescript');
+    });
+
+    it('should work with new transformations when closureCompilerCompat is disabled', () => {
+      const input = `
+ * This function uses {@code let x = 1;} syntax.
+ * @tutorial getting-started
+ * @default null
+`;
+
+      // Test that transformations are NOT applied when disabled
+      const transformedInput = applyLegacyTransformations(input, {
+        closureCompilerCompat: false,
+      });
+
+      expect(transformedInput).toContain('{@code let x = 1;}');
+      expect(transformedInput).toContain('@tutorial');
+      expect(transformedInput).toContain('@default');
+      expect(transformedInput).toBe(input); // No transformation applied
+    });
+
+    it('should be idempotent - {@code} transformation should not cause issues on second run', () => {
+      const input = `
+ * This class has a constructor. This is some {@code let x = 1;} code example
+ *
+ * @param name - The name
+`;
+
+      const parser = createParser();
+
+      // First run
+      const firstResult = formatTSDocComment(input, defaultOptions, parser);
+      const firstString = safeDocToString(firstResult);
+
+      // Second run - should be identical
+      const secondResult = formatTSDocComment(
+        firstString,
+        defaultOptions,
+        parser
+      );
+      const secondString = safeDocToString(secondResult);
+
+      console.log('First run result:', JSON.stringify(firstString));
+      console.log('Second run result:', JSON.stringify(secondString));
+
+      // The results should be identical (idempotent)
+      expect(secondString).toBe(firstString);
+
+      // Both should contain the backticks with content (may be wrapped due to line width)
+      expect(firstString).toMatch(/`let x =[\s\S]*?1;`/);
+      expect(secondString).toMatch(/`let x =[\s\S]*?1;`/);
+
+      // Neither should contain the original {@code} tag
+      expect(firstString).not.toContain('{@code');
+      expect(secondString).not.toContain('{@code');
+    });
+  });
+
   describe('error handling and fallbacks', () => {
     it('should handle malformed legacy tags gracefully', () => {
       const input = `

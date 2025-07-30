@@ -3,6 +3,8 @@
  * Based on specification §3.
  */
 
+import { debugLog } from './utils/common.js';
+
 interface CommentNode {
   type: string;
   value: string;
@@ -17,16 +19,25 @@ export function isTSDocCandidate(
 ): boolean {
   // Must be a block comment
   if (comment.type !== 'CommentBlock') {
+    if (process.env.PRETTIER_TSDOC_DEBUG === '1') {
+      debugLog('[TSDoc Candidate-Check] Not a comment block');
+    }
     return false;
   }
 
   // Must start with /** (not /*!)
-  if (!comment.value.startsWith('*')) {
+  if (!comment.value.trim().startsWith('*')) {
+    if (process.env.PRETTIER_TSDOC_DEBUG === '1') {
+      debugLog('[TSDoc Candidate-Check] Does not start with *', comment.value);
+    }
     return false;
   }
 
   // Must be multi-line (contains newline before closing */)
   if (!comment.value.includes('\n')) {
+    if (process.env.PRETTIER_TSDOC_DEBUG === '1') {
+      debugLog('[TSDoc Candidate-Check] No a multiline block');
+    }
     return false;
   }
 
@@ -50,6 +61,11 @@ export function isTSDocCandidate(
     const trimmed = line.replace(/^\s*\*?\s*/, '').trim();
     return trimmed.length > 0;
   });
+  if (process.env.PRETTIER_TSDOC_DEBUG === '1') {
+    debugLog(
+      `[TSDoc Candidate-Check] Block: ${hasBlockTag}, Inline: ${hasInlineTag}, Content: ${hasContent}`
+    );
+  }
 
   return hasBlockTag || hasInlineTag || hasContent;
 }

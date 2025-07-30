@@ -126,6 +126,11 @@ export function createTSDocConfiguration(
       syntaxKind: TSDocTagSyntaxKind.BlockTag,
       allowMultiple: false,
     },
+    {
+      tagName: '@fileoverview',
+      syntaxKind: TSDocTagSyntaxKind.BlockTag,
+      allowMultiple: false,
+    },
 
     // Modifier tags from TypeDoc/AEDoc
     {
@@ -200,6 +205,11 @@ export function createTSDocConfiguration(
     },
 
     // Inline tags (some may already be in core)
+    {
+      tagName: '@code',
+      syntaxKind: TSDocTagSyntaxKind.InlineTag,
+      allowMultiple: true,
+    },
     {
       tagName: '@linkcode',
       syntaxKind: TSDocTagSyntaxKind.InlineTag,

@@ -385,7 +385,28 @@ The plugin automatically modernizes the following legacy annotations:
 - `@see Also check the documentation` → _(unchanged - descriptive text
   preserved)_
 
+##### 6. Inline Code Block Transformation
+
+- `{@code expression}` → `` `expression` ``
+
+##### 7. Tutorial Tag Modernization
+
+- `@tutorial tutorialName` → `@document tutorialName`
+- References:
+  [TypeDoc @document tag](https://typedoc.org/documents/Tags._document.html)
+
+##### 8. Default Value Tag Modernization
+
+- `@default value` → `@defaultValue value`
+
+##### 9. Package Documentation Tag Transformation
+
+- `@fileoverview description` → Summary content + `@packageDocumentation`
+- **Special handling**: Content is moved to summary, tag is placed at bottom
+
 #### Migration Examples
+
+**Example 1: Core Legacy Transformations**
 
 **Before (Legacy Closure Compiler):**
 
@@ -415,6 +436,49 @@ The plugin automatically modernizes the following legacy annotations:
  * @see {@link MyOtherClass}
  * @see {@link http://example.com/docs}
  */
+```
+
+**Example 2: New Tag Transformations**
+
+**Before (Legacy with new transformations):**
+
+```typescript
+/**
+ * @fileoverview This module provides utility functions for data processing.
+ * It includes various helper methods for validation and transformation.
+ */
+
+/**
+ * Processes values with {@code let x = getValue();} syntax.
+ * @tutorial getting-started
+ * @default null
+ * @param value - The input value
+ */
+function processValue(value: string = null) {
+  // implementation
+}
+```
+
+**After (Modern TSDoc):**
+
+```typescript
+/**
+ * This module provides utility functions for data processing.
+ * It includes various helper methods for validation and transformation.
+ *
+ * @packageDocumentation
+ */
+
+/**
+ * Processes values with `let x = getValue();` syntax.
+ *
+ * @param value - The input value
+ * @document getting-started
+ * @defaultValue null
+ */
+function processValue(value: string = null) {
+  // implementation
+}
 ```
 
 #### Smart Pattern Recognition
