@@ -1125,7 +1125,8 @@ function buildPrettierDoc(
     const alignedParams = printAligned(
       paramTags,
       width,
-      tsdocOptions?.alignParamTags ?? false
+      tsdocOptions?.alignParamTags ?? false,
+      options
     );
     for (const paramLine of alignedParams) {
       parts.push(hardline);
@@ -1144,7 +1145,8 @@ function buildPrettierDoc(
     const alignedTypeParams = printAligned(
       typeParamTags,
       width,
-      tsdocOptions?.alignParamTags ?? false
+      tsdocOptions?.alignParamTags ?? false,
+      options
     );
     for (const typeParamLine of alignedTypeParams) {
       parts.push(hardline);

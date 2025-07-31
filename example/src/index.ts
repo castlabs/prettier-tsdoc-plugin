@@ -30,8 +30,8 @@
  * const foo = bla()
  * ```
  *
- * @param name - The name param should receive a and maybe it should also be
- *   formatted over multiple lines.
+ * @param name - The name param should receive a and maybe it should also be formatted over
+ *   multiple lines.
  * @param second - The second thing
  * @internal
  *
@@ -44,6 +44,35 @@
  */
 export function long_line_test(name: string, second: string) {
   console.log(`Hello ${name} ${second}`);
+}
+
+/**
+ * Multi-line parameter example.
+ *
+ * @param name - The name param should receive a and maybe it should also be formatted over
+ *   multiple lines.
+ * @param second - The second thing. Let me see what will happen if this is a really really long
+ *   line?
+ *
+ *   That looks reasonable but can I continue here in a separate paragraph? This
+ *   line shoudl be split but lets continue with a list then.
+ *
+ *   - This is one item
+ *   - This is a second item
+ *
+ * ```typescript
+ * let code = "also works"
+ * ```
+ *   And then I continue here
+ * @param third - The third one
+ * @internal
+ */
+export function multi_line_parameter(
+  name: string,
+  second: string,
+  third: string
+) {
+  console.log(`Hello ${name} ${second} ${third}`);
 }
 
 /**
