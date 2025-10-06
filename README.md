@@ -62,7 +62,7 @@ A Prettier plugin that formats TSDoc comments consistently.
 ## Installation
 
 ```bash
-npm install prettier-tsdoc-plugin
+npm install @castlabs/prettier-tsdoc-plugin
 ```
 
 ## Usage
@@ -71,7 +71,7 @@ Add the plugin to your Prettier configuration:
 
 ```json
 {
-  "plugins": ["prettier-tsdoc-plugin"]
+  "plugins": ["@castlabs/prettier-tsdoc-plugin"]
 }
 ```
 
@@ -82,7 +82,7 @@ configuration:
 
 ```json
 {
-  "plugins": ["prettier-tsdoc-plugin"],
+  "plugins": ["@castlabs/prettier-tsdoc-plugin"],
   "tsdoc": {
     "fencedIndent": "space",
     "normalizeTagOrder": true,
