@@ -1,5 +1,6 @@
 src/
 agents/
+example/
 node_modules/
 *.test.ts
 *.test.js
@@ -8,3 +9,7 @@ node_modules/
 tsconfig.json
 vitest.config.ts
 vitest.setup.ts
+AGENTS.md
+rollup.config.js
+.prettierrc.json
+.markdownlint.yaml

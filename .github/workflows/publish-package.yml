@@ -30,6 +30,9 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      - name: Build plugin
+        run: npm run build
+
       - name: Publish to npm
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TSDOC_WRITE }}
@@ -55,6 +58,9 @@ jobs:
 
       - name: Install dependencies
         run: npm ci
+
+      - name: Build plugin
+        run: npm run build
 
       - name: Publish to GitHub Package Registry
         env:
