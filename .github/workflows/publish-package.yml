@@ -45,3 +45,46 @@ jobs:
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TSDOC_WRITE }}
         run: npm publish --access public
+
+  publish-gpr:
+    name: Publish to GitHub Package Registry
+    runs-on: ubuntu-latest
+    env:
+      CI: true
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Use Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          registry-url: https://npm.pkg.github.com
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Install Example dependencies
+        working-directory: ./example
+        run: npm ci
+
+      - name: Lint sources
+        run: npm run lint
+
+      - name: Type check
+        run: npm run typecheck
+
+      - name: Build plugin
+        run: npm run build
+
+      - name: Run unit tests
+        run: npm run test
+
+      - name: Publish to GitHub Package Registry
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: npm publish --access public
