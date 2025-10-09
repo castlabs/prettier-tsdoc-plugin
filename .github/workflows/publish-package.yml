@@ -4,18 +4,23 @@ on:
   workflow_dispatch:
 
 jobs:
+  verify:
+    uses: ./.github/workflows/build-and-test.yml
+    secrets: inherit
+    permissions:
+      contents: read
+
   publish:
     name: Publish @castlabs/prettier-tsdoc-plugin
+    needs: verify
     runs-on: ubuntu-latest
-    env:
-      CI: true
     permissions:
       contents: read
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Use Node.js 20
+      - name: Use Node.js
         uses: actions/setup-node@v4
         with:
           node-version: 20
@@ -25,22 +30,6 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Install Example dependencies
-        working-directory: ./example
-        run: npm ci
-
-      - name: Lint sources
-        run: npm run lint
-
-      - name: Type check
-        run: npm run typecheck
-
-      - name: Build plugin
-        run: npm run build
-
-      - name: Run unit tests
-        run: npm run test
-
       - name: Publish to npm
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TSDOC_WRITE }}
@@ -48,9 +37,8 @@ jobs:
 
   publish-gpr:
     name: Publish to GitHub Package Registry
+    needs: verify
     runs-on: ubuntu-latest
-    env:
-      CI: true
     permissions:
       contents: read
       packages: write
@@ -67,22 +55,6 @@ jobs:
 
       - name: Install dependencies
         run: npm ci
-
-      - name: Install Example dependencies
-        working-directory: ./example
-        run: npm ci
-
-      - name: Lint sources
-        run: npm run lint
-
-      - name: Type check
-        run: npm run typecheck
-
-      - name: Build plugin
-        run: npm run build
-
-      - name: Run unit tests
-        run: npm run test
 
       - name: Publish to GitHub Package Registry
         env:

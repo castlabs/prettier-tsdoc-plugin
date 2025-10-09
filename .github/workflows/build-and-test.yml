@@ -1,0 +1,45 @@
+name: Build and Test
+
+on:
+  workflow_call:
+    inputs:
+      registry-url:
+        description: "NPM registry URL to configure"
+        required: false
+        type: string
+        default: ""
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+    env:
+      CI: true
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Use Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          registry-url: ${{ inputs.registry-url != '' && inputs.registry-url || null }}
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Install Example dependencies
+        working-directory: ./example
+        run: npm ci
+
+      - name: Lint sources
+        run: npm run lint
+
+      - name: Type check
+        run: npm run typecheck
+
+      - name: Build plugin
+        run: npm run build
+
+      - name: Run unit tests
+        run: npm run test
