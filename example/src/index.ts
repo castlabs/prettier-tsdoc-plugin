@@ -167,6 +167,15 @@ export class Thing {
   public hello(who: string): string {
     return this.name + ' ' + who;
   }
+
+  /**
+   * Say goodbye to someone
+   *
+   * @returns say bye
+   */
+  public goodbye(name: string): string {
+    return `bye ${name}`;
+  }
 }
 /**
  * This is an oldschool function

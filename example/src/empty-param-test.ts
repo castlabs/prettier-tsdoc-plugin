@@ -14,7 +14,9 @@ export function testme(name: string) {
  * @param options -
  * @internal
  */
-export function multipleParams(_name: string, _id: number, _options: object) {}
+export function multipleParams(name: string, id: number, options: object) {
+  console.log('Foo bar', name, id, options);
+}
 
 /**
  * Test function with mixed params
@@ -24,10 +26,14 @@ export function multipleParams(_name: string, _id: number, _options: object) {}
  * @param options -
  * @internal
  */
-export function mixedParams(_name: string, _id: number, _options: object) {}
+export function mixedParams(name: string, id: number, options: object) {
+  console.log('Foo bar', name, id, options);
+}
 
 /**
  * @typeParam T -
  * @internal
  */
-export function genericFunc<T>(_value: T) {}
+export function genericFunc<T>(value: T) {
+  console.log('Generic', value);
+}
