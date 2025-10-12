@@ -192,7 +192,12 @@ When two or more adjacent tags of the same family appear (`@param`,
 
 - Syntax: `@param <name> - <description>`; `@typeParam <T> - <description>`.
 - Exactly one space before and after `-`.
-- If no description text, omit `-` entirely (configurable; default omit).
+- If no description text, include `-` (configurable via `requireParamHyphen` and
+  `requireTypeParamHyphen`; default **include** for TypeDoc compatibility).
+  - `requireParamHyphen: true` (default): `@param name -`
+  - `requireParamHyphen: false`: `@param name`
+  - `requireTypeParamHyphen: true` (default): `@typeParam T -`
+  - `requireTypeParamHyphen: false`: `@typeParam T`
 - Long names wrap onto next line; description starts on following line indented
   two spaces (so visual alignment remains clear).
 
@@ -365,6 +370,8 @@ clutter). Example `.prettierrc`:
     "splitModifiers": true,
     "singleSentenceSummary": false,
     "fencedIndent": "space",
+    "requireParamHyphen": true,
+    "requireTypeParamHyphen": true,
     "extraTags": [],
     "normalizeTags": { "@return": "@returns" }
   }

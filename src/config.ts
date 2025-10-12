@@ -89,6 +89,28 @@ export interface TSDocPluginOptions {
    * @defaultValue `true`
    */
   closureCompilerCompat?: boolean;
+
+  /**
+   * Whether to require a hyphen separator for \@param tags
+   * even when the description is empty.
+   *
+   * - When true: `\@param name -`
+   * - When false: `\@param name`
+   *
+   * @defaultValue `true` (for TypeDoc compatibility)
+   */
+  requireParamHyphen?: boolean;
+
+  /**
+   * Whether to require a hyphen separator for \@typeParam tags
+   * even when the description is empty.
+   *
+   * - When true: `\@typeParam T -`
+   * - When false: `\@typeParam T`
+   *
+   * @defaultValue `true` (for TypeDoc compatibility)
+   */
+  requireTypeParamHyphen?: boolean;
 }
 
 /**
@@ -187,6 +209,8 @@ export const DEFAULT_OPTIONS: Required<TSDocPluginOptions> = {
   onlyExportedAPI: true,
   inheritanceAware: true,
   closureCompilerCompat: true,
+  requireParamHyphen: true,
+  requireTypeParamHyphen: true,
 };
 
 /**
@@ -239,6 +263,12 @@ export function resolveOptions(
     }),
     ...(userOptions.closureCompilerCompat !== undefined && {
       closureCompilerCompat: userOptions.closureCompilerCompat,
+    }),
+    ...(userOptions.requireParamHyphen !== undefined && {
+      requireParamHyphen: userOptions.requireParamHyphen,
+    }),
+    ...(userOptions.requireTypeParamHyphen !== undefined && {
+      requireTypeParamHyphen: userOptions.requireTypeParamHyphen,
     }),
   };
 }

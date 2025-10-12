@@ -4,10 +4,10 @@ on:
   workflow_call:
     inputs:
       registry-url:
-        description: "NPM registry URL to configure"
+        description: 'NPM registry URL to configure'
         required: false
         type: string
-        default: ""
+        default: ''
 
 jobs:
   build-and-test:
@@ -23,7 +23,8 @@ jobs:
         with:
           node-version: 20
           cache: npm
-          registry-url: ${{ inputs.registry-url != '' && inputs.registry-url || null }}
+          registry-url:
+            ${{ inputs.registry-url != '' && inputs.registry-url || null }}
 
       - name: Install dependencies
         run: npm ci
