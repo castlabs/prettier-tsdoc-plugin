@@ -320,8 +320,8 @@ export function printAligned(
 ): any[];
 ```
 
-**Important:** The third parameter is `alignParamTags` (not `alignTags`) to match
-the configuration option name defined in `src/config.ts`.
+**Important:** The third parameter is `alignParamTags` (not `alignTags`) to
+match the configuration option name defined in `src/config.ts`.
 
 #### 3. Independent Configuration for @param and @typeParam
 
@@ -441,8 +441,8 @@ new option.
   - Mixed configuration (`requireParamHyphen: true`,
     `requireTypeParamHyphen: false`)
 
-**Critical:** The context.md update is essential since we're changing the default
-behavior from the original specification.
+**Critical:** The context.md update is essential since we're changing the
+default behavior from the original specification.
 
 ### Phase 6: Manual Testing
 

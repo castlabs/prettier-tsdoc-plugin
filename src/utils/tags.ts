@@ -9,6 +9,7 @@ import type { ParserOptions } from 'prettier';
 import { extractTextFromNode } from '../models.js';
 import { formatTextContent, createCommentLine } from './text-width.js';
 import { preserveInlineTags, restoreInlineTags } from './markdown.js';
+import { resolveOptions } from '../config.js';
 
 const { builders } = doc;
 const { fill: _fill, line: _line } = builders;
@@ -73,7 +74,7 @@ export function printAligned(
   tags: ParamTagInfo[],
   effectiveWidth: number,
   alignTags: boolean = true,
-  options?: ParserOptions<any>
+  options?: Partial<ParserOptions<any>>
 ): any[] {
   if (tags.length === 0) return [];
 
@@ -264,8 +265,36 @@ export function printAligned(
         }
       }
     } else {
-      // No description, no hyphen
-      result.push(createCommentLine(prefix));
+      // No description - check if we should add hyphen based on tag type
+      const tsdocOptions = resolveOptions(options);
+
+      // Determine which option to check based on tag type
+      // Normalize tag name to handle both '@typeParam' and 'typeParam' formats
+      const normalizedTagName = tag.tagName.startsWith('@')
+        ? tag.tagName
+        : `@${tag.tagName}`;
+      const shouldAddHyphen =
+        normalizedTagName === '@typeParam'
+          ? tsdocOptions.requireTypeParamHyphen
+          : tsdocOptions.requireParamHyphen;
+
+      if (shouldAddHyphen) {
+        // Add hyphen for TypeDoc compatibility
+        if (alignTags && tags.length > 1) {
+          // Aligned format - align the hyphen with other tags
+          const currentWidth = prefix.length;
+          const targetWidth = maxWidth - 3; // maxWidth includes " - ", so subtract it
+          const paddingNeeded = Math.max(1, targetWidth - currentWidth + 1);
+          const padding = ' '.repeat(paddingNeeded);
+          result.push(createCommentLine([prefix, padding, '-']));
+        } else {
+          // Non-aligned format
+          result.push(createCommentLine(`${prefix} -`));
+        }
+      } else {
+        // No description, no hyphen (legacy behavior)
+        result.push(createCommentLine(prefix));
+      }
     }
   }
 
@@ -277,7 +306,7 @@ export function printAligned(
  */
 function formatParamDescription(
   text: string,
-  options: ParserOptions<any>
+  options: Partial<ParserOptions<any>>
 ): any {
   if (!text.trim()) {
     return [];
@@ -348,7 +377,7 @@ function hasMarkdownFeatures(text: string): boolean {
  */
 function formatMarkdownParamContent(
   text: string,
-  options: ParserOptions<any>
+  options: Partial<ParserOptions<any>>
 ): any[] {
   // Preserve inline tags to prevent them from being split during text wrapping
   const { text: textWithTokens, tokens } = preserveInlineTags(text);
@@ -520,7 +549,10 @@ function formatMarkdownParamContent(
 /**
  * Wrap text to lines for parameter content
  */
-function wrapTextToLines(text: string, options: ParserOptions<any>): string[] {
+function wrapTextToLines(
+  text: string,
+  options: Partial<ParserOptions<any>>
+): string[] {
   const printWidth = options.printWidth || 80;
   const availableWidth = printWidth - 3; // Account for " * "
 
@@ -559,7 +591,7 @@ function wrapTextToLines(text: string, options: ParserOptions<any>): string[] {
  */
 function wrapListItemContent(
   text: string,
-  options: ParserOptions<any>
+  options: Partial<ParserOptions<any>>
 ): string[] {
   const printWidth = options.printWidth || 80;
   const availableWidth = printWidth - 3; // Account for " * "

@@ -213,4 +213,204 @@ describe('End-to-End Integration Tests', () => {
     console.log('  ✓ Phase 6: Configuration & Normalization');
     console.log('  ✓ Phase 7: Edge Cases & Performance');
   });
+
+  test('formats empty parameter descriptions with requireParamHyphen: true', () => {
+    const config = createTSDocConfiguration();
+    const parser = new TSDocParser(config);
+    const options = {
+      printWidth: 80,
+      tabWidth: 2,
+      useTabs: false,
+      tsdoc: {
+        requireParamHyphen: true,
+      },
+    };
+
+    const commentWithEmptyParams = `*
+ * Test function
+ * @param name
+ * @param id
+ * @internal
+ `;
+
+    const result = formatTSDocComment(commentWithEmptyParams, options, parser);
+    const formatted = docToString(result);
+
+    // Verify hyphens are present for empty params
+    const lines = formatted.split('\n');
+    const nameLine = lines.find((line) => line.includes('@param name'));
+    const idLine = lines.find((line) => line.includes('@param id'));
+
+    // Expect exact format: " * @param name -" (with trailing space or end of line)
+    expect(nameLine).toBe(' * @param name -');
+    expect(idLine).toBe(' * @param id -');
+
+    console.log(
+      '✅ Empty parameter hyphen feature (requireParamHyphen: true) working'
+    );
+  });
+
+  test('formats empty parameter descriptions with requireParamHyphen: false', () => {
+    const config = createTSDocConfiguration();
+    const parser = new TSDocParser(config);
+    const options = {
+      printWidth: 80,
+      tabWidth: 2,
+      useTabs: false,
+      tsdoc: {
+        requireParamHyphen: false,
+      },
+    };
+
+    const commentWithEmptyParams = `*
+ * Test function
+ * @param name
+ * @param id
+ `;
+
+    const result = formatTSDocComment(commentWithEmptyParams, options, parser);
+    const formatted = docToString(result);
+
+    // Verify hyphens are NOT present for empty params
+    const lines = formatted.split('\n');
+    const nameLine = lines.find((line) => line.includes('@param name'));
+    const idLine = lines.find((line) => line.includes('@param id'));
+
+    // Expect exact format: " * @param name" (no hyphen)
+    expect(nameLine).toBe(' * @param name');
+    expect(idLine).toBe(' * @param id');
+
+    console.log(
+      '✅ Empty parameter hyphen feature (requireParamHyphen: false) working'
+    );
+  });
+
+  test('respects default requireParamHyphen: true for TypeDoc compatibility', () => {
+    const config = createTSDocConfiguration();
+    const parser = new TSDocParser(config);
+    const options = {
+      printWidth: 80,
+      tabWidth: 2,
+      useTabs: false,
+      // No tsdoc config specified - should use defaults
+    };
+
+    const commentWithEmptyParams = `*
+ * @param value
+ * @typeParam T
+ `;
+
+    const result = formatTSDocComment(commentWithEmptyParams, options, parser);
+    const formatted = docToString(result);
+
+    // Verify default behavior: hyphens present for both param and typeParam
+    const lines = formatted.split('\n');
+    const valueLine = lines.find((line) => line.includes('@param value'));
+    const typeParamLine = lines.find((line) => line.includes('@typeParam T'));
+
+    // Expect hyphens by default (TypeDoc compatibility)
+    expect(valueLine).toBe(' * @param value -');
+    expect(typeParamLine).toBe(' * @typeParam T -');
+
+    console.log(
+      '✅ Default requireParamHyphen and requireTypeParamHyphen: true working'
+    );
+  });
+
+  test('handles independent configuration for param and typeParam', () => {
+    const config = createTSDocConfiguration();
+    const parser = new TSDocParser(config);
+    const options = {
+      printWidth: 80,
+      tabWidth: 2,
+      useTabs: false,
+      tsdoc: {
+        requireParamHyphen: true,
+        requireTypeParamHyphen: false,
+      },
+    };
+
+    const commentWithEmptyParams = `*
+ * @param value
+ * @typeParam T
+ `;
+
+    const result = formatTSDocComment(commentWithEmptyParams, options, parser);
+    const formatted = docToString(result);
+
+    // Verify independent behavior: param has hyphen, typeParam does not
+    const lines = formatted.split('\n');
+    const valueLine = lines.find((line) => line.includes('@param value'));
+    const typeParamLine = lines.find((line) => line.includes('@typeParam T'));
+
+    expect(valueLine).toBe(' * @param value -');
+    expect(typeParamLine).toBe(' * @typeParam T');
+
+    console.log('✅ Independent configuration for param and typeParam working');
+  });
 });
+
+/**
+ * Helper function to convert Doc to string for testing
+ */
+function docToString(doc: any): string {
+  if (typeof doc === 'string') {
+    return doc;
+  }
+
+  if (typeof doc === 'number') {
+    return String(doc);
+  }
+
+  if (doc === null || doc === undefined) {
+    return '';
+  }
+
+  if (Array.isArray(doc)) {
+    return doc.map(docToString).join('');
+  }
+
+  if (doc && typeof doc === 'object') {
+    // Handle Prettier Doc builders
+    if (doc.type === 'concat' || (doc.parts && Array.isArray(doc.parts))) {
+      return doc.parts.map(docToString).join('');
+    }
+    if (doc.type === 'group' && doc.contents) {
+      return docToString(doc.contents);
+    }
+    if (doc.type === 'line' || doc.type === 'hardline') {
+      return '\n';
+    }
+    if (doc.type === 'softline') {
+      return ' ';
+    }
+    if (doc.type === 'fill' && doc.parts) {
+      return doc.parts.map(docToString).join(' ');
+    }
+    if (
+      doc.type === 'break-parent' ||
+      doc.type === 'indent' ||
+      doc.type === 'dedent'
+    ) {
+      return ''; // These are formatting control tokens, not content
+    }
+    if (doc.contents !== undefined) {
+      return docToString(doc.contents);
+    }
+    if (doc.parts !== undefined) {
+      return doc.parts.map(docToString).join('');
+    }
+
+    // Last resort: check for common properties
+    if (doc.value !== undefined) {
+      return docToString(doc.value);
+    }
+    if (doc.text !== undefined) {
+      return docToString(doc.text);
+    }
+  }
+
+  // Debug problematic docs
+  console.warn('Unable to convert doc to string:', doc);
+  return '';
+}
