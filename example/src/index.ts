@@ -55,7 +55,7 @@ export function long_line_test(name: string, second: string) {
  *   line?
  *
  *   That looks reasonable but can I continue here in a separate paragraph? This
- *   line shoudl be split but lets continue with a list then.
+ *   line should be split but lets continue with a list then.
  *
  *   - This is one item
  *   - This is a second item
