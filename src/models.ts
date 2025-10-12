@@ -9,6 +9,7 @@ import type {
   ReturnsTag,
   OtherTag,
 } from './types.js';
+import { TSDocTagSyntaxKind } from '@microsoft/tsdoc';
 import { debugLog } from './utils/common.js';
 
 // Re-export types for backward compatibility
@@ -149,11 +150,31 @@ export function extractTextFromNode(node: any): string {
       return `\`${content}\``;
     }
 
-    // Generic inline tag handling - preserve the original syntax
-    if (content) {
-      return `{${tagName} ${content}}`;
+    // Dynamically determine if this is an inline tag by checking the TSDoc configuration
+    // This works for both built-in tags and custom tags defined in tsdoc.json
+    let isInlineTag = false;
+    if (node.configuration) {
+      const tagDefinition = node.configuration.tryGetTagDefinition(tagName);
+      if (tagDefinition) {
+        isInlineTag = tagDefinition.syntaxKind === TSDocTagSyntaxKind.InlineTag;
+      }
+    }
+
+    if (isInlineTag) {
+      // Inline tag - wrap in curly braces: {@tag content}
+      if (content) {
+        return `{${tagName} ${content}}`;
+      } else {
+        return `{${tagName}}`;
+      }
     } else {
-      return `{${tagName}}`;
+      // Block or modifier tag - format without braces: @tag content
+      // This handles cases like @namespace, @module, @public, etc.
+      if (content) {
+        return `${tagName} ${content}`;
+      } else {
+        return tagName;
+      }
     }
   }
 

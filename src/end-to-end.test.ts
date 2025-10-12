@@ -348,6 +348,29 @@ describe('End-to-End Integration Tests', () => {
 
     console.log('✅ Independent configuration for param and typeParam working');
   });
+
+  test('does not wrap block-level tags like @namespace in curly braces', () => {
+    const config = createTSDocConfiguration();
+    const parser = new TSDocParser(config);
+    const options = {
+      printWidth: 80,
+      tabWidth: 2,
+      useTabs: false,
+    };
+
+    const commentWithNamespace = `*
+ * @namespace MyNamespace
+ `;
+
+    const result = formatTSDocComment(commentWithNamespace, options, parser);
+    const formatted = docToString(result);
+
+    // Verify @namespace is NOT wrapped in curly braces (it's a block tag, not an inline tag)
+    expect(formatted).toContain('@namespace MyNamespace');
+    expect(formatted).not.toContain('{@namespace}');
+
+    console.log('✅ Block-level tags like @namespace are correctly formatted');
+  });
 });
 
 /**

@@ -1,7 +1,12 @@
 import { expect, test, describe } from 'vitest';
 import { buildCommentModel, extractTextFromNode } from './models.js';
 import { createTSDocConfiguration } from './parser-config.js';
-import { TSDocParser } from '@microsoft/tsdoc';
+import {
+  TSDocParser,
+  TSDocConfiguration,
+  TSDocTagDefinition,
+  TSDocTagSyntaxKind,
+} from '@microsoft/tsdoc';
 
 describe('Comment Models', () => {
   test('extracts text from simple node', () => {
@@ -109,5 +114,53 @@ describe('Comment Models', () => {
     expect(model.typeParams[0].description).toBe('The first type parameter');
     expect(model.typeParams[1].name).toBe('U');
     expect(model.typeParams[1].description).toBe('The second type parameter');
+  });
+
+  test('handles custom inline tags with curly braces', () => {
+    // Create a configuration with a custom inline tag
+    const config = new TSDocConfiguration();
+    config.addTagDefinition(
+      new TSDocTagDefinition({
+        tagName: '@customInline',
+        syntaxKind: TSDocTagSyntaxKind.InlineTag,
+        allowMultiple: true,
+      })
+    );
+    const parser = new TSDocParser(config);
+
+    // Test that custom inline tag content is extracted with curly braces preserved
+    const context = parser.parseString(`/**
+ * Text with {@customInline some content} inline tag.
+ */`);
+    const model = buildCommentModel(context.docComment);
+
+    expect(model.summary).toBeDefined();
+    // The inline tag should be preserved in the summary with curly braces
+    expect(model.summary?.content).toContain('{@customInline some content}');
+  });
+
+  test('handles custom block tags without curly braces', () => {
+    // Create a configuration with a custom block tag
+    const config = new TSDocConfiguration();
+    config.addTagDefinition(
+      new TSDocTagDefinition({
+        tagName: '@customBlock',
+        syntaxKind: TSDocTagSyntaxKind.BlockTag,
+        allowMultiple: false,
+      })
+    );
+    const parser = new TSDocParser(config);
+
+    // Test that custom block tag is handled correctly
+    const context = parser.parseString(`/**
+ * Summary text.
+ * @customBlock This is custom block content
+ */`);
+    const model = buildCommentModel(context.docComment);
+
+    expect(model.summary).toBeDefined();
+    expect(model.otherTags).toHaveLength(1);
+    expect(model.otherTags[0].tagName).toBe('@customBlock');
+    expect(model.otherTags[0].content).toBe('This is custom block content');
   });
 });
