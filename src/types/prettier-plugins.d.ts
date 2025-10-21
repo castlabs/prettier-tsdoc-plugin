@@ -1,0 +1,9 @@
+declare module 'prettier/plugins/typescript';
+declare module 'prettier/plugins/babel';
+declare module 'prettier/plugins/html';
+declare module 'prettier/plugins/postcss';
+declare module 'prettier/plugins/markdown';
+declare module 'prettier/plugins/json';
+declare module 'prettier/plugins/yaml';
+declare module 'prettier/plugins/graphql';
+declare module 'prettier/plugins/estree';

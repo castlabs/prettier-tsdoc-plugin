@@ -1,8 +1,8 @@
 import type { Plugin } from 'prettier';
 import parserBabel from 'prettier/parser-babel';
 import parserTypescript from 'prettier/parser-typescript';
-import { preprocessJavaScript, preprocessTypescript } from './preprocessor.js';
-import type { PrettierOptionsWithTSDoc } from './types.js';
+import { createAsyncParser } from './parser-wrappers.js';
+import { prepareSourceForTSDoc } from './preprocessor.js';
 
 const plugin: Plugin = {
   // Define languages that this plugin supports
@@ -20,18 +20,14 @@ const plugin: Plugin = {
   ],
   // Extend existing parsers with our preprocessing logic
   parsers: {
-    typescript: {
-      ...parserTypescript.parsers.typescript,
-      preprocess: (text: string, options: PrettierOptionsWithTSDoc) => {
-        return preprocessTypescript(text, options);
-      },
-    },
-    babel: {
-      ...parserBabel.parsers.babel,
-      preprocess: (text: string, options: PrettierOptionsWithTSDoc) => {
-        return preprocessJavaScript(text, options);
-      },
-    },
+    typescript: createAsyncParser(
+      parserTypescript.parsers.typescript,
+      prepareSourceForTSDoc
+    ),
+    babel: createAsyncParser(
+      parserBabel.parsers.babel,
+      prepareSourceForTSDoc
+    ),
   },
   options: {
     fencedIndent: {
@@ -67,6 +63,24 @@ const plugin: Plugin = {
       category: 'TSDoc',
       default: false,
       description: 'Enforce single sentence summaries',
+    },
+    embeddedLanguageFormatting: {
+      type: 'choice',
+      category: 'TSDoc',
+      default: 'auto',
+      description:
+        'Control whether fenced code blocks inside TSDoc comments are formatted with Prettier',
+      choices: [
+        {
+          value: 'auto',
+          description:
+            'Format supported embedded languages using Prettier (default)',
+        },
+        {
+          value: 'off',
+          description: 'Skip embedded formatting and trim whitespace only',
+        },
+      ],
     },
     releaseTagStrategy: {
       type: 'choice',

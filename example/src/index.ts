@@ -5,7 +5,7 @@
  * And this then is a completely separate paragraphs. But look at this code:
  *
  * ```typescript
- * const melon = food()
+ * const melon = food();
  * ```
  *
  * @packageDocumentation
@@ -27,7 +27,7 @@
  * Let me also add a simple codeblock here
  *
  * ```typescript
- * const foo = bla()
+ * const foo = bla();
  * ```
  *
  * @param name - The name param should receive a and maybe it should also be formatted over
@@ -37,7 +37,7 @@
  *
  * @example This is an example
  * ```typescript
- * const a = internal()
+ * const a = internal();
  * ```
  *
  * This is also part of the example!
@@ -66,6 +66,14 @@ export function long_line_test(name: string, second: string) {
  *   And then I continue here
  * @param third - The third one
  * @internal
+ *
+ * @example This is an example
+ * ```typescript
+ * const beacon: TrackingBeacon = {
+ *   type: 'start',
+ *   url: 'https://tracking.example.com/start?id=[AD_ID]&cb=[CACHE_BUSTER]',
+ * };
+ * ```
  */
 export function multi_line_parameter(
   name: string,
@@ -85,7 +93,7 @@ export function multi_line_parameter(
  *
  * @example This is an example
  * ```typescript
- * const a = internal()
+ * const a = internal();
  * ```
  */
 function internal() {
@@ -107,7 +115,7 @@ function internal() {
  *
  * @example This is an example
  * ```typescript
- * const a = internal()
+ * const a = internal();
  * ```
  */
 export function external_function() {
@@ -120,12 +128,9 @@ export function external_function() {
  * @example This HTML example
  * ```html
  * <html>
- *   <head>
- *   </head>
+ *   <head> </head>
  *   <body>
- *     <p>
- *       Hello
- *     </p>
+ *     <p>Hello</p>
  *   </body>
  * </html>
  * ```

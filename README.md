@@ -55,6 +55,8 @@ A Prettier plugin that formats TSDoc comments consistently.
   Compiler annotations to modern TSDoc syntax
 - **Multi-language Code Formatting**: Enhanced support for TypeScript,
   JavaScript, HTML, CSS, and more
+- **Embedded Formatting Control**: Toggle fenced code block formatting per
+  project using Prettier or plugin-specific options
 - **Performance Optimized**: Efficient parsing with telemetry and debug support
 - **Highly Configurable**: 14+ configuration options via Prettier config
 - **TypeDoc/AEDoc Compatible**: Support for extended tag sets beyond core TSDoc
@@ -106,21 +108,54 @@ configuration:
 
 ### Option Details
 
-| Option                  | Type                            | Default        | Description                                                      |
-| ----------------------- | ------------------------------- | -------------- | ---------------------------------------------------------------- |
-| `fencedIndent`          | `"space"` \| `"none"`           | `"space"`      | Indentation style for fenced code blocks                         |
-| `normalizeTagOrder`     | `boolean`                       | `true`         | Normalize tag order based on conventional patterns (see below)   |
-| `dedupeReleaseTags`     | `boolean`                       | `true`         | Deduplicate release tags (`@public`, `@beta`, etc.)              |
-| `splitModifiers`        | `boolean`                       | `true`         | Split modifiers to separate lines                                |
-| `singleSentenceSummary` | `boolean`                       | `false`        | Enforce single sentence summaries                                |
-| `alignParamTags`        | `boolean`                       | `false`        | Align parameter descriptions across @param tags                  |
-| `defaultReleaseTag`     | `string` \| `null`              | `"@internal"`  | Default release tag when none exists (null to disable)           |
-| `onlyExportedAPI`       | `boolean`                       | `true`         | Only add release tags to exported API constructs (AST-aware)     |
-| `inheritanceAware`      | `boolean`                       | `true`         | Respect inheritance rules - skip tagging class/interface members |
-| `closureCompilerCompat` | `boolean`                       | `true`         | Enable legacy Closure Compiler annotation transformations        |
-| `extraTags`             | `string[]`                      | `[]`           | Additional custom tags to recognize                              |
-| `normalizeTags`         | `Record<string, string>`        | `{}`           | Custom tag spelling normalizations                               |
-| `releaseTagStrategy`    | `"keep-first"` \| `"keep-last"` | `"keep-first"` | Strategy for release tag deduplication                           |
+| Option                       | Type                            | Default        | Description                                                                     |
+| ---------------------------- | ------------------------------- | -------------- | ------------------------------------------------------------------------------- |
+| `fencedIndent`               | `"space"` \| `"none"`           | `"space"`      | Indentation style for fenced code blocks                                        |
+| `normalizeTagOrder`          | `boolean`                       | `true`         | Normalize tag order based on conventional patterns (see below)                  |
+| `dedupeReleaseTags`          | `boolean`                       | `true`         | Deduplicate release tags (`@public`, `@beta`, etc.)                             |
+| `splitModifiers`             | `boolean`                       | `true`         | Split modifiers to separate lines                                               |
+| `singleSentenceSummary`      | `boolean`                       | `false`        | Enforce single sentence summaries                                               |
+| `embeddedLanguageFormatting` | `"auto"` \| `"off"`             | `"auto"`       | Control embedded code block formatting (`auto` uses Prettier, `off` trims only) |
+| `alignParamTags`             | `boolean`                       | `false`        | Align parameter descriptions across @param tags                                 |
+| `defaultReleaseTag`          | `string` \| `null`              | `"@internal"`  | Default release tag when none exists (null to disable)                          |
+| `onlyExportedAPI`            | `boolean`                       | `true`         | Only add release tags to exported API constructs (AST-aware)                    |
+| `inheritanceAware`           | `boolean`                       | `true`         | Respect inheritance rules - skip tagging class/interface members                |
+| `closureCompilerCompat`      | `boolean`                       | `true`         | Enable legacy Closure Compiler annotation transformations                       |
+| `extraTags`                  | `string[]`                      | `[]`           | Additional custom tags to recognize                                             |
+| `normalizeTags`              | `Record<string, string>`        | `{}`           | Custom tag spelling normalizations                                              |
+| `releaseTagStrategy`         | `"keep-first"` \| `"keep-last"` | `"keep-first"` | Strategy for release tag deduplication                                          |
+
+### Embedded Language Formatting
+
+By default the plugin formats fenced code blocks inside TSDoc comments using
+Prettier’s language-specific parsers. You can opt out when the extra formatting
+is undesirable:
+
+```jsonc
+{
+  "plugins": ["@castlabs/prettier-tsdoc-plugin"],
+  "tsdoc": {
+    "embeddedLanguageFormatting": "off",
+  },
+}
+```
+
+- `"auto"` (default) delegates supported code fences to Prettier and preserves
+  the existing async formatter behavior.
+- `"off"` skips the embedded Prettier call and instead trims leading/trailing
+  whitespace inside the fenced block, matching the legacy heuristic formatter.
+
+Precedence rules:
+
+1. `tsdoc.embeddedLanguageFormatting` takes priority when specified.
+2. The global Prettier option `embeddedLanguageFormatting` is respected when the
+   TSDoc override is omitted. Setting it to `"off"` disables embedded formatting
+   across the board, including inside this plugin.
+3. When neither is provided, the plugin defaults to `"auto"`.
+
+The plugin also exposes the option at the top level, so CLI usage such as
+`prettier --plugin @castlabs/prettier-tsdoc-plugin --embedded-language-formatting off`
+will disable snippet formatting in TSDoc comments as well.
 
 ### Built-in Tag Normalizations
 

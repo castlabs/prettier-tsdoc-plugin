@@ -5,7 +5,7 @@ import { TSDocParser } from '@microsoft/tsdoc';
 import { isTSDocCandidate } from './detection.js';
 
 describe('End-to-End Integration Tests', () => {
-  test('processes realistic TSDoc comment through complete pipeline', () => {
+  test('processes realistic TSDoc comment through complete pipeline', async () => {
     // Use a realistic TSDoc comment similar to what would be in an example file
     const realisticComment = `*
  * Adds two numbers together with optional formatting.
@@ -54,13 +54,13 @@ describe('End-to-End Integration Tests', () => {
     expect(isCandidate).toBe(true);
 
     // Step 2: Formatting
-    const formatted = formatTSDocComment(realisticComment, options, parser);
+    const formatted = await formatTSDocComment(realisticComment, options, parser);
     expect(formatted).toBeDefined();
 
     console.log('✅ Complete TSDoc pipeline working for realistic comment');
   });
 
-  test('demonstrates tag normalization functionality', () => {
+  test('demonstrates tag normalization functionality', async () => {
     const config = createTSDocConfiguration();
     const parser = new TSDocParser(config);
     const options = {
@@ -78,13 +78,13 @@ describe('End-to-End Integration Tests', () => {
  * @return The processed result
  `;
 
-    const formatted = formatTSDocComment(commentWithReturnTag, options, parser);
+    const formatted = await formatTSDocComment(commentWithReturnTag, options, parser);
     expect(formatted).toBeDefined();
 
     console.log('✅ Tag normalization functionality working');
   });
 
-  test('demonstrates release tag deduplication', () => {
+  test('demonstrates release tag deduplication', async () => {
     const config = createTSDocConfiguration();
     const parser = new TSDocParser(config);
     const options = {
@@ -105,7 +105,7 @@ describe('End-to-End Integration Tests', () => {
  * @beta
  `;
 
-    const formatted = formatTSDocComment(
+    const formatted = await formatTSDocComment(
       commentWithDuplicateTags,
       options,
       parser
@@ -115,7 +115,7 @@ describe('End-to-End Integration Tests', () => {
     console.log('✅ Release tag deduplication functionality working');
   });
 
-  test('demonstrates fenced code block formatting', () => {
+  test('demonstrates fenced code block formatting', async () => {
     const config = createTSDocConfiguration();
     const parser = new TSDocParser(config);
     const options = {
@@ -136,13 +136,13 @@ describe('End-to-End Integration Tests', () => {
  * \`\`\`
  `;
 
-    const formatted = formatTSDocComment(commentWithCode, options, parser);
+    const formatted = await formatTSDocComment(commentWithCode, options, parser);
     expect(formatted).toBeDefined();
 
     console.log('✅ Fenced code block formatting functionality working');
   });
 
-  test('demonstrates markdown list formatting', () => {
+  test('demonstrates markdown list formatting', async () => {
     const config = createTSDocConfiguration();
     const parser = new TSDocParser(config);
     const options = { printWidth: 80, tabWidth: 2, useTabs: false };
@@ -156,13 +156,13 @@ describe('End-to-End Integration Tests', () => {
  * + Feature 3
  `;
 
-    const formatted = formatTSDocComment(commentWithMarkdown, options, parser);
+    const formatted = await formatTSDocComment(commentWithMarkdown, options, parser);
     expect(formatted).toBeDefined();
 
     console.log('✅ Markdown list formatting functionality working');
   });
 
-  test('validates all 7 phases are integrated correctly', () => {
+  test('validates all 7 phases are integrated correctly', async () => {
     const config = createTSDocConfiguration();
     const parser = new TSDocParser(config);
     const options = {
@@ -201,7 +201,7 @@ describe('End-to-End Integration Tests', () => {
  * @beta
  `;
 
-    const formatted = formatTSDocComment(complexComment, options, parser);
+    const formatted = await formatTSDocComment(complexComment, options, parser);
     expect(formatted).toBeDefined();
 
     console.log('✅ All 7 phases integrated successfully:');
@@ -214,7 +214,7 @@ describe('End-to-End Integration Tests', () => {
     console.log('  ✓ Phase 7: Edge Cases & Performance');
   });
 
-  test('formats empty parameter descriptions with requireParamHyphen: true', () => {
+  test('formats empty parameter descriptions with requireParamHyphen: true', async () => {
     const config = createTSDocConfiguration();
     const parser = new TSDocParser(config);
     const options = {
@@ -233,7 +233,7 @@ describe('End-to-End Integration Tests', () => {
  * @internal
  `;
 
-    const result = formatTSDocComment(commentWithEmptyParams, options, parser);
+    const result = await formatTSDocComment(commentWithEmptyParams, options, parser);
     const formatted = docToString(result);
 
     // Verify hyphens are present for empty params
@@ -250,7 +250,7 @@ describe('End-to-End Integration Tests', () => {
     );
   });
 
-  test('formats empty parameter descriptions with requireParamHyphen: false', () => {
+  test('formats empty parameter descriptions with requireParamHyphen: false', async () => {
     const config = createTSDocConfiguration();
     const parser = new TSDocParser(config);
     const options = {
@@ -268,7 +268,7 @@ describe('End-to-End Integration Tests', () => {
  * @param id
  `;
 
-    const result = formatTSDocComment(commentWithEmptyParams, options, parser);
+    const result = await formatTSDocComment(commentWithEmptyParams, options, parser);
     const formatted = docToString(result);
 
     // Verify hyphens are NOT present for empty params
@@ -285,7 +285,7 @@ describe('End-to-End Integration Tests', () => {
     );
   });
 
-  test('respects default requireParamHyphen: true for TypeDoc compatibility', () => {
+  test('respects default requireParamHyphen: true for TypeDoc compatibility', async () => {
     const config = createTSDocConfiguration();
     const parser = new TSDocParser(config);
     const options = {
@@ -300,7 +300,7 @@ describe('End-to-End Integration Tests', () => {
  * @typeParam T
  `;
 
-    const result = formatTSDocComment(commentWithEmptyParams, options, parser);
+    const result = await formatTSDocComment(commentWithEmptyParams, options, parser);
     const formatted = docToString(result);
 
     // Verify default behavior: hyphens present for both param and typeParam
@@ -317,7 +317,7 @@ describe('End-to-End Integration Tests', () => {
     );
   });
 
-  test('handles independent configuration for param and typeParam', () => {
+  test('handles independent configuration for param and typeParam', async () => {
     const config = createTSDocConfiguration();
     const parser = new TSDocParser(config);
     const options = {
@@ -335,7 +335,7 @@ describe('End-to-End Integration Tests', () => {
  * @typeParam T
  `;
 
-    const result = formatTSDocComment(commentWithEmptyParams, options, parser);
+    const result = await formatTSDocComment(commentWithEmptyParams, options, parser);
     const formatted = docToString(result);
 
     // Verify independent behavior: param has hyphen, typeParam does not
@@ -349,7 +349,7 @@ describe('End-to-End Integration Tests', () => {
     console.log('✅ Independent configuration for param and typeParam working');
   });
 
-  test('does not wrap block-level tags like @namespace in curly braces', () => {
+  test('does not wrap block-level tags like @namespace in curly braces', async () => {
     const config = createTSDocConfiguration();
     const parser = new TSDocParser(config);
     const options = {
@@ -362,7 +362,7 @@ describe('End-to-End Integration Tests', () => {
  * @namespace MyNamespace
  `;
 
-    const result = formatTSDocComment(commentWithNamespace, options, parser);
+    const result = await formatTSDocComment(commentWithNamespace, options, parser);
     const formatted = docToString(result);
 
     // Verify @namespace is NOT wrapped in curly braces (it's a block tag, not an inline tag)

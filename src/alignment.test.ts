@@ -20,13 +20,18 @@ describe('Parameter Alignment', () => {
     parser = new TSDocParser(configuration);
   });
 
+  async function render(comment: string, options: any) {
+    const doc = await formatTSDocComment(comment, options, parser);
+    return docToString(doc);
+  }
+
   describe('Non-aligned formatting (default)', () => {
     const nonAlignedOptions = {
       ...baseOptions,
       alignParamTags: false,
     };
 
-    test('formats parameters without alignment', () => {
+    test('formats parameters without alignment', async () => {
       const comment = `*
  * Function with two parameters of different lengths.
  *
@@ -34,8 +39,7 @@ describe('Parameter Alignment', () => {
  * @param second_long_param - Much longer parameter description.
  */`;
 
-      const result = formatTSDocComment(comment, nonAlignedOptions, parser);
-      const formatted = docToString(result);
+      const formatted = await render(comment, nonAlignedOptions);
 
       expect(formatted).toContain('@param name - Short parameter.');
       expect(formatted).toContain(
@@ -55,15 +59,14 @@ describe('Parameter Alignment', () => {
       );
     });
 
-    test('handles single parameter without alignment', () => {
+    test('handles single parameter without alignment', async () => {
       const comment = `*
  * Function with one parameter.
  *
  * @param singleParam - The only parameter.
  */`;
 
-      const result = formatTSDocComment(comment, nonAlignedOptions, parser);
-      const formatted = docToString(result);
+      const formatted = await render(comment, nonAlignedOptions);
 
       expect(formatted).toContain('@param singleParam - The only parameter.');
 
@@ -81,7 +84,7 @@ describe('Parameter Alignment', () => {
       alignParamTags: true,
     };
 
-    test('aligns parameters with different name lengths', () => {
+    test('aligns parameters with different name lengths', async () => {
       const comment = `*
  * Function with two parameters of different lengths.
  *
@@ -89,8 +92,7 @@ describe('Parameter Alignment', () => {
  * @param second_long_param - Much longer parameter description.
  */`;
 
-      const result = formatTSDocComment(comment, alignedOptions, parser);
-      const formatted = docToString(result);
+      const formatted = await render(comment, alignedOptions);
 
       const lines = formatted.split('\n');
       const nameParamLine = lines.find((line) => line.includes('@param name'));
@@ -107,21 +109,20 @@ describe('Parameter Alignment', () => {
       expect(nameHyphenPos).toBe(longHyphenPos); // Hyphens should be aligned
     });
 
-    test('handles single parameter (no alignment needed)', () => {
+    test('handles single parameter (no alignment needed)', async () => {
       const comment = `*
  * Function with one parameter.
  *
  * @param singleParam - The only parameter.
  */`;
 
-      const result = formatTSDocComment(comment, alignedOptions, parser);
-      const formatted = docToString(result);
+      const formatted = await render(comment, alignedOptions);
 
       // Single parameter should be formatted normally (no alignment needed)
       expect(formatted).toContain('@param singleParam - The only parameter.');
     });
 
-    test('aligns mixed parameter and typeParam tags', () => {
+    test('aligns mixed parameter and typeParam tags', async () => {
       const comment = `*
  * Generic function with parameters.
  *
@@ -129,8 +130,7 @@ describe('Parameter Alignment', () => {
  * @typeParam LongTypeParamName - Much longer type parameter.
  */`;
 
-      const result = formatTSDocComment(comment, alignedOptions, parser);
-      const formatted = docToString(result);
+      const formatted = await render(comment, alignedOptions);
 
       const lines = formatted.split('\n');
       const typeParamLine = lines.find((line) => line.includes('@typeParam T'));
@@ -147,7 +147,7 @@ describe('Parameter Alignment', () => {
       expect(typeHyphenPos).toBe(longTypeHyphenPos); // Hyphens should be aligned
     });
 
-    test('handles parameters without descriptions', () => {
+    test('handles parameters without descriptions', async () => {
       const comment = `*
  * Function with mixed parameters.
  *
@@ -156,8 +156,7 @@ describe('Parameter Alignment', () => {
  * @param anotherLongParam - Also has description.
  */`;
 
-      const result = formatTSDocComment(comment, alignedOptions, parser);
-      const formatted = docToString(result);
+      const formatted = await render(comment, alignedOptions);
 
       // Should handle mix of parameters with/without descriptions
       expect(formatted).toContain('@param name');
@@ -182,7 +181,7 @@ describe('Parameter Alignment', () => {
   });
 
   describe('Edge cases', () => {
-    test('handles very long parameter names that exceed print width', () => {
+    test('handles very long parameter names that exceed print width', async () => {
       const alignedOptions = {
         ...baseOptions,
         printWidth: 40, // Short width to force wrapping
@@ -196,8 +195,7 @@ describe('Parameter Alignment', () => {
  * @param short - Short param.
  */`;
 
-      const result = formatTSDocComment(comment, alignedOptions, parser);
-      const formatted = docToString(result);
+      const formatted = await render(comment, alignedOptions);
 
       // Should handle gracefully without breaking
       expect(formatted).toContain('extremelyLongParameterNameThatExceedsWidth');

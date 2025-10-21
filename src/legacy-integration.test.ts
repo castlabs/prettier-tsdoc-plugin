@@ -27,7 +27,7 @@ describe('Legacy transformations integration', () => {
   };
 
   describe('full pipeline integration', () => {
-    it('should apply legacy transformations and format correctly', () => {
+    it('should apply legacy transformations and format correctly', async () => {
       const input = `
  * Creates a new widget with the given configuration.
  * @constructor
@@ -37,7 +37,7 @@ describe('Legacy transformations integration', () => {
 `;
 
       const parser = createParser();
-      const result = formatTSDocComment(input, defaultOptions, parser);
+      const result = await formatTSDocComment(input, defaultOptions, parser);
 
       // Convert the result to string for comparison
       const resultString = safeDocToString(result);
@@ -54,7 +54,7 @@ describe('Legacy transformations integration', () => {
       expect(resultString).toContain('@param options');
     });
 
-    it('should handle class heritage tags with formatting', () => {
+    it('should handle class heritage tags with formatting', async () => {
       const input = `
  * A special widget that extends functionality.
  * @extends {BaseWidget}
@@ -64,7 +64,7 @@ describe('Legacy transformations integration', () => {
 `;
 
       const parser = createParser();
-      const result = formatTSDocComment(input, defaultOptions, parser);
+      const result = await formatTSDocComment(input, defaultOptions, parser);
       const resultString = safeDocToString(result);
 
       // Legacy heritage tags should be removed
@@ -77,7 +77,7 @@ describe('Legacy transformations integration', () => {
       expect(resultString).toContain('@param config');
     });
 
-    it('should normalize @see tags and format them properly', () => {
+    it('should normalize @see tags and format them properly', async () => {
       const input = `
  * Widget utilities.
  * @see http://example.com/docs
@@ -94,7 +94,7 @@ describe('Legacy transformations integration', () => {
       expect(transformedInput).not.toContain('@see MyOtherClass'); // Plain text should be wrapped
 
       const parser = createParser();
-      const result = formatTSDocComment(input, defaultOptions, parser);
+      const result = await formatTSDocComment(input, defaultOptions, parser);
       const resultString = safeDocToString(result);
 
       // Both URLs and single words should be preserved in the final result
@@ -105,7 +105,7 @@ describe('Legacy transformations integration', () => {
       expect(resultString).toContain('Also check the documentation');
     });
 
-    it('should handle simple single word @see tags correctly', () => {
+    it('should handle simple single word @see tags correctly', async () => {
       const input = `
  * This class has a constructor
  *
@@ -121,7 +121,7 @@ describe('Legacy transformations integration', () => {
       expect(transformedInput).not.toContain('@see MyClass'); // Should be wrapped, not plain text
 
       const parser = createParser();
-      const result = formatTSDocComment(input, defaultOptions, parser);
+      const result = await formatTSDocComment(input, defaultOptions, parser);
       const resultString = safeDocToString(result);
 
       // The final result should contain the class name wrapped in {@link}
@@ -131,7 +131,7 @@ describe('Legacy transformations integration', () => {
       expect(resultString).not.toContain('{@link }');
     });
 
-    it('should work with closureCompilerCompat disabled', () => {
+    it('should work with closureCompilerCompat disabled', async () => {
       const input = `
  * Creates a widget.
  * @constructor
@@ -156,7 +156,7 @@ describe('Legacy transformations integration', () => {
       expect(transformedInput).toContain('@export');
 
       const parser = createParser();
-      const result = formatTSDocComment(input, optionsDisabled, parser);
+      const result = await formatTSDocComment(input, optionsDisabled, parser);
       const _resultString = safeDocToString(result);
 
       // With transformations disabled, the original tags should be present in the input
@@ -165,7 +165,7 @@ describe('Legacy transformations integration', () => {
       expect(transformedInput).toBe(input); // No transformation applied
     });
 
-    it('should maintain idempotence with formatting rules', () => {
+    it('should maintain idempotence with formatting rules', async () => {
       const input = `
  * Creates a widget.
  * @constructor
@@ -178,7 +178,7 @@ describe('Legacy transformations integration', () => {
       const parser = createParser();
 
       // First formatting pass
-      const firstResult = formatTSDocComment(input, defaultOptions, parser);
+      const firstResult = await formatTSDocComment(input, defaultOptions, parser);
       const firstString = safeDocToString(firstResult);
 
       // Second formatting pass on the result of the first
@@ -191,7 +191,7 @@ describe('Legacy transformations integration', () => {
       expect(firstString).toContain('@public');
     });
 
-    it('should work with tag ordering and alignment', () => {
+    it('should work with tag ordering and alignment', async () => {
       const input = `
  * A complex function with multiple parameters.
  * @constructor
@@ -211,7 +211,7 @@ describe('Legacy transformations integration', () => {
       };
 
       const parser = createParser();
-      const result = formatTSDocComment(input, optionsWithAlignment, parser);
+      const result = await formatTSDocComment(input, optionsWithAlignment, parser);
       const resultString = safeDocToString(result);
 
       // Should apply transformations and maintain proper formatting
@@ -229,7 +229,7 @@ describe('Legacy transformations integration', () => {
   });
 
   describe('new transformation features', () => {
-    it('should transform {@code} inline tags to markdown backticks', () => {
+    it('should transform {@code} inline tags to markdown backticks', async () => {
       const input = `
  * This function uses {@code let x = getValue();} syntax.
  * Another example: {@code const result = process(data);}.
@@ -237,7 +237,7 @@ describe('Legacy transformations integration', () => {
 `;
 
       const parser = createParser();
-      const result = formatTSDocComment(input, defaultOptions, parser);
+      const result = await formatTSDocComment(input, defaultOptions, parser);
       const resultString = safeDocToString(result);
 
       // {@code} should be transformed to backticks
@@ -248,7 +248,7 @@ describe('Legacy transformations integration', () => {
       expect(resultString).not.toContain('{@code');
     });
 
-    it('should transform @tutorial to @document', () => {
+    it('should transform @tutorial to @document', async () => {
       const input = `
  * This function is documented in detail.
  * @tutorial getting-started
@@ -257,7 +257,7 @@ describe('Legacy transformations integration', () => {
 `;
 
       const parser = createParser();
-      const result = formatTSDocComment(input, defaultOptions, parser);
+      const result = await formatTSDocComment(input, defaultOptions, parser);
       const resultString = safeDocToString(result);
 
       // @tutorial should be transformed to @document
@@ -266,7 +266,7 @@ describe('Legacy transformations integration', () => {
       expect(resultString).not.toContain('@tutorial');
     });
 
-    it('should transform @default to @defaultValue', () => {
+    it('should transform @default to @defaultValue', async () => {
       const input = `
  * This function has a default parameter.
  * @param value - The input value
@@ -276,7 +276,7 @@ describe('Legacy transformations integration', () => {
 `;
 
       const parser = createParser();
-      const result = formatTSDocComment(input, defaultOptions, parser);
+      const result = await formatTSDocComment(input, defaultOptions, parser);
       const resultString = safeDocToString(result);
 
       // @default should be transformed to @defaultValue
@@ -287,14 +287,14 @@ describe('Legacy transformations integration', () => {
       expect(resultString).not.toContain('@default {}');
     });
 
-    it('should transform @fileoverview to @packageDocumentation with content restructuring', () => {
+    it('should transform @fileoverview to @packageDocumentation with content restructuring', async () => {
       const input = `
  * @fileoverview This module provides utility functions for data processing.
  * It includes various helper methods for validation and transformation.
 `;
 
       const parser = createParser();
-      const result = formatTSDocComment(input, defaultOptions, parser);
+      const result = await formatTSDocComment(input, defaultOptions, parser);
       const resultString = safeDocToString(result);
 
       // Content should be moved to summary
@@ -311,7 +311,7 @@ describe('Legacy transformations integration', () => {
       expect(packageDocIndex).toBeGreaterThan(contentIndex);
     });
 
-    it('should handle @fileoverview with existing summary content', () => {
+    it('should handle @fileoverview with existing summary content', async () => {
       const input = `
  * Existing summary content.
  * @fileoverview Additional file overview content.
@@ -319,7 +319,7 @@ describe('Legacy transformations integration', () => {
 `;
 
       const parser = createParser();
-      const result = formatTSDocComment(input, defaultOptions, parser);
+      const result = await formatTSDocComment(input, defaultOptions, parser);
       const resultString = safeDocToString(result);
 
       // Both existing and fileoverview content should be preserved
@@ -329,7 +329,7 @@ describe('Legacy transformations integration', () => {
       expect(resultString).not.toContain('@fileoverview');
     });
 
-    it('should handle multiple new transformations together', () => {
+    it('should handle multiple new transformations together', async () => {
       const input = `
  * This is a complex example with {@code let value = getValue();} syntax.
  * @tutorial getting-started  
@@ -339,7 +339,7 @@ describe('Legacy transformations integration', () => {
 `;
 
       const parser = createParser();
-      const result = formatTSDocComment(input, defaultOptions, parser);
+      const result = await formatTSDocComment(input, defaultOptions, parser);
       const resultString = safeDocToString(result);
 
       // All transformations should be applied (may be wrapped due to line width)
@@ -355,7 +355,7 @@ describe('Legacy transformations integration', () => {
       expect(resultString).not.toContain('@default null');
     });
 
-    it('should preserve {@code} inside code blocks from transformation', () => {
+    it('should preserve {@code} inside code blocks from transformation', async () => {
       const input = `
  * This example shows {@code let x = 1;} usage.
  * 
@@ -367,7 +367,7 @@ describe('Legacy transformations integration', () => {
 `;
 
       const parser = createParser();
-      const result = formatTSDocComment(input, defaultOptions, parser);
+      const result = await formatTSDocComment(input, defaultOptions, parser);
       const resultString = safeDocToString(result);
 
       // Outside code blocks should be transformed
@@ -378,7 +378,7 @@ describe('Legacy transformations integration', () => {
       expect(resultString).toContain('```typescript');
     });
 
-    it('should work with new transformations when closureCompilerCompat is disabled', () => {
+    it('should work with new transformations when closureCompilerCompat is disabled', async () => {
       const input = `
  * This function uses {@code let x = 1;} syntax.
  * @tutorial getting-started
@@ -396,7 +396,7 @@ describe('Legacy transformations integration', () => {
       expect(transformedInput).toBe(input); // No transformation applied
     });
 
-    it('should be idempotent - {@code} transformation should not cause issues on second run', () => {
+    it('should be idempotent - {@code} transformation should not cause issues on second run', async () => {
       const input = `
  * This class has a constructor. This is some {@code let x = 1;} code example
  *
@@ -406,11 +406,11 @@ describe('Legacy transformations integration', () => {
       const parser = createParser();
 
       // First run
-      const firstResult = formatTSDocComment(input, defaultOptions, parser);
+      const firstResult = await formatTSDocComment(input, defaultOptions, parser);
       const firstString = safeDocToString(firstResult);
 
       // Second run - should be identical
-      const secondResult = formatTSDocComment(
+      const secondResult = await formatTSDocComment(
         firstString,
         defaultOptions,
         parser
@@ -434,7 +434,7 @@ describe('Legacy transformations integration', () => {
   });
 
   describe('error handling and fallbacks', () => {
-    it('should handle malformed legacy tags gracefully', () => {
+    it('should handle malformed legacy tags gracefully', async () => {
       const input = `
  * A function.
  * @param {string id - Missing closing brace.
@@ -442,7 +442,7 @@ describe('Legacy transformations integration', () => {
 `;
 
       const parser = createParser();
-      const result = formatTSDocComment(input, defaultOptions, parser);
+      const result = await formatTSDocComment(input, defaultOptions, parser);
 
       // Should not throw and should still apply some transformations
       expect(result).toBeDefined();
@@ -450,7 +450,7 @@ describe('Legacy transformations integration', () => {
       expect(resultString).toContain('@public'); // @export should still be transformed
     });
 
-    it('should preserve unknown legacy-style tags', () => {
+    it('should preserve unknown legacy-style tags', async () => {
       const input = `
  * A function.
  * @customTag {Type} value
@@ -458,7 +458,7 @@ describe('Legacy transformations integration', () => {
 `;
 
       const parser = createParser();
-      const result = formatTSDocComment(input, defaultOptions, parser);
+      const result = await formatTSDocComment(input, defaultOptions, parser);
       const resultString = safeDocToString(result);
 
       // Known tags should be transformed

@@ -7,7 +7,7 @@ describe('AST-Aware Release Tag Detection', () => {
   const config = createTSDocConfiguration();
   const parser = new TSDocParser(config);
 
-  test('respects onlyExportedAPI: false (legacy behavior)', () => {
+  test('respects onlyExportedAPI: false (legacy behavior)', async () => {
     const options = {
       printWidth: 80,
       tabWidth: 2,
@@ -20,13 +20,13 @@ describe('AST-Aware Release Tag Detection', () => {
 
     const commentValue =
       '*\n * Function without context.\n * @param value - Input\n ';
-    const result = formatTSDocComment(commentValue, options, parser);
+    const result = await formatTSDocComment(commentValue, options, parser);
 
     expect(result).toBeDefined();
     // Should add @internal tag even without AST context (legacy behavior)
   });
 
-  test('respects onlyExportedAPI: true without AST context', () => {
+  test('respects onlyExportedAPI: true without AST context', async () => {
     const options = {
       printWidth: 80,
       tabWidth: 2,
@@ -40,13 +40,13 @@ describe('AST-Aware Release Tag Detection', () => {
     const commentValue =
       '*\n * Function without AST context.\n * @param value - Input\n ';
     // Call without commentPath (AST context) - should fallback to legacy behavior
-    const result = formatTSDocComment(commentValue, options, parser);
+    const result = await formatTSDocComment(commentValue, options, parser);
 
     expect(result).toBeDefined();
     // Should add @internal tag as fallback when AST analysis fails
   });
 
-  test('preserves existing release tags regardless of AST analysis', () => {
+  test('preserves existing release tags regardless of AST analysis', async () => {
     const options = {
       printWidth: 80,
       tabWidth: 2,
@@ -59,13 +59,13 @@ describe('AST-Aware Release Tag Detection', () => {
 
     const commentValue =
       '*\n * Function with existing tag.\n * @public\n * @param value - Input\n ';
-    const result = formatTSDocComment(commentValue, options, parser);
+    const result = await formatTSDocComment(commentValue, options, parser);
 
     expect(result).toBeDefined();
     // Should preserve @public tag
   });
 
-  test('handles null defaultReleaseTag (feature disabled)', () => {
+  test('handles null defaultReleaseTag (feature disabled)', async () => {
     const options = {
       printWidth: 80,
       tabWidth: 2,
@@ -78,13 +78,13 @@ describe('AST-Aware Release Tag Detection', () => {
 
     const commentValue =
       '*\n * Function without release tag.\n * @param value - Input\n ';
-    const result = formatTSDocComment(commentValue, options, parser);
+    const result = await formatTSDocComment(commentValue, options, parser);
 
     expect(result).toBeDefined();
     // Should not add any release tag
   });
 
-  test('handles custom defaultReleaseTag', () => {
+  test('handles custom defaultReleaseTag', async () => {
     const options = {
       printWidth: 80,
       tabWidth: 2,
@@ -97,13 +97,13 @@ describe('AST-Aware Release Tag Detection', () => {
 
     const commentValue =
       '*\n * Function without release tag.\n * @param value - Input\n ';
-    const result = formatTSDocComment(commentValue, options, parser);
+    const result = await formatTSDocComment(commentValue, options, parser);
 
     expect(result).toBeDefined();
     // Should add @public tag
   });
 
-  test('handles inheritanceAware option', () => {
+  test('handles inheritanceAware option', async () => {
     const options = {
       printWidth: 80,
       tabWidth: 2,
@@ -117,7 +117,7 @@ describe('AST-Aware Release Tag Detection', () => {
 
     const commentValue =
       '*\n * Function that might be a class member.\n * @param value - Input\n ';
-    const result = formatTSDocComment(commentValue, options, parser);
+    const result = await formatTSDocComment(commentValue, options, parser);
 
     expect(result).toBeDefined();
     // Behavior depends on AST context - without it, should use fallback
@@ -128,7 +128,7 @@ describe('AST Analysis Edge Cases', () => {
   const config = createTSDocConfiguration();
   const parser = new TSDocParser(config);
 
-  test('gracefully handles AST analysis errors', () => {
+  test('gracefully handles AST analysis errors', async () => {
     const options = {
       printWidth: 80,
       tabWidth: 2,
@@ -149,7 +149,7 @@ describe('AST Analysis Edge Cases', () => {
 
     const commentValue =
       '*\n * Function that will cause AST error.\n * @param value - Input\n ';
-    const result = formatTSDocComment(
+    const result = await formatTSDocComment(
       commentValue,
       options,
       parser,
@@ -160,7 +160,7 @@ describe('AST Analysis Edge Cases', () => {
     // Should fallback gracefully and still format the comment
   });
 
-  test('handles undefined options gracefully', () => {
+  test('handles undefined options gracefully', async () => {
     const options = {
       printWidth: 80,
       tabWidth: 2,
@@ -170,13 +170,13 @@ describe('AST Analysis Edge Cases', () => {
 
     const commentValue =
       '*\n * Function with default options.\n * @param value - Input\n ';
-    const result = formatTSDocComment(commentValue, options, parser);
+    const result = await formatTSDocComment(commentValue, options, parser);
 
     expect(result).toBeDefined();
     // Should use default options and add @internal tag
   });
 
-  test('respects all configuration combinations', () => {
+  test('respects all configuration combinations', async () => {
     const testCases = [
       {
         config: {
@@ -212,7 +212,7 @@ describe('AST Analysis Edge Cases', () => {
       },
     ];
 
-    testCases.forEach(({ config, description: _description }) => {
+    for (const { config } of testCases) {
       const options = {
         printWidth: 80,
         tabWidth: 2,
@@ -222,10 +222,10 @@ describe('AST Analysis Edge Cases', () => {
 
       const commentValue =
         '*\n * Function for configuration test.\n * @param value - Input\n ';
-      const result = formatTSDocComment(commentValue, options, parser);
+      const result = await formatTSDocComment(commentValue, options, parser);
 
       expect(result).toBeDefined();
       // Each configuration should work without errors
-    });
+    }
   });
 });

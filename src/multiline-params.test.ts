@@ -21,8 +21,16 @@ describe('Multi-line Parameter Formatting', () => {
     plugins: [],
   };
 
+  async function render(
+    input: string,
+    overrideOptions = options
+  ): Promise<string> {
+    const doc = await formatTSDocComment(input, overrideOptions, parser);
+    return docToString(doc);
+  }
+
   describe('Simple multi-line paragraphs', () => {
-    it('should format multi-line paragraphs correctly', () => {
+    it('should format multi-line paragraphs correctly', async () => {
       const input = `/**
  * Function with multi-line parameter description.
  * 
@@ -32,8 +40,7 @@ describe('Multi-line Parameter Formatting', () => {
  *   That looks reasonable but can I continue here in a separate paragraph? This line should be split but lets continue.
  */`;
 
-      const result = formatTSDocComment(input, options, parser);
-      const formatted = docToString(result);
+      const formatted = await render(input);
 
       expect(formatted).toContain(
         '@param second - The second thing. Let me see what will happen if this is a'
@@ -45,7 +52,7 @@ describe('Multi-line Parameter Formatting', () => {
       expect(formatted).toContain('line should be split but lets continue.');
     });
 
-    it('should handle multiple paragraphs with blank lines', () => {
+    it('should handle multiple paragraphs with blank lines', async () => {
       const input = `/**
  * @param config - This is the first paragraph describing the config parameter.
  *
@@ -55,8 +62,7 @@ describe('Multi-line Parameter Formatting', () => {
  *   And this is a third paragraph with even more information.
  */`;
 
-      const result = formatTSDocComment(input, options, parser);
-      const formatted = docToString(result);
+      const formatted = await render(input);
 
       expect(formatted).toContain(
         '@param config - This is the first paragraph describing the config parameter.'
@@ -72,7 +78,7 @@ describe('Multi-line Parameter Formatting', () => {
   });
 
   describe('Lists in parameter descriptions', () => {
-    it('should format bulleted lists correctly', () => {
+    it('should format bulleted lists correctly', async () => {
       const input = `/**
  * @param options - Configuration options object with the following properties:
  *
@@ -81,8 +87,7 @@ describe('Multi-line Parameter Formatting', () => {
  *   - verbose: Enable verbose logging
  */`;
 
-      const result = formatTSDocComment(input, options, parser);
-      const formatted = docToString(result);
+      const formatted = await render(input);
 
       expect(formatted).toContain(
         '@param options - Configuration options object with the following properties:'
@@ -92,7 +97,7 @@ describe('Multi-line Parameter Formatting', () => {
       expect(formatted).toContain('- verbose: Enable verbose logging');
     });
 
-    it('should format numbered lists correctly', () => {
+    it('should format numbered lists correctly', async () => {
       const input = `/**
  * @param steps - The process steps to follow:
  *
@@ -102,8 +107,7 @@ describe('Multi-line Parameter Formatting', () => {
  *   4. Clean up resources
  */`;
 
-      const result = formatTSDocComment(input, options, parser);
-      const formatted = docToString(result);
+      const formatted = await render(input);
 
       expect(formatted).toContain(
         '@param steps - The process steps to follow:'
@@ -114,7 +118,7 @@ describe('Multi-line Parameter Formatting', () => {
       expect(formatted).toContain('4. Clean up resources');
     });
 
-    it('should handle mixed text, lists, and paragraphs', () => {
+    it('should handle mixed text, lists, and paragraphs', async () => {
       const input = `/**
  * @param second - The second thing. Let me see what will happen if this is a
  *   really really long line?
@@ -125,8 +129,7 @@ describe('Multi-line Parameter Formatting', () => {
  *   - This is a second item
  */`;
 
-      const result = formatTSDocComment(input, options, parser);
-      const formatted = docToString(result);
+      const formatted = await render(input);
 
       expect(formatted).toContain(
         '@param second - The second thing. Let me see what will happen if this is a'
@@ -144,7 +147,7 @@ describe('Multi-line Parameter Formatting', () => {
   });
 
   describe('Fenced code blocks in parameter descriptions', () => {
-    it('should format JSON code blocks correctly', () => {
+    it('should format JSON code blocks correctly', async () => {
       const input = `/**
  * @param options - An options object.
  *   Here is an example of the object:
@@ -153,8 +156,7 @@ describe('Multi-line Parameter Formatting', () => {
  *   \`\`\`
  */`;
 
-      const result = formatTSDocComment(input, options, parser);
-      const formatted = docToString(result);
+      const formatted = await render(input);
 
       expect(formatted).toContain('@param options - An options object.');
       expect(formatted).toContain('Here is an example of the object:');
@@ -163,7 +165,7 @@ describe('Multi-line Parameter Formatting', () => {
       expect(formatted).toContain('```');
     });
 
-    it('should format TypeScript code blocks correctly', () => {
+    it('should format TypeScript code blocks correctly', async () => {
       const input = `/**
  * @param callback - A callback function that should follow this pattern:
  *   \`\`\`typescript
@@ -171,8 +173,7 @@ describe('Multi-line Parameter Formatting', () => {
  *   \`\`\`
  */`;
 
-      const result = formatTSDocComment(input, options, parser);
-      const formatted = docToString(result);
+      const formatted = await render(input);
 
       expect(formatted).toContain(
         '@param callback - A callback function that should follow this pattern:'
@@ -184,7 +185,7 @@ describe('Multi-line Parameter Formatting', () => {
       expect(formatted).toContain('```');
     });
 
-    it('should not indent fenced code blocks in parameter descriptions', () => {
+    it('should not indent fenced code blocks in parameter descriptions', async () => {
       const input = `/**
  * @param config - Configuration with TypeScript example:
  *   \`\`\`typescript
@@ -195,8 +196,7 @@ describe('Multi-line Parameter Formatting', () => {
  *   \`\`\`
  */`;
 
-      const result = formatTSDocComment(input, options, parser);
-      const formatted = docToString(result);
+      const formatted = await render(input);
 
       expect(formatted).toContain(
         '@param config - Configuration with TypeScript example:'
@@ -212,7 +212,7 @@ describe('Multi-line Parameter Formatting', () => {
       expect(formatted).not.toContain(' *     interface Config {'); // Should not have extra indentation
     });
 
-    it('should handle multiple code blocks in one parameter', () => {
+    it('should handle multiple code blocks in one parameter', async () => {
       const input = `/**
  * @param config - Configuration with examples:
  *   
@@ -230,8 +230,7 @@ describe('Multi-line Parameter Formatting', () => {
  *   \`\`\`
  */`;
 
-      const result = formatTSDocComment(input, options, parser);
-      const formatted = docToString(result);
+      const formatted = await render(input);
 
       expect(formatted).toContain(
         '@param config - Configuration with examples:'
@@ -246,7 +245,7 @@ describe('Multi-line Parameter Formatting', () => {
   });
 
   describe('Complex combinations', () => {
-    it('should handle text, lists, and code blocks together', () => {
+    it('should handle text, lists, and code blocks together', async () => {
       const input = `/**
  * @param config - A complex configuration object with multiple options:
  *
@@ -266,8 +265,7 @@ describe('Multi-line Parameter Formatting', () => {
  *   For more advanced usage, see the documentation.
  */`;
 
-      const result = formatTSDocComment(input, options, parser);
-      const formatted = docToString(result);
+      const formatted = await render(input);
 
       expect(formatted).toContain(
         '@param config - A complex configuration object with multiple options:'
@@ -288,15 +286,14 @@ describe('Multi-line Parameter Formatting', () => {
   });
 
   describe('Indentation consistency', () => {
-    it('should maintain proper indentation for multi-line parameters', () => {
+    it('should maintain proper indentation for multi-line parameters', async () => {
       const input = `/**
  * @param first - First parameter description.
  * @param second - Second parameter with a very long description that spans
  *   multiple lines and should be properly indented under the parameter.
  */`;
 
-      const result = formatTSDocComment(input, options, parser);
-      const formatted = docToString(result);
+      const formatted = await render(input);
 
       // Check that continuation lines are properly indented
       const lines = formatted.split('\n');
@@ -315,7 +312,7 @@ describe('Multi-line Parameter Formatting', () => {
       }
     });
 
-    it('should handle inconsistent source indentation', () => {
+    it('should handle inconsistent source indentation', async () => {
       const input = `/**
  * @param data - This parameter has inconsistent indentation in the source:
  *     Some lines are indented more
@@ -324,8 +321,7 @@ describe('Multi-line Parameter Formatting', () => {
  *   But they should all be normalized.
  */`;
 
-      const result = formatTSDocComment(input, options, parser);
-      const formatted = docToString(result);
+      const formatted = await render(input);
 
       expect(formatted).toContain(
         '@param data - This parameter has inconsistent indentation in the source:'
@@ -350,7 +346,7 @@ describe('Multi-line Parameter Formatting', () => {
   });
 
   describe('Idempotency', () => {
-    it('should be idempotent for already formatted multi-line parameters', () => {
+    it('should be idempotent for already formatted multi-line parameters', async () => {
       const input = `/**
  * @param config - A configuration object with the following properties:
  *
@@ -366,12 +362,10 @@ describe('Multi-line Parameter Formatting', () => {
  *   \`\`\`
  */`;
 
-      const firstPass = formatTSDocComment(input, options, parser);
-      const firstFormatted = docToString(firstPass);
+      const firstFormatted = await render(input);
 
       // Format the result again
-      const secondPass = formatTSDocComment(firstFormatted, options, parser);
-      const secondFormatted = docToString(secondPass);
+      const secondFormatted = await render(firstFormatted);
 
       // Should be functionally identical (allowing for minor whitespace differences in code blocks)
       const normalizeWhitespace = (text: string) =>
@@ -383,7 +377,7 @@ describe('Multi-line Parameter Formatting', () => {
   });
 
   describe('Edge cases', () => {
-    it('should handle empty lines within parameter descriptions', () => {
+    it('should handle empty lines within parameter descriptions', async () => {
       const input = `/**
  * @param config - Configuration object.
  *
@@ -396,8 +390,7 @@ describe('Multi-line Parameter Formatting', () => {
  *   - Item 2
  */`;
 
-      const result = formatTSDocComment(input, options, parser);
-      const formatted = docToString(result);
+      const formatted = await render(input);
 
       expect(formatted).toContain('@param config - Configuration object.');
       expect(formatted).toContain(
@@ -410,7 +403,7 @@ describe('Multi-line Parameter Formatting', () => {
       expect(formatted).not.toMatch(/\*\s*\n\s*\*\s*\n\s*\*\s*\n/);
     });
 
-    it('should handle parameters with only code blocks', () => {
+    it('should handle parameters with only code blocks', async () => {
       const input = `/**
  * @param schema - The validation schema:
  *   \`\`\`typescript
@@ -421,8 +414,7 @@ describe('Multi-line Parameter Formatting', () => {
  *   \`\`\`
  */`;
 
-      const result = formatTSDocComment(input, options, parser);
-      const formatted = docToString(result);
+      const formatted = await render(input);
 
       expect(formatted).toContain('@param schema - The validation schema:');
       expect(formatted).toContain('```typescript');
@@ -435,7 +427,7 @@ describe('Multi-line Parameter Formatting', () => {
   });
 
   describe('Integration with parameter alignment', () => {
-    it('should work correctly with parameter alignment enabled', () => {
+    it('should work correctly with parameter alignment enabled', async () => {
       const input = `/**
  * @param a - Short parameter.
  * @param veryLongParameterName - This parameter has a very long name and a multi-line description:
@@ -445,8 +437,7 @@ describe('Multi-line Parameter Formatting', () => {
  */`;
 
       const alignedOptions = { ...options };
-      const result = formatTSDocComment(input, alignedOptions, parser);
-      const formatted = docToString(result);
+      const formatted = await render(input, alignedOptions);
 
       // Parameters should be aligned
       expect(formatted).toContain('@param a');

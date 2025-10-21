@@ -32,6 +32,14 @@ export interface TSDocPluginOptions {
   singleSentenceSummary?: boolean;
 
   /**
+   * Controls formatting of fenced code blocks inside TSDoc comments.
+   *
+   * - 'auto': Format supported languages using Prettier (default)
+   * - 'off': Skip embedded formatting and only trim surrounding whitespace
+   */
+  embeddedLanguageFormatting?: 'auto' | 'off';
+
+  /**
    * Additional custom tags to recognize during parsing.
    */
   extraTags?: string[];
@@ -201,6 +209,7 @@ export const DEFAULT_OPTIONS: Required<TSDocPluginOptions> = {
   dedupeReleaseTags: true,
   splitModifiers: true,
   singleSentenceSummary: false,
+  embeddedLanguageFormatting: 'auto',
   extraTags: [],
   normalizeTags: {},
   releaseTagStrategy: 'keep-first',
@@ -220,6 +229,20 @@ export function resolveOptions(
   userOptions: any = {}
 ): Required<TSDocPluginOptions> {
   const tsdocOptions = userOptions.tsdoc || {};
+
+  const pluginSpecificSetting =
+    tsdocOptions.embeddedLanguageFormatting ??
+    userOptions.tsdocEmbeddedLanguageFormatting;
+  const globalSetting = userOptions.embeddedLanguageFormatting;
+
+  let embeddedLanguageFormatting =
+    pluginSpecificSetting ??
+    globalSetting ??
+    DEFAULT_OPTIONS.embeddedLanguageFormatting;
+
+  if (globalSetting === 'off' && pluginSpecificSetting !== 'off') {
+    embeddedLanguageFormatting = 'off';
+  }
 
   return {
     ...DEFAULT_OPTIONS,
@@ -270,6 +293,7 @@ export function resolveOptions(
     ...(userOptions.requireTypeParamHyphen !== undefined && {
       requireTypeParamHyphen: userOptions.requireTypeParamHyphen,
     }),
+    embeddedLanguageFormatting,
   };
 }
 

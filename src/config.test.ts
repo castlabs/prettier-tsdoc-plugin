@@ -87,6 +87,38 @@ describe('Configuration', () => {
     expect(resolved.defaultReleaseTag).toBe('@public');
     expect(resolved.fencedIndent).toBe(DEFAULT_OPTIONS.fencedIndent); // Should use default
   });
+
+  test('applies tsdoc embeddedLanguageFormatting override', () => {
+    const resolved = resolveOptions({
+      tsdoc: { embeddedLanguageFormatting: 'off' as const },
+    });
+
+    expect(resolved.embeddedLanguageFormatting).toBe('off');
+  });
+
+  test('respects Prettier global embeddedLanguageFormatting when tsdoc unset', () => {
+    const resolved = resolveOptions({ embeddedLanguageFormatting: 'off' });
+
+    expect(resolved.embeddedLanguageFormatting).toBe('off');
+  });
+
+  test('tsdoc override can re-enable formatting when global is auto', () => {
+    const resolved = resolveOptions({
+      embeddedLanguageFormatting: 'auto',
+      tsdoc: { embeddedLanguageFormatting: 'off' as const },
+    });
+
+    expect(resolved.embeddedLanguageFormatting).toBe('off');
+  });
+
+  test('global off cannot be overridden by tsdoc auto', () => {
+    const resolved = resolveOptions({
+      embeddedLanguageFormatting: 'off',
+      tsdoc: { embeddedLanguageFormatting: 'auto' as const },
+    });
+
+    expect(resolved.embeddedLanguageFormatting).toBe('off');
+  });
 });
 
 describe('Tag Normalization', () => {

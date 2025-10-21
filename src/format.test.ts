@@ -4,124 +4,124 @@ import { createTSDocConfiguration } from './parser-config.js';
 import { TSDocParser } from '@microsoft/tsdoc';
 
 describe('Phase 3: Summary & Remarks Formatting', () => {
-  test('formats simple summary comment', () => {
+  test('formats simple summary comment', async () => {
     const config = createTSDocConfiguration();
     const parser = new TSDocParser(config);
     const options = { printWidth: 80, tabWidth: 2, useTabs: false };
 
     const commentValue = '*\n * This is a simple summary.\n ';
-    const result = formatTSDocComment(commentValue, options, parser);
+    const result = await formatTSDocComment(commentValue, options, parser);
 
     expect(result).toBeDefined();
   });
 
-  test('formats summary with remarks section', () => {
+  test('formats summary with remarks section', async () => {
     const config = createTSDocConfiguration();
     const parser = new TSDocParser(config);
     const options = { printWidth: 80, tabWidth: 2, useTabs: false };
 
     const commentValue =
       '*\n * Short summary.\n * @remarks\n * This is a longer remarks section.\n ';
-    const result = formatTSDocComment(commentValue, options, parser);
+    const result = await formatTSDocComment(commentValue, options, parser);
 
     expect(result).toBeDefined();
   });
 
-  test('formats remarks-only comment', () => {
+  test('formats remarks-only comment', async () => {
     const config = createTSDocConfiguration();
     const parser = new TSDocParser(config);
     const options = { printWidth: 80, tabWidth: 2, useTabs: false };
 
     const commentValue = '*\n * @remarks\n * This comment only has remarks.\n ';
-    const result = formatTSDocComment(commentValue, options, parser);
+    const result = await formatTSDocComment(commentValue, options, parser);
 
     expect(result).toBeDefined();
   });
 
-  test('handles empty comments gracefully', () => {
+  test('handles empty comments gracefully', async () => {
     const config = createTSDocConfiguration();
     const parser = new TSDocParser(config);
     const options = { printWidth: 80, tabWidth: 2, useTabs: false };
 
     const commentValue = '*\n ';
-    const result = formatTSDocComment(commentValue, options, parser);
+    const result = await formatTSDocComment(commentValue, options, parser);
 
     expect(result).toBeDefined();
   });
 
-  test('formats comment with parameter tags', () => {
+  test('formats comment with parameter tags', async () => {
     const config = createTSDocConfiguration();
     const parser = new TSDocParser(config);
     const options = { printWidth: 80, tabWidth: 2, useTabs: false };
 
     const commentValue =
       '*\n * Function with params.\n * @param name - The name\n * @param age - The age\n * @returns A greeting\n ';
-    const result = formatTSDocComment(commentValue, options, parser);
+    const result = await formatTSDocComment(commentValue, options, parser);
 
     expect(result).toBeDefined();
   });
 
-  test('formats comment with mixed parameter types', () => {
+  test('formats comment with mixed parameter types', async () => {
     const config = createTSDocConfiguration();
     const parser = new TSDocParser(config);
     const options = { printWidth: 80, tabWidth: 2, useTabs: false };
 
     const commentValue =
       '*\n * Generic function.\n * @param value - Input value\n * @typeParam T - Type parameter\n * @returns Processed value\n ';
-    const result = formatTSDocComment(commentValue, options, parser);
+    const result = await formatTSDocComment(commentValue, options, parser);
 
     expect(result).toBeDefined();
   });
 
-  test('handles parameters without descriptions', () => {
+  test('handles parameters without descriptions', async () => {
     const config = createTSDocConfiguration();
     const parser = new TSDocParser(config);
     const options = { printWidth: 80, tabWidth: 2, useTabs: false };
 
     const commentValue =
       '*\n * Function with unnamed params.\n * @param value\n * @returns Something\n ';
-    const result = formatTSDocComment(commentValue, options, parser);
+    const result = await formatTSDocComment(commentValue, options, parser);
 
     expect(result).toBeDefined();
   });
 
-  test('formats comment with markdown lists', () => {
+  test('formats comment with markdown lists', async () => {
     const config = createTSDocConfiguration();
     const parser = new TSDocParser(config);
     const options = { printWidth: 80, tabWidth: 2, useTabs: false };
 
     const commentValue =
       '*\n * Function features:\n * - Feature 1\n * - Feature 2\n *   - Sub-feature\n ';
-    const result = formatTSDocComment(commentValue, options, parser);
+    const result = await formatTSDocComment(commentValue, options, parser);
 
     expect(result).toBeDefined();
   });
 
-  test('formats comment with fenced code blocks', () => {
+  test('formats comment with fenced code blocks', async () => {
     const config = createTSDocConfiguration();
     const parser = new TSDocParser(config);
     const options = { printWidth: 80, tabWidth: 2, useTabs: false };
 
     const commentValue =
       '*\n * @example\n * ```typescript\n * const x = 1;\n * console.log(x);\n * ```\n ';
-    const result = formatTSDocComment(commentValue, options, parser);
+    const result = await formatTSDocComment(commentValue, options, parser);
 
     expect(result).toBeDefined();
   });
 
-  test('formats comment with mixed markdown and code', () => {
+  test('formats comment with mixed markdown and code', async () => {
     const config = createTSDocConfiguration();
     const parser = new TSDocParser(config);
     const options = { printWidth: 80, tabWidth: 2, useTabs: false };
 
     const commentValue =
       '*\n * @remarks\n * This function:\n * - Does something\n * - Example:\n * ```js\n * doSomething();\n * ```\n ';
-    const result = formatTSDocComment(commentValue, options, parser);
+    const result = await formatTSDocComment(commentValue, options, parser);
 
     expect(result).toBeDefined();
   });
 
-  test('formatting is idempotent', () => {
+  test('formatting is idempotent', async () => {
     const config = createTSDocConfiguration();
     const parser = new TSDocParser(config);
     const options = { printWidth: 80, tabWidth: 2, useTabs: false };
@@ -129,7 +129,7 @@ describe('Phase 3: Summary & Remarks Formatting', () => {
     const commentValue =
       '*\n * Summary text here.\n * @remarks\n * Some remarks.\n ';
 
-    const firstResult = formatTSDocComment(commentValue, options, parser);
+    const firstResult = await formatTSDocComment(commentValue, options, parser);
     expect(firstResult).toBeDefined();
 
     // Since we're testing the function directly, we can't easily test idempotence
@@ -138,33 +138,33 @@ describe('Phase 3: Summary & Remarks Formatting', () => {
 });
 
 describe('Phase 6: Configuration & Normalization', () => {
-  test('normalizes @return to @returns by default', () => {
+  test('normalizes @return to @returns by default', async () => {
     const config = createTSDocConfiguration();
     const parser = new TSDocParser(config);
     const options = { printWidth: 80, tabWidth: 2, useTabs: false };
 
     const commentValue =
       '*\n * Function with return tag.\n * @param value - The input\n * @return The output\n ';
-    const result = formatTSDocComment(commentValue, options, parser);
+    const result = await formatTSDocComment(commentValue, options, parser);
 
     expect(result).toBeDefined();
     // Note: Testing exact output would require Doc-to-string conversion
     // The normalization is tested at the config level and integration level
   });
 
-  test('normalizes @prop to @property by default', () => {
+  test('normalizes @prop to @property by default', async () => {
     const config = createTSDocConfiguration();
     const parser = new TSDocParser(config);
     const options = { printWidth: 80, tabWidth: 2, useTabs: false };
 
     const commentValue =
       '*\n * Object with property.\n * @prop name - The name property\n ';
-    const result = formatTSDocComment(commentValue, options, parser);
+    const result = await formatTSDocComment(commentValue, options, parser);
 
     expect(result).toBeDefined();
   });
 
-  test('respects custom normalization mappings', () => {
+  test('respects custom normalization mappings', async () => {
     const config = createTSDocConfiguration();
     const parser = new TSDocParser(config);
     const options = {
@@ -180,12 +180,12 @@ describe('Phase 6: Configuration & Normalization', () => {
 
     const commentValue =
       '*\n * Function with custom tag.\n * @custom Some custom content\n ';
-    const result = formatTSDocComment(commentValue, options, parser);
+    const result = await formatTSDocComment(commentValue, options, parser);
 
     expect(result).toBeDefined();
   });
 
-  test('applies release tag deduplication when enabled', () => {
+  test('applies release tag deduplication when enabled', async () => {
     const config = createTSDocConfiguration();
     const parser = new TSDocParser(config);
     const options = {
@@ -200,12 +200,12 @@ describe('Phase 6: Configuration & Normalization', () => {
 
     const commentValue =
       '*\n * Function with duplicate release tags.\n * @public\n * @param x - Value\n * @public\n ';
-    const result = formatTSDocComment(commentValue, options, parser);
+    const result = await formatTSDocComment(commentValue, options, parser);
 
     expect(result).toBeDefined();
   });
 
-  test('respects keep-last strategy for release tag deduplication', () => {
+  test('respects keep-last strategy for release tag deduplication', async () => {
     const config = createTSDocConfiguration();
     const parser = new TSDocParser(config);
     const options = {
@@ -220,12 +220,12 @@ describe('Phase 6: Configuration & Normalization', () => {
 
     const commentValue =
       '*\n * Function with duplicate release tags.\n * @public\n * @param x - Value\n * @beta\n ';
-    const result = formatTSDocComment(commentValue, options, parser);
+    const result = await formatTSDocComment(commentValue, options, parser);
 
     expect(result).toBeDefined();
   });
 
-  test('skips release tag deduplication when disabled', () => {
+  test('skips release tag deduplication when disabled', async () => {
     const config = createTSDocConfiguration();
     const parser = new TSDocParser(config);
     const options = {
@@ -239,12 +239,12 @@ describe('Phase 6: Configuration & Normalization', () => {
 
     const commentValue =
       '*\n * Function with duplicate release tags.\n * @public\n * @public\n ';
-    const result = formatTSDocComment(commentValue, options, parser);
+    const result = await formatTSDocComment(commentValue, options, parser);
 
     expect(result).toBeDefined();
   });
 
-  test('handles mixed normalization and deduplication', () => {
+  test('handles mixed normalization and deduplication', async () => {
     const config = createTSDocConfiguration();
     const parser = new TSDocParser(config);
     const options = {
@@ -262,14 +262,14 @@ describe('Phase 6: Configuration & Normalization', () => {
 
     const commentValue =
       '*\n * Complex function.\n * @param x - Input\n * @return Output\n * @public\n * @public\n ';
-    const result = formatTSDocComment(commentValue, options, parser);
+    const result = await formatTSDocComment(commentValue, options, parser);
 
     expect(result).toBeDefined();
   });
 });
 
 describe('Phase 8: Default Release Tags', () => {
-  test('adds default @internal tag when no release tag is present', () => {
+  test('adds default @internal tag when no release tag is present', async () => {
     const config = createTSDocConfiguration();
     const parser = new TSDocParser(config);
     const options = {
@@ -283,13 +283,13 @@ describe('Phase 8: Default Release Tags', () => {
 
     const commentValue =
       '*\n * Function without release tag.\n * @param value - The input\n * @returns The output\n ';
-    const result = formatTSDocComment(commentValue, options, parser);
+    const result = await formatTSDocComment(commentValue, options, parser);
 
     expect(result).toBeDefined();
     // The function should have added @internal tag
   });
 
-  test('does not add default tag when release tag already exists', () => {
+  test('does not add default tag when release tag already exists', async () => {
     const config = createTSDocConfiguration();
     const parser = new TSDocParser(config);
     const options = {
@@ -303,13 +303,13 @@ describe('Phase 8: Default Release Tags', () => {
 
     const commentValue =
       '*\n * Function with existing release tag.\n * @public\n * @param value - The input\n * @returns The output\n ';
-    const result = formatTSDocComment(commentValue, options, parser);
+    const result = await formatTSDocComment(commentValue, options, parser);
 
     expect(result).toBeDefined();
     // Should not add @internal because @public already exists
   });
 
-  test('respects custom defaultReleaseTag option', () => {
+  test('respects custom defaultReleaseTag option', async () => {
     const config = createTSDocConfiguration();
     const parser = new TSDocParser(config);
     const options = {
@@ -323,13 +323,13 @@ describe('Phase 8: Default Release Tags', () => {
 
     const commentValue =
       '*\n * Function that should be public.\n * @param value - The input\n * @returns The output\n ';
-    const result = formatTSDocComment(commentValue, options, parser);
+    const result = await formatTSDocComment(commentValue, options, parser);
 
     expect(result).toBeDefined();
     // Should add @public tag instead of @internal
   });
 
-  test('skips default tag addition when defaultReleaseTag is null', () => {
+  test('skips default tag addition when defaultReleaseTag is null', async () => {
     const config = createTSDocConfiguration();
     const parser = new TSDocParser(config);
     const options = {
@@ -343,13 +343,13 @@ describe('Phase 8: Default Release Tags', () => {
 
     const commentValue =
       '*\n * Function without release tag.\n * @param value - The input\n * @returns The output\n ';
-    const result = formatTSDocComment(commentValue, options, parser);
+    const result = await formatTSDocComment(commentValue, options, parser);
 
     expect(result).toBeDefined();
     // Should not add any default tag
   });
 
-  test('default release tag functionality works with deduplication', () => {
+  test('default release tag functionality works with deduplication', async () => {
     const config = createTSDocConfiguration();
     const parser = new TSDocParser(config);
     const options = {
@@ -365,13 +365,13 @@ describe('Phase 8: Default Release Tags', () => {
 
     const commentValue =
       '*\n * Function with duplicate beta tags.\n * @beta\n * @param value - Input\n * @beta\n * @returns Output\n ';
-    const result = formatTSDocComment(commentValue, options, parser);
+    const result = await formatTSDocComment(commentValue, options, parser);
 
     expect(result).toBeDefined();
     // Should keep existing @beta tag and deduplicate, not add @internal
   });
 
-  test('works correctly with comments containing only summary', () => {
+  test('works correctly with comments containing only summary', async () => {
     const config = createTSDocConfiguration();
     const parser = new TSDocParser(config);
     const options = {
@@ -384,13 +384,13 @@ describe('Phase 8: Default Release Tags', () => {
     };
 
     const commentValue = '*\n * Simple function summary.\n ';
-    const result = formatTSDocComment(commentValue, options, parser);
+    const result = await formatTSDocComment(commentValue, options, parser);
 
     expect(result).toBeDefined();
     // Should add @internal tag to this simple comment
   });
 
-  test('detects release tags in various tag types correctly', () => {
+  test('detects release tags in various tag types correctly', async () => {
     const config = createTSDocConfiguration();
     const parser = new TSDocParser(config);
 
@@ -406,13 +406,13 @@ describe('Phase 8: Default Release Tags', () => {
 
     const commentValue1 =
       '*\n * Experimental function.\n * @experimental\n * @param value - Input\n ';
-    const result1 = formatTSDocComment(commentValue1, options1, parser);
+    const result1 = await formatTSDocComment(commentValue1, options1, parser);
 
     expect(result1).toBeDefined();
     // Should not add @internal because @experimental is already present
   });
 
-  test('respects existing @public modifier tag and does not add default', () => {
+  test('respects existing @public modifier tag and does not add default', async () => {
     const config = createTSDocConfiguration();
     const parser = new TSDocParser(config);
     const options = {
@@ -426,14 +426,14 @@ describe('Phase 8: Default Release Tags', () => {
 
     const commentValue =
       '*\n * Function that is already public.\n * @public\n * @param value - The input\n * @returns The output\n ';
-    const result = formatTSDocComment(commentValue, options, parser);
+    const result = await formatTSDocComment(commentValue, options, parser);
 
     expect(result).toBeDefined();
     // Should NOT add @internal because @public already exists
     // This tests the fix for the bug where existing @public was replaced
   });
 
-  test('respects existing @beta modifier tag and does not add default', () => {
+  test('respects existing @beta modifier tag and does not add default', async () => {
     const config = createTSDocConfiguration();
     const parser = new TSDocParser(config);
     const options = {
@@ -447,13 +447,13 @@ describe('Phase 8: Default Release Tags', () => {
 
     const commentValue =
       '*\n * Beta function.\n * @beta\n * @param value - Input\n ';
-    const result = formatTSDocComment(commentValue, options, parser);
+    const result = await formatTSDocComment(commentValue, options, parser);
 
     expect(result).toBeDefined();
     // Should NOT add @internal because @beta already exists
   });
 
-  test('respects existing @alpha modifier tag and does not add default', () => {
+  test('respects existing @alpha modifier tag and does not add default', async () => {
     const config = createTSDocConfiguration();
     const parser = new TSDocParser(config);
     const options = {
@@ -467,13 +467,13 @@ describe('Phase 8: Default Release Tags', () => {
 
     const commentValue =
       '*\n * Alpha function.\n * @alpha\n * @param value - Input\n ';
-    const result = formatTSDocComment(commentValue, options, parser);
+    const result = await formatTSDocComment(commentValue, options, parser);
 
     expect(result).toBeDefined();
     // Should NOT add @public because @alpha already exists
   });
 
-  test('handles multiple release tags with keep-first strategy', () => {
+  test('handles multiple release tags with keep-first strategy', async () => {
     const config = createTSDocConfiguration();
     const parser = new TSDocParser(config);
     const options = {
@@ -491,13 +491,13 @@ describe('Phase 8: Default Release Tags', () => {
     // but we test the deduplication logic
     const commentValue =
       '*\n * Function with multiple visibility.\n * @public\n * @param value - Input\n * @beta\n ';
-    const result = formatTSDocComment(commentValue, options, parser);
+    const result = await formatTSDocComment(commentValue, options, parser);
 
     expect(result).toBeDefined();
     // Should keep @public (first) and @beta, no @internal should be added
   });
 
-  test('handles multiple release tags with keep-last strategy', () => {
+  test('handles multiple release tags with keep-last strategy', async () => {
     const config = createTSDocConfiguration();
     const parser = new TSDocParser(config);
     const options = {
@@ -513,7 +513,7 @@ describe('Phase 8: Default Release Tags', () => {
 
     const commentValue =
       '*\n * Function with multiple visibility.\n * @public\n * @param value - Input\n * @beta\n ';
-    const result = formatTSDocComment(commentValue, options, parser);
+    const result = await formatTSDocComment(commentValue, options, parser);
 
     expect(result).toBeDefined();
     // Should apply keep-last strategy, no @internal should be added

@@ -4,7 +4,7 @@ import { createTSDocConfiguration } from './parser-config.js';
 import { TSDocParser } from '@microsoft/tsdoc';
 
 describe('Phase 7: Telemetry & Debug Features', () => {
-  test('tracks telemetry data correctly', () => {
+  test('tracks telemetry data correctly', async () => {
     const config = createTSDocConfiguration();
     const parser = new TSDocParser(config);
     const options: any = { printWidth: 80, tabWidth: 2, useTabs: false };
@@ -21,15 +21,15 @@ describe('Phase 7: Telemetry & Debug Features', () => {
     const comment1 = '*\n * Simple comment.\n * @param x - Value\n ';
     const comment2 = '*\n * Another comment.\n * @returns Result\n ';
 
-    formatTSDocComment(comment1, options, parser);
-    formatTSDocComment(comment2, options, parser);
+    await formatTSDocComment(comment1, options, parser);
+    await formatTSDocComment(comment2, options, parser);
 
     const finalTelemetry = getTelemetry();
     expect(finalTelemetry.commentsProcessed).toBe(2);
     expect(finalTelemetry.totalTime).toBeGreaterThan(0);
   });
 
-  test('tracks parse errors when malformed comments are processed', () => {
+  test('tracks parse errors when malformed comments are processed', async () => {
     const config = createTSDocConfiguration();
     const parser = new TSDocParser(config);
     const options = { printWidth: 80, tabWidth: 2, useTabs: false };
@@ -40,7 +40,7 @@ describe('Phase 7: Telemetry & Debug Features', () => {
     const malformedComment =
       '*\n * @param - Missing parameter name\n * @return\n ';
 
-    formatTSDocComment(malformedComment, options, parser);
+    await formatTSDocComment(malformedComment, options, parser);
 
     const telemetry = getTelemetry();
     expect(telemetry.commentsProcessed).toBe(1);
@@ -48,7 +48,7 @@ describe('Phase 7: Telemetry & Debug Features', () => {
     expect(telemetry.formattingErrors).toBe(0); // Should not have formatting errors
   });
 
-  test('tracks formatting errors for deeply problematic comments', () => {
+  test('tracks formatting errors for deeply problematic comments', async () => {
     const config = createTSDocConfiguration();
     const parser = new TSDocParser(config);
     const options = { printWidth: 80, tabWidth: 2, useTabs: false };
@@ -57,7 +57,7 @@ describe('Phase 7: Telemetry & Debug Features', () => {
 
     // Try to format something that might cause formatting errors
     try {
-      formatTSDocComment('*\n * ' + 'x'.repeat(10000) + '\n ', options, parser);
+      await formatTSDocComment('*\n * ' + 'x'.repeat(10000) + '\n ', options, parser);
     } catch (_error) {
       // Expected if it fails hard
     }
@@ -67,7 +67,7 @@ describe('Phase 7: Telemetry & Debug Features', () => {
     // The function should handle errors gracefully and not crash
   });
 
-  test('debug telemetry logs when PRETTIER_TSDOC_DEBUG=1', () => {
+  test('debug telemetry logs when PRETTIER_TSDOC_DEBUG=1', async () => {
     const config = createTSDocConfiguration();
     const parser = new TSDocParser(config);
 
@@ -95,7 +95,7 @@ describe('Phase 7: Telemetry & Debug Features', () => {
 
       // Format enough comments to trigger periodic logging (every 100 comments)
       for (let i = 0; i < 100; i++) {
-        formatTSDocComment('*\n * Test comment.\n ', options, parser);
+        await formatTSDocComment('*\n * Test comment.\n ', options, parser);
       }
 
       // Should have logged debug telemetry
@@ -120,7 +120,7 @@ describe('Phase 7: Telemetry & Debug Features', () => {
     }
   });
 
-  test('telemetry data structure is complete', () => {
+  test('telemetry data structure is complete', async () => {
     resetTelemetry();
 
     const telemetry = getTelemetry();
@@ -142,14 +142,14 @@ describe('Phase 7: Telemetry & Debug Features', () => {
     expect(typeof telemetry.cacheMisses).toBe('number');
   });
 
-  test('telemetry reset works correctly', () => {
+  test('telemetry reset works correctly', async () => {
     const config = createTSDocConfiguration();
     const parser = new TSDocParser(config);
     const options = { printWidth: 80, tabWidth: 2, useTabs: false };
 
     // Format some comments first
-    formatTSDocComment('*\n * Test\n ', options, parser);
-    formatTSDocComment('*\n * Test 2\n ', options, parser);
+    await formatTSDocComment('*\n * Test\n ', options, parser);
+    await formatTSDocComment('*\n * Test 2\n ', options, parser);
 
     let telemetry = getTelemetry();
     expect(telemetry.commentsProcessed).toBeGreaterThan(0);

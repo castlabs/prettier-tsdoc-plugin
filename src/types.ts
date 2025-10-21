@@ -14,6 +14,7 @@ export interface TSDocPluginOptions {
   dedupeReleaseTags?: boolean;
   splitModifiers?: boolean;
   singleSentenceSummary?: boolean;
+  embeddedLanguageFormatting?: 'auto' | 'off';
   releaseTagStrategy?: 'keep-first' | 'keep-last';
   alignParamTags?: boolean;
   defaultReleaseTag?: string;

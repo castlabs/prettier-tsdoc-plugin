@@ -53,48 +53,22 @@ and re-integrating them with proper comment alignment.
 
 ## Implementation Strategy
 
-**ACTUAL IMPLEMENTATION** (adapted for Prettier's async constraints):
+**ACTUAL IMPLEMENTATION (Tasks 003–004)**
 
-```typescript
-// Multi-language code block formatting
-function formatCodeBlock(
-  code: string,
-  language: string,
-  options: ParserOptions<any>
-): string {
-  const parser = LANGUAGE_TO_PARSER[language.toLowerCase()];
-
-  if (!parser) {
-    return code.trim(); // Unsupported language fallback
-  }
-
-  // Due to Prettier's async nature, use enhanced basic formatting
-  return formatCodeBasic(code, language);
-}
-
-function formatCodeBasic(code: string, language: string): string {
-  if (language === 'html') {
-    return formatHtmlBasic(code); // Custom HTML formatter with indentation
-  } else if (['typescript', 'javascript'].includes(language)) {
-    return formatJavaScriptBasic(code); // Basic JS/TS cleanup
-  }
-  return code.trim();
-}
-
-// Inline tag preservation during text wrapping
-function formatTextWithMarkdown(
-  text: string,
-  options: ParserOptions<any>
-): any {
-  const { text: textWithTokens, tokens } = preserveInlineTags(text);
-
-  // Process markdown with proper list handling and text wrapping
-  const formatted = formatMarkdownText(textWithTokens, options);
-
-  // Restore inline tags
-  return finalResult.map((item) => restoreInlineTags(item, tokens));
-}
-```
+- `formatMarkdownText` collects fenced code blocks and delegates to
+  `formatCodeBlock` for language-aware processing.
+- `formatCodeBlock` now calls the async `formatEmbeddedCode` helper, which in
+  turn invokes `prettier.format` with the appropriate embedded parser set. The
+  helper sets an internal `EMBEDDED_FORMATTER_FLAG` to guard against
+  re-entrancy.
+- The effective behavior is governed by the new
+  `embeddedLanguageFormatting` option. When the option (or Prettier’s global
+  setting) is `off`, `formatCodeBlock` skips the Prettier call and simply
+  returns the trimmed snippet so the legacy text-preserving behavior remains
+  available on demand.
+- Inline-tag preservation and markdown wrapping remain as previously described,
+  ensuring that only the code fence payload changes between the `auto` and
+  `off` modes.
 
 ## Acceptance Criteria
 
@@ -120,8 +94,9 @@ function formatTextWithMarkdown(
 - **Language Support**: Multi-language code block formatting with comprehensive
   language-to-parser mapping for TypeScript, JavaScript, HTML, CSS, JSON, YAML,
   etc.
-- **Enhanced HTML Formatting**: Custom HTML formatter with proper tag
-  indentation and line breaks to overcome Prettier async limitations
+- **Embedded Formatting Toggle**: `embeddedLanguageFormatting` defaults to
+  `auto`, running Prettier for supported fences; setting it to `off` skips the
+  async call and returns trimmed snippets instead.
 - **Indentation**: Preserve the comment's original indentation relative to the
   commented code
 - **Performance**: Cache formatted results for identical text blocks to improve

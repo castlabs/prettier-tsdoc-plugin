@@ -34,40 +34,47 @@ proper syntax highlighting preservation.
 ## Implementation Strategy
 
 ```typescript
-// Language mapping for automatic detection
+// Language mapping used by formatEmbeddedCode helper
 const LANGUAGE_TO_PARSER: Record<string, string> = {
   typescript: 'typescript',
   ts: 'typescript',
   javascript: 'babel',
   js: 'babel',
   jsx: 'babel',
+  tsx: 'typescript',
   html: 'html',
   css: 'css',
   scss: 'scss',
+  less: 'less',
   json: 'json',
+  json5: 'json5',
   yaml: 'yaml',
+  yml: 'yaml',
   markdown: 'markdown',
+  md: 'markdown',
   graphql: 'graphql',
 };
 
-// Enhanced formatters for specific languages
-function formatCodeBlock(
+async function formatCodeBlock(
   code: string,
   language: string,
-  options: ParserOptions<any>
-): string {
-  const parser = LANGUAGE_TO_PARSER[language.toLowerCase()];
+  parentOptions: ParserOptions<any>,
+  embeddedPreference: 'auto' | 'off'
+) {
+  const fallback = cleanupCodeSnippet(code);
 
-  if (!parser) {
-    return code.trim(); // Unsupported language fallback
+  if (embeddedPreference === 'off') {
+    return fallback;
   }
 
-  return formatCodeBasic(code, language);
-}
+  const formatted = await formatEmbeddedCode({
+    code,
+    language,
+    parentOptions,
+    embeddedLanguageFormatting: embeddedPreference,
+  });
 
-function formatHtmlBasic(html: string): string {
-  // Custom HTML formatter with proper indentation
-  // Handles tag nesting, self-closing tags, and text content
+  return formatted || fallback;
 }
 ```
 
@@ -86,7 +93,8 @@ function formatHtmlBasic(html: string): string {
 ## Technical Notes
 
 - **Language Support**: Focus on most commonly used languages in documentation
-- **HTML Formatting**: Custom implementation due to Prettier async constraints
+- **Embedded Formatting Toggle**: `embeddedLanguageFormatting` allows projects
+  to disable Prettier-based snippet formatting and fall back to trimmed output.
 - **Performance**: Language detection is lightweight string matching
 - **Extensibility**: Easy to add new languages by extending the mapping table
 - **Error Handling**: Graceful degradation for parsing errors or unsupported

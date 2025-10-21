@@ -7,6 +7,7 @@
 import type { TSDocParser } from '@microsoft/tsdoc';
 import type { AstPath, Doc, ParserOptions } from 'prettier';
 import { doc } from 'prettier';
+import { formatEmbeddedCode } from './embedded-formatting/formatter.js';
 import {
   createDefaultReleaseTag,
   getTagOrderPriority,
@@ -135,13 +136,13 @@ const { hardline, group } = builders;
  * @param commentPath - Optional AST path for context analysis
  * @returns Formatted comment as Prettier Doc
  */
-export function formatTSDocComment(
+export async function formatTSDocComment(
   commentValue: string,
   options: any,
   parser: TSDocParser,
   commentPath?: AstPath<any>,
   exportContext?: { isExported: boolean; followingCode: string }
-): Doc {
+): Promise<Doc> {
   const startTime = performance.now();
 
   try {
@@ -256,7 +257,11 @@ export function formatTSDocComment(
     );
 
     // Convert model to Prettier Doc
-    const result = buildPrettierDoc(normalizedModel, options, tsdocOptions);
+    const result = await buildPrettierDoc(
+      normalizedModel,
+      options,
+      tsdocOptions
+    );
 
     // Update telemetry
     telemetry.commentsProcessed++;
@@ -546,10 +551,10 @@ function sortTagsByCanonicalOrder(tags: any[]): any[] {
  * Note: Full async Prettier formatting would require architectural changes,
  * so we use enhanced text processing for now.
  */
-function formatTextWithMarkdown(
+async function formatTextWithMarkdown(
   text: string,
   options: ParserOptions<any>
-): any {
+): Promise<any> {
   if (!text.trim()) {
     return null;
   }
@@ -570,7 +575,7 @@ function formatTextWithMarkdown(
     }
 
     // Apply enhanced markdown-aware text formatting
-    const formatted = formatMarkdownText(cleanText, options);
+    const formatted = await formatMarkdownText(cleanText, options);
 
     return formatted;
   } catch (error) {
@@ -592,10 +597,16 @@ function formatTextWithMarkdown(
 /**
  * Enhanced markdown text formatting with proper list handling and line wrapping
  */
-function formatMarkdownText(text: string, options: ParserOptions<any>): any {
+async function formatMarkdownText(
+  text: string,
+  options: ParserOptions<any>
+): Promise<any> {
   if (!text.trim()) {
     return null;
   }
+
+  const tsdocOptions = resolveOptions(options);
+  const embeddedPreference = tsdocOptions.embeddedLanguageFormatting;
 
   // Preserve inline tags to prevent them from being split during text wrapping
   const { text: textWithTokens, tokens } = preserveInlineTags(text);
@@ -643,9 +654,11 @@ function formatMarkdownText(text: string, options: ParserOptions<any>): any {
         if (codeBlockLines.length > 0) {
           const codeContent = codeBlockLines.join('\n');
           try {
-            const formattedCode = formatCodeBlock(
+            const formattedCode = await formatCodeBlock(
               codeContent,
-              codeBlockLanguage
+              codeBlockLanguage,
+              options,
+              embeddedPreference
             );
 
             // Add the formatted code lines
@@ -980,11 +993,11 @@ function wrapListItemContent(
 /**
  * Convert the intermediate model to a Prettier Doc structure.
  */
-function buildPrettierDoc(
+async function buildPrettierDoc(
   model: TSDocCommentModel,
   options: ParserOptions<any>,
   tsdocOptions?: TSDocPluginOptions
-): Doc {
+): Promise<Doc> {
   const parts: any[] = [];
   const width = effectiveWidth(options);
 
@@ -998,7 +1011,7 @@ function buildPrettierDoc(
       debugLog('Summary content:', JSON.stringify(model.summary.content));
     }
 
-    const summaryContent = formatTextWithMarkdown(
+    const summaryContent = await formatTextWithMarkdown(
       model.summary.content,
       options
     );
@@ -1007,65 +1020,7 @@ function buildPrettierDoc(
       if (process.env.PRETTIER_TSDOC_DEBUG === '1') {
         debugLog('Summary content array:', JSON.stringify(summaryContent));
       }
-      if (Array.isArray(summaryContent)) {
-        // Handle array of lines/content
-        summaryContent.forEach((line, index) => {
-          // Add hardline before each element except the first one to ensure proper line separation
-          if (index > 0) {
-            parts.push(hardline);
-          }
-
-          if (typeof line === 'object' && line.type === 'list-item') {
-            // Handle list items with proper continuation indentation
-            const listItem = line as any;
-            // First line with marker
-            parts.push(
-              createCommentLine(`${listItem.marker} ${listItem.lines[0]}`)
-            );
-            // Continuation lines with proper indentation - align with the content after the marker
-            for (let i = 1; i < listItem.lines.length; i++) {
-              parts.push(hardline);
-              parts.push(` *   ${listItem.lines[i]}`); // Space, asterisk, 3 spaces to align with content after "- "
-            }
-            // List item is complete - no additional hardline needed as it's handled globally
-          } else if (
-            typeof line === 'object' &&
-            (line.type === 'code-fence-start' ||
-              line.type === 'code-fence-end' ||
-              line.type === 'code-line')
-          ) {
-            // Handle code block elements
-            parts.push(createCommentLine(line.content));
-          } else if (typeof line === 'string' && line.trim()) {
-            // Split multi-line strings into individual lines
-            const lines = line.split('\n');
-            lines.forEach((singleLine, lineIndex) => {
-              if (singleLine.trim()) {
-                // Handle embedded newlines in the line (from text wrapping)
-                const subLines = singleLine.split('\n');
-                subLines.forEach((subLine, subIndex) => {
-                  if (subLine.trim()) {
-                    parts.push(createCommentLine(subLine));
-                    // Add hardline after each subline except the last one
-                    if (subIndex < subLines.length - 1) {
-                      parts.push(hardline);
-                    }
-                  }
-                });
-                // Add hardline after each line except the last one within this element
-                if (lineIndex < lines.length - 1) {
-                  parts.push(hardline);
-                }
-              }
-            });
-          } else if (line === '') {
-            // Empty string represents paragraph break - add empty comment line for spacing
-            parts.push(createEmptyCommentLine());
-          }
-        });
-      } else {
-        parts.push(createCommentLine(summaryContent));
-      }
+      appendMarkdownSegments(parts, summaryContent);
     }
   }
 
@@ -1092,10 +1047,14 @@ function buildPrettierDoc(
     if (!model.summary) {
       parts.push(hardline);
     }
-    parts.push(hardline);
-    parts.push(
-      createCommentLine(formatTextWithMarkdown(model.remarks.content, options))
+    const remarksContent = await formatTextWithMarkdown(
+      model.remarks.content,
+      options
     );
+    if (remarksContent) {
+      parts.push(hardline);
+      appendMarkdownSegments(parts, remarksContent);
+    }
   }
 
   // Blank line before meta-data block (parameters and other annotations)
@@ -1178,7 +1137,7 @@ function buildPrettierDoc(
     // These are part of the meta-data block and don't need special spacing
     for (const tag of metaDataTags) {
       parts.push(hardline);
-      parts.push(formatOtherTag(tag));
+      parts.push(await formatOtherTag(tag, options));
     }
 
     // Process @example tags with special spacing (Phase 110 requirement)
@@ -1200,7 +1159,7 @@ function buildPrettierDoc(
       }
 
       parts.push(hardline);
-      parts.push(formatOtherTag(tag));
+      parts.push(await formatOtherTag(tag, options));
     }
   }
 
@@ -1214,7 +1173,10 @@ function buildPrettierDoc(
 /**
  * Format other tags like `@example`, `@see`, etc.
  */
-function formatOtherTag(tag: any): any {
+async function formatOtherTag(
+  tag: any,
+  options: ParserOptions<any>
+): Promise<any> {
   const tagName = tag.tagName.startsWith('@') ? tag.tagName : `@${tag.tagName}`;
   const content = tag.content.trim();
 
@@ -1224,7 +1186,7 @@ function formatOtherTag(tag: any): any {
 
   // For @example tags, handle embedded code blocks specially
   if (tagName === '@example') {
-    return formatExampleTag(tag);
+    return formatExampleTag(tag, options);
   }
 
   // For other tags, format content with text wrapping
@@ -1234,7 +1196,10 @@ function formatOtherTag(tag: any): any {
 /**
  * Format @example tags with potential embedded code blocks
  */
-function formatExampleTag(tag: any): any {
+async function formatExampleTag(
+  tag: any,
+  options: ParserOptions<any>
+): Promise<any> {
   const content = tag.content.trim();
 
   if (!content) {
@@ -1253,7 +1218,10 @@ function formatExampleTag(tag: any): any {
     // Format the rest as markdown if there's more content
     const remainingContent = lines.slice(1).join('\n').trim();
     if (remainingContent) {
-      const formattedContent = formatExampleWithMarkdown(remainingContent);
+      const formattedContent = await formatExampleWithMarkdown(
+        remainingContent,
+        options
+      );
       if (Array.isArray(formattedContent)) {
         parts.push(...formattedContent);
       } else {
@@ -1263,7 +1231,10 @@ function formatExampleTag(tag: any): any {
   } else {
     // No description, just @example followed by content
     parts.push(createCommentLine('@example'));
-    const formattedContent = formatExampleWithMarkdown(content);
+    const formattedContent = await formatExampleWithMarkdown(
+      content,
+      options
+    );
     if (Array.isArray(formattedContent)) {
       parts.push(...formattedContent);
     } else {
@@ -1274,10 +1245,68 @@ function formatExampleTag(tag: any): any {
   return parts;
 }
 
+function appendMarkdownSegments(target: any[], content: any): void {
+  if (!content) {
+    return;
+  }
+
+  if (Array.isArray(content)) {
+    content.forEach((line: any, index: number) => {
+      if (index > 0) {
+        target.push(hardline);
+      }
+
+      if (typeof line === 'object' && line.type === 'list-item') {
+        const listItem = line as any;
+        target.push(createCommentLine(`${listItem.marker} ${listItem.lines[0]}`));
+        for (let i = 1; i < listItem.lines.length; i++) {
+          target.push(hardline);
+          target.push(` *   ${listItem.lines[i]}`);
+        }
+      } else if (
+        typeof line === 'object' &&
+        (line.type === 'code-fence-start' ||
+          line.type === 'code-fence-end' ||
+          line.type === 'code-line')
+      ) {
+        target.push(createCommentLine(line.content));
+      } else if (typeof line === 'string' && line.trim()) {
+        const lines = line.split('\n');
+        lines.forEach((singleLine, lineIndex) => {
+          if (singleLine.trim()) {
+            const subLines = singleLine.split('\n');
+            subLines.forEach((subLine, subIndex) => {
+              if (subLine.trim()) {
+                target.push(createCommentLine(subLine));
+                if (subIndex < subLines.length - 1) {
+                  target.push(hardline);
+                }
+              }
+            });
+            if (lineIndex < lines.length - 1) {
+              target.push(hardline);
+            }
+          }
+        });
+      } else if (line === '') {
+        target.push(createEmptyCommentLine());
+      }
+    });
+  } else {
+    target.push(createCommentLine(content));
+  }
+}
+
 /**
  * Format @example content using enhanced code block formatting
  */
-function formatExampleWithMarkdown(content: string): any {
+async function formatExampleWithMarkdown(
+  content: string,
+  options: ParserOptions<any>
+): Promise<any> {
+  const tsdocOptions = resolveOptions(options);
+  const embeddedPreference = tsdocOptions.embeddedLanguageFormatting;
+
   const parts: any[] = [];
 
   // Split content into lines and process each part
@@ -1304,9 +1333,11 @@ function formatExampleWithMarkdown(content: string): any {
         if (codeBlockLines.length > 0) {
           const codeContent = codeBlockLines.join('\n');
           try {
-            const formattedCode = formatCodeBlock(
+            const formattedCode = await formatCodeBlock(
               codeContent,
-              codeBlockLanguage
+              codeBlockLanguage,
+              options,
+              embeddedPreference
             );
 
             // Add the formatted code lines
@@ -1350,158 +1381,46 @@ function formatExampleWithMarkdown(content: string): any {
 }
 
 /**
- * Map language identifiers to Prettier parser names
+ * Format code block using Prettier with appropriate parser for the language.
+ * Falls back to lightweight trimming if the language isn't supported or
+ * Prettier throws.
  */
-const LANGUAGE_TO_PARSER: Record<string, string> = {
-  // TypeScript/JavaScript
-  typescript: 'typescript',
-  ts: 'typescript',
-  javascript: 'babel',
-  js: 'babel',
-  jsx: 'babel',
-  tsx: 'typescript',
-
-  // Web technologies
-  html: 'html',
-  css: 'css',
-  scss: 'scss',
-  less: 'less',
-
-  // Data formats
-  json: 'json',
-  json5: 'json5',
-  yaml: 'yaml',
-  yml: 'yaml',
-
-  // Other
-  markdown: 'markdown',
-  md: 'markdown',
-  graphql: 'graphql',
-};
-
-/**
- * Format code block using Prettier with appropriate parser for the language
- */
-function formatCodeBlock(code: string, language: string): string {
-  if (!code.trim()) {
-    return code;
+async function formatCodeBlock(
+  code: string,
+  language: string,
+  options: ParserOptions<any>,
+  embeddedPreference: 'auto' | 'off'
+): Promise<string> {
+  const fallback = cleanupCodeSnippet(code);
+  if (!fallback) {
+    return fallback;
   }
 
-  const parser = LANGUAGE_TO_PARSER[language.toLowerCase()];
-
-  if (!parser) {
-    // For unsupported languages, return as-is but with basic whitespace cleanup
-    return code.trim();
+  if (embeddedPreference === 'off') {
+    return fallback;
   }
 
-  // Since Prettier's format functions are async and we're in a sync context,
-  // we use enhanced basic formatting for now
-  // TODO: In the future, consider restructuring to support async formatting
-
-  if (process.env.PRETTIER_TSDOC_DEBUG === '1') {
-    debugLog(
-      `Formatting ${language} code with basic formatter:`,
-      JSON.stringify(code.substring(0, 50))
-    );
-  }
-
-  const formatted = formatCodeBasic(code, language);
-
-  if (process.env.PRETTIER_TSDOC_DEBUG === '1') {
-    debugLog(
-      `Formatted ${language} code result:`,
-      JSON.stringify(formatted.substring(0, 50))
-    );
-  }
-
-  return formatted;
-}
-
-/**
- * Basic code formatting fallback for when Prettier fails
- */
-function formatCodeBasic(code: string, language: string): string {
-  let formatted = code.trim();
-
-  // Basic whitespace normalization for all languages
-  formatted = formatted.replace(/\s+$/gm, ''); // Remove trailing whitespace from lines
-
-  // Language-specific basic formatting
-  if (
-    ['typescript', 'ts', 'javascript', 'js', 'jsx', 'tsx'].includes(language)
-  ) {
-    // JavaScript/TypeScript basic formatting
-    formatted = formatted.replace(/\(\s+\)/g, '()'); // Fix function call spacing
-    formatted = formatted.replace(/\s*=\s*/g, ' = '); // Fix assignment spacing
-    formatted = formatted.replace(/\s*;\s*$/gm, ';'); // Fix semicolon spacing
-  } else if (language === 'html') {
-    // HTML basic formatting - add proper indentation and line breaks
-    formatted = formatHtmlBasic(formatted);
-  }
-
-  return formatted;
-}
-
-/**
- * Basic HTML formatting with proper indentation and line breaks
- */
-function formatHtmlBasic(html: string): string {
-  // Remove all existing whitespace between tags
-  const formatted = html.replace(/>\s+</g, '><').trim();
-
-  // Add line breaks and indentation
-  const indent = '  '; // 2 spaces
-  let level = 0;
-  let result = '';
-  let i = 0;
-
-  while (i < formatted.length) {
-    if (formatted[i] === '<') {
-      const tagEnd = formatted.indexOf('>', i);
-      if (tagEnd === -1) break;
-
-      const tag = formatted.slice(i, tagEnd + 1);
-      const isClosingTag = tag.startsWith('</');
-      const isSelfClosing =
-        tag.endsWith('/>') ||
-        ['<br>', '<hr>', '<img', '<input', '<meta', '<link'].some((t) =>
-          tag.startsWith(t)
-        );
-
-      if (isClosingTag) {
-        level--;
-      }
-
-      // Add indentation
-      if (result && !result.endsWith('\n')) {
-        result += '\n';
-      }
-      result += indent.repeat(Math.max(0, level)) + tag;
-
-      if (!isClosingTag && !isSelfClosing) {
-        level++;
-      }
-
-      i = tagEnd + 1;
-    } else {
-      // Text content between tags
-      const nextTag = formatted.indexOf('<', i);
-      const textContent = formatted
-        .slice(i, nextTag === -1 ? formatted.length : nextTag)
-        .trim();
-
-      if (textContent) {
-        if (result && !result.endsWith('\n')) {
-          result += '\n';
-        }
-        result += indent.repeat(level) + textContent;
-      }
-
-      i = nextTag === -1 ? formatted.length : nextTag;
+  try {
+    const formatted = await formatEmbeddedCode({
+      code,
+      language,
+      parentOptions: options,
+      embeddedLanguageFormatting: embeddedPreference,
+    });
+    return formatted || fallback;
+  } catch (error) {
+    if (process.env.PRETTIER_TSDOC_DEBUG === '1') {
+      debugLog(
+        `Embedded formatter failed for language "${language}":`,
+        error instanceof Error ? error.message : String(error)
+      );
     }
+    return fallback;
   }
+}
 
-  return result;
+function cleanupCodeSnippet(code: string): string {
+  return code.trim().replace(/\s+$/gm, '');
 }
 
 /**
