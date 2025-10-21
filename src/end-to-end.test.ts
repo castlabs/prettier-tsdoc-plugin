@@ -371,6 +371,60 @@ describe('End-to-End Integration Tests', () => {
 
     console.log('✅ Block-level tags like @namespace are correctly formatted');
   });
+
+  test('@enum should be treated as block-level tag, not inline', async () => {
+    const config = createTSDocConfiguration();
+    const parser = new TSDocParser(config);
+    const options = {
+      printWidth: 80,
+      tabWidth: 2,
+      useTabs: false,
+    };
+
+    const commentWithEnum = `*
+ * Status enum.
+ * @enum
+ * @readonly
+ `;
+
+    const result = await formatTSDocComment(commentWithEnum, options, parser);
+    const formatted = docToString(result);
+
+    console.log('Formatted output with @enum:', formatted);
+
+    // Verify @enum is NOT wrapped in curly braces like {@enum}
+    // It should appear as a block-level tag on its own line
+    expect(formatted).not.toContain('{@enum}');
+    expect(formatted).toContain('@enum');
+
+    console.log('✅ @enum tag is correctly formatted as block-level tag');
+  });
+
+  test('@enum with type annotation should be treated as block-level tag', async () => {
+    const config = createTSDocConfiguration();
+    const parser = new TSDocParser(config);
+    const options = {
+      printWidth: 80,
+      tabWidth: 2,
+      useTabs: false,
+    };
+
+    const commentWithEnum = `*
+ * Status values.
+ * @enum {string}
+ `;
+
+    const result = await formatTSDocComment(commentWithEnum, options, parser);
+    const formatted = docToString(result);
+
+    console.log('Formatted output with @enum {string}:', formatted);
+
+    // Verify @enum is NOT wrapped in additional curly braces like {@enum}
+    expect(formatted).not.toContain('{@enum}');
+    expect(formatted).toContain('@enum');
+
+    console.log('✅ @enum with type annotation is correctly formatted');
+  });
 });
 
 /**

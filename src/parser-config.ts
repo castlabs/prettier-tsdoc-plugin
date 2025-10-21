@@ -47,6 +47,11 @@ export function createTSDocConfiguration(
       allowMultiple: false,
     },
     {
+      tagName: '@enum',
+      syntaxKind: TSDocTagSyntaxKind.BlockTag,
+      allowMultiple: false,
+    },
+    {
       tagName: '@expandType',
       syntaxKind: TSDocTagSyntaxKind.BlockTag,
       allowMultiple: false,

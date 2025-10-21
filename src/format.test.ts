@@ -519,3 +519,56 @@ describe('Phase 8: Default Release Tags', () => {
     // Should apply keep-last strategy, no @internal should be added
   });
 });
+
+describe('Block-level tags', () => {
+  test('@enum should be treated as block-level tag, not inline', async () => {
+    const config = createTSDocConfiguration();
+    const parser = new TSDocParser(config);
+    const options = { printWidth: 80, tabWidth: 2, useTabs: false };
+
+    const commentValue =
+      '*\n * Status enum.\n * @enum\n * @readonly\n ';
+    const result = await formatTSDocComment(commentValue, options, parser);
+
+    expect(result).toBeDefined();
+    // The @enum tag should NOT be wrapped in braces like {@enum}
+    // It should appear as a block-level tag on its own line
+    const resultStr = JSON.stringify(result);
+    expect(resultStr).not.toContain('{@enum}');
+    expect(resultStr).toContain('@enum');
+  });
+
+  test('@enum with description should be treated as block-level tag', async () => {
+    const config = createTSDocConfiguration();
+    const parser = new TSDocParser(config);
+    const options = { printWidth: 80, tabWidth: 2, useTabs: false };
+
+    const commentValue =
+      '*\n * Status values.\n * @enum {string}\n * @readonly\n ';
+    const result = await formatTSDocComment(commentValue, options, parser);
+
+    expect(result).toBeDefined();
+    // The @enum tag should NOT be wrapped in braces like {@enum}
+    const resultStr = JSON.stringify(result);
+    expect(resultStr).not.toContain('{@enum}');
+  });
+
+  test('@enum should not be converted to inline tag when added to comment', async () => {
+    const config = createTSDocConfiguration();
+    const parser = new TSDocParser(config);
+    const options = { printWidth: 80, tabWidth: 2, useTabs: false };
+
+    // Test what happens when we just have @enum in a comment
+    const commentValue = '*\n * Status type.\n * @enum\n ';
+    const result = await formatTSDocComment(commentValue, options, parser);
+
+    expect(result).toBeDefined();
+    const resultStr = JSON.stringify(result);
+
+    // The key issue: @enum should NOT be converted to {@enum}
+    expect(resultStr).not.toContain('{@enum}');
+
+    // Log the result for debugging
+    console.log('Result for @enum test:', resultStr);
+  });
+});
