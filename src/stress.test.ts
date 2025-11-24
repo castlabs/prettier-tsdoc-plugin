@@ -54,7 +54,9 @@ describe('Phase 7: Stress Tests & Performance', () => {
     console.log(`Comments formatted: ${formattedCount}/${iterations}`);
     console.log(`Total time: ${totalTime.toFixed(2)}ms`);
     console.log(`Average per comment: ${timePerComment.toFixed(2)}ms`);
-    console.log(`Success rate: ${((formattedCount / iterations) * 100).toFixed(1)}%`);
+    console.log(
+      `Success rate: ${((formattedCount / iterations) * 100).toFixed(1)}%`
+    );
 
     // Performance assertions
     expect(totalTime).toBeLessThan(6000); // Must complete within ~6s

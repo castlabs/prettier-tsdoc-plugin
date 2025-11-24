@@ -251,10 +251,8 @@ describe('Multi-Language Code Block Formatting', () => {
     expect(output).toContain('```');
   });
 
-  test(
-    'preserves query parameters in TypeScript string literals',
-    async () => {
-      const commentValue = `*
+  test('preserves query parameters in TypeScript string literals', async () => {
+    const commentValue = `*
  * Tracking example.
  * @example Preserves query params
  * \`\`\`typescript
@@ -264,14 +262,13 @@ describe('Multi-Language Code Block Formatting', () => {
  * \`\`\`
  `;
 
-      const output = await formatComment(commentValue);
+    const output = await formatComment(commentValue);
 
-      expect(output).toContain('id=[AD_ID]');
-      expect(output).toContain('cb=[CACHE_BUSTER]');
-      expect(output).not.toContain('id = [AD_ID]');
-      expect(output).not.toContain('cb = [CACHE_BUSTER]');
-    }
-  );
+    expect(output).toContain('id=[AD_ID]');
+    expect(output).toContain('cb=[CACHE_BUSTER]');
+    expect(output).not.toContain('id = [AD_ID]');
+    expect(output).not.toContain('cb = [CACHE_BUSTER]');
+  });
 
   test('handles mixed text and code in @example', async () => {
     const commentValue = `*
@@ -345,7 +342,11 @@ describe('Multi-Language Code Block Formatting', () => {
       },
     };
 
-    const output = await formatWithParser(commentValue, parser, disabledOptions);
+    const output = await formatWithParser(
+      commentValue,
+      parser,
+      disabledOptions
+    );
 
     expect(output).toContain('```ts');
     expect(output).toContain('const value = processData(  );');

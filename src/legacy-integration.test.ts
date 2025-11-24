@@ -178,7 +178,11 @@ describe('Legacy transformations integration', () => {
       const parser = createParser();
 
       // First formatting pass
-      const firstResult = await formatTSDocComment(input, defaultOptions, parser);
+      const firstResult = await formatTSDocComment(
+        input,
+        defaultOptions,
+        parser
+      );
       const firstString = safeDocToString(firstResult);
 
       // Second formatting pass on the result of the first
@@ -211,7 +215,11 @@ describe('Legacy transformations integration', () => {
       };
 
       const parser = createParser();
-      const result = await formatTSDocComment(input, optionsWithAlignment, parser);
+      const result = await formatTSDocComment(
+        input,
+        optionsWithAlignment,
+        parser
+      );
       const resultString = safeDocToString(result);
 
       // Should apply transformations and maintain proper formatting
@@ -406,7 +414,11 @@ describe('Legacy transformations integration', () => {
       const parser = createParser();
 
       // First run
-      const firstResult = await formatTSDocComment(input, defaultOptions, parser);
+      const firstResult = await formatTSDocComment(
+        input,
+        defaultOptions,
+        parser
+      );
       const firstString = safeDocToString(firstResult);
 
       // Second run - should be identical

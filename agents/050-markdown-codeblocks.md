@@ -61,14 +61,13 @@ and re-integrating them with proper comment alignment.
   turn invokes `prettier.format` with the appropriate embedded parser set. The
   helper sets an internal `EMBEDDED_FORMATTER_FLAG` to guard against
   re-entrancy.
-- The effective behavior is governed by the new
-  `embeddedLanguageFormatting` option. When the option (or Prettier’s global
-  setting) is `off`, `formatCodeBlock` skips the Prettier call and simply
-  returns the trimmed snippet so the legacy text-preserving behavior remains
-  available on demand.
+- The effective behavior is governed by the new `embeddedLanguageFormatting`
+  option. When the option (or Prettier’s global setting) is `off`,
+  `formatCodeBlock` skips the Prettier call and simply returns the trimmed
+  snippet so the legacy text-preserving behavior remains available on demand.
 - Inline-tag preservation and markdown wrapping remain as previously described,
-  ensuring that only the code fence payload changes between the `auto` and
-  `off` modes.
+  ensuring that only the code fence payload changes between the `auto` and `off`
+  modes.
 
 ## Acceptance Criteria
 

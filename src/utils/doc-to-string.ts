@@ -245,7 +245,10 @@ export function docToString(
     return printWithPrettier(doc, printerOptions);
   } catch (error) {
     if (isDebugEnabled()) {
-      console.warn('[TSDoc Plugin] Doc printer failed, using legacy fallback:', error);
+      console.warn(
+        '[TSDoc Plugin] Doc printer failed, using legacy fallback:',
+        error
+      );
     }
     return legacyDocToString(doc);
   }
@@ -269,9 +272,7 @@ export function docsToStringWithSeparator(
   separator: string,
   printerOptions?: Partial<DocPrinterConfig>
 ): string {
-  return docs
-    .map((item) => docToString(item, printerOptions))
-    .join(separator);
+  return docs.map((item) => docToString(item, printerOptions)).join(separator);
 }
 
 /**

@@ -1231,10 +1231,7 @@ async function formatExampleTag(
   } else {
     // No description, just @example followed by content
     parts.push(createCommentLine('@example'));
-    const formattedContent = await formatExampleWithMarkdown(
-      content,
-      options
-    );
+    const formattedContent = await formatExampleWithMarkdown(content, options);
     if (Array.isArray(formattedContent)) {
       parts.push(...formattedContent);
     } else {
@@ -1258,7 +1255,9 @@ function appendMarkdownSegments(target: any[], content: any): void {
 
       if (typeof line === 'object' && line.type === 'list-item') {
         const listItem = line as any;
-        target.push(createCommentLine(`${listItem.marker} ${listItem.lines[0]}`));
+        target.push(
+          createCommentLine(`${listItem.marker} ${listItem.lines[0]}`)
+        );
         for (let i = 1; i < listItem.lines.length; i++) {
           target.push(hardline);
           target.push(` *   ${listItem.lines[i]}`);

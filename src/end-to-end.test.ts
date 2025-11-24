@@ -54,7 +54,11 @@ describe('End-to-End Integration Tests', () => {
     expect(isCandidate).toBe(true);
 
     // Step 2: Formatting
-    const formatted = await formatTSDocComment(realisticComment, options, parser);
+    const formatted = await formatTSDocComment(
+      realisticComment,
+      options,
+      parser
+    );
     expect(formatted).toBeDefined();
 
     console.log('✅ Complete TSDoc pipeline working for realistic comment');
@@ -78,7 +82,11 @@ describe('End-to-End Integration Tests', () => {
  * @return The processed result
  `;
 
-    const formatted = await formatTSDocComment(commentWithReturnTag, options, parser);
+    const formatted = await formatTSDocComment(
+      commentWithReturnTag,
+      options,
+      parser
+    );
     expect(formatted).toBeDefined();
 
     console.log('✅ Tag normalization functionality working');
@@ -136,7 +144,11 @@ describe('End-to-End Integration Tests', () => {
  * \`\`\`
  `;
 
-    const formatted = await formatTSDocComment(commentWithCode, options, parser);
+    const formatted = await formatTSDocComment(
+      commentWithCode,
+      options,
+      parser
+    );
     expect(formatted).toBeDefined();
 
     console.log('✅ Fenced code block formatting functionality working');
@@ -156,7 +168,11 @@ describe('End-to-End Integration Tests', () => {
  * + Feature 3
  `;
 
-    const formatted = await formatTSDocComment(commentWithMarkdown, options, parser);
+    const formatted = await formatTSDocComment(
+      commentWithMarkdown,
+      options,
+      parser
+    );
     expect(formatted).toBeDefined();
 
     console.log('✅ Markdown list formatting functionality working');
@@ -233,7 +249,11 @@ describe('End-to-End Integration Tests', () => {
  * @internal
  `;
 
-    const result = await formatTSDocComment(commentWithEmptyParams, options, parser);
+    const result = await formatTSDocComment(
+      commentWithEmptyParams,
+      options,
+      parser
+    );
     const formatted = docToString(result);
 
     // Verify hyphens are present for empty params
@@ -268,7 +288,11 @@ describe('End-to-End Integration Tests', () => {
  * @param id
  `;
 
-    const result = await formatTSDocComment(commentWithEmptyParams, options, parser);
+    const result = await formatTSDocComment(
+      commentWithEmptyParams,
+      options,
+      parser
+    );
     const formatted = docToString(result);
 
     // Verify hyphens are NOT present for empty params
@@ -300,7 +324,11 @@ describe('End-to-End Integration Tests', () => {
  * @typeParam T
  `;
 
-    const result = await formatTSDocComment(commentWithEmptyParams, options, parser);
+    const result = await formatTSDocComment(
+      commentWithEmptyParams,
+      options,
+      parser
+    );
     const formatted = docToString(result);
 
     // Verify default behavior: hyphens present for both param and typeParam
@@ -335,7 +363,11 @@ describe('End-to-End Integration Tests', () => {
  * @typeParam T
  `;
 
-    const result = await formatTSDocComment(commentWithEmptyParams, options, parser);
+    const result = await formatTSDocComment(
+      commentWithEmptyParams,
+      options,
+      parser
+    );
     const formatted = docToString(result);
 
     // Verify independent behavior: param has hyphen, typeParam does not
@@ -362,7 +394,11 @@ describe('End-to-End Integration Tests', () => {
  * @namespace MyNamespace
  `;
 
-    const result = await formatTSDocComment(commentWithNamespace, options, parser);
+    const result = await formatTSDocComment(
+      commentWithNamespace,
+      options,
+      parser
+    );
     const formatted = docToString(result);
 
     // Verify @namespace is NOT wrapped in curly braces (it's a block tag, not an inline tag)

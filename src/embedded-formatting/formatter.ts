@@ -172,9 +172,7 @@ function resolveEmbeddedPreference(
     return 'auto';
   }
 
-  const resolved = resolveOptions(
-    parentOptions as PrettierOptionsWithTSDoc
-  );
+  const resolved = resolveOptions(parentOptions as PrettierOptionsWithTSDoc);
 
   return resolved.embeddedLanguageFormatting;
 }

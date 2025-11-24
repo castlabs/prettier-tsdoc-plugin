@@ -57,7 +57,11 @@ describe('Phase 7: Telemetry & Debug Features', () => {
 
     // Try to format something that might cause formatting errors
     try {
-      await formatTSDocComment('*\n * ' + 'x'.repeat(10000) + '\n ', options, parser);
+      await formatTSDocComment(
+        '*\n * ' + 'x'.repeat(10000) + '\n ',
+        options,
+        parser
+      );
     } catch (_error) {
       // Expected if it fails hard
     }

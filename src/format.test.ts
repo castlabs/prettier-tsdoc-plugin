@@ -526,8 +526,7 @@ describe('Block-level tags', () => {
     const parser = new TSDocParser(config);
     const options = { printWidth: 80, tabWidth: 2, useTabs: false };
 
-    const commentValue =
-      '*\n * Status enum.\n * @enum\n * @readonly\n ';
+    const commentValue = '*\n * Status enum.\n * @enum\n * @readonly\n ';
     const result = await formatTSDocComment(commentValue, options, parser);
 
     expect(result).toBeDefined();

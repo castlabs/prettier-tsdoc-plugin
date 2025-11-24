@@ -24,10 +24,7 @@ const plugin: Plugin = {
       parserTypescript.parsers.typescript,
       prepareSourceForTSDoc
     ),
-    babel: createAsyncParser(
-      parserBabel.parsers.babel,
-      prepareSourceForTSDoc
-    ),
+    babel: createAsyncParser(parserBabel.parsers.babel, prepareSourceForTSDoc),
   },
   options: {
     fencedIndent: {
