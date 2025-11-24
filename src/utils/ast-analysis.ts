@@ -14,7 +14,7 @@ export interface ExportAnalysis {
   isExported: boolean;
   exportType: 'named' | 'default' | 'namespace' | 'none';
   isContainerMember: boolean;
-  containerType?: 'class' | 'interface' | 'namespace';
+  containerType?: 'class' | 'interface' | 'namespace' | 'const-enum';
   shouldInheritReleaseTag: boolean;
 }
 
@@ -171,7 +171,7 @@ function analyzeContainerInheritance(
   commentPath: AstPath<any>
 ): {
   isContainerMember: boolean;
-  containerType?: 'class' | 'interface' | 'namespace';
+  containerType?: 'class' | 'interface' | 'namespace' | 'const-enum';
   shouldInherit: boolean;
 } {
   if (!node) {
@@ -237,6 +237,26 @@ function analyzeContainerInheritance(
     return {
       isContainerMember: true,
       containerType: 'namespace',
+      shouldInherit: true,
+    };
+  }
+
+  // Check if this is a const enum property
+  const constEnumInfo = analyzeConstEnumProperty(node, commentPath);
+  if (
+    constEnumInfo.isConstEnumProperty &&
+    constEnumInfo.parentHasEnumTag &&
+    constEnumInfo.parentHasReleaseTag
+  ) {
+    if (process.env.PRETTIER_TSDOC_DEBUG === '1') {
+      debugLog(
+        'Container Analysis - Found const enum property:',
+        constEnumInfo.parentReleaseTag
+      );
+    }
+    return {
+      isContainerMember: true,
+      containerType: 'const-enum',
       shouldInherit: true,
     };
   }
@@ -481,4 +501,205 @@ export function isLikelyClassMember(commentContent: string): boolean {
   }
 
   return false;
+}
+
+/**
+ * Check if a comment string contains an `@enum` tag.
+ *
+ * @param comment - The comment text to analyze
+ * @returns Whether `@enum` tag is present
+ */
+function hasEnumTag(comment: string): boolean {
+  if (!comment) return false;
+  return /@enum\b/.test(comment);
+}
+
+/**
+ * Extract release tag from a comment string.
+ *
+ * @param comment - The comment text to analyze
+ * @returns The release tag if found, or undefined
+ */
+function extractReleaseTag(comment: string): string | undefined {
+  if (!comment) return undefined;
+
+  // Match release tags: @public, @internal, @beta, @alpha
+  const match = comment.match(/@(public|internal|beta|alpha)\b/);
+  return match ? `@${match[1]}` : undefined;
+}
+
+/**
+ * Get leading comment from an AST node.
+ *
+ * @param node - The AST node to check
+ * @returns The leading comment text, or undefined
+ */
+function getLeadingComment(node: any): string | undefined {
+  if (!node) return undefined;
+
+  // Check for leadingComments array
+  if (node.leadingComments && node.leadingComments.length > 0) {
+    // Get the last leading comment (closest to the node)
+    const comment = node.leadingComments[node.leadingComments.length - 1];
+    return comment.value || '';
+  }
+
+  // Check for comments property (alternative location)
+  if (node.comments && node.comments.length > 0) {
+    const comment = node.comments[node.comments.length - 1];
+    return comment.value || '';
+  }
+
+  return undefined;
+}
+
+/**
+ * Check if a node is a property within a const enum pattern.
+ *
+ * @param node - The AST node to check
+ * @param commentPath - The comment's AST path
+ * @returns Analysis of const enum membership
+ */
+export function analyzeConstEnumProperty(
+  node: any,
+  commentPath: AstPath<any>
+): {
+  isConstEnumProperty: boolean;
+  parentHasEnumTag: boolean;
+  parentHasReleaseTag: boolean;
+  parentReleaseTag?: string;
+} {
+  const defaultResult = {
+    isConstEnumProperty: false,
+    parentHasEnumTag: false,
+    parentHasReleaseTag: false,
+  };
+
+  if (!node || !commentPath) {
+    return defaultResult;
+  }
+
+  if (process.env.PRETTIER_TSDOC_DEBUG === '1') {
+    debugLog('analyzeConstEnumProperty - Node type:', node.type);
+  }
+
+  // Check if this node is a Property
+  if (node.type !== 'Property' && node.type !== 'ObjectProperty') {
+    return defaultResult;
+  }
+
+  // Try to find the parent ObjectExpression
+  const parent = commentPath.getParentNode();
+  if (process.env.PRETTIER_TSDOC_DEBUG === '1') {
+    debugLog('analyzeConstEnumProperty - Parent type:', parent?.type);
+  }
+
+  if (
+    !parent ||
+    (parent.type !== 'ObjectExpression' && parent.type !== 'ObjectLiteral')
+  ) {
+    return defaultResult;
+  }
+
+  // Try to find the VariableDeclarator that contains this ObjectExpression
+  // The hierarchy is typically: VariableDeclarator -> ObjectExpression -> Property
+  const grandparent = commentPath.getParentNode(1);
+  if (process.env.PRETTIER_TSDOC_DEBUG === '1') {
+    debugLog('analyzeConstEnumProperty - Grandparent type:', grandparent?.type);
+  }
+
+  if (!grandparent || grandparent.type !== 'VariableDeclarator') {
+    return defaultResult;
+  }
+
+  // Look for the VariableDeclaration that contains the declarator
+  const greatGrandparent = commentPath.getParentNode(2);
+  if (process.env.PRETTIER_TSDOC_DEBUG === '1') {
+    debugLog(
+      'analyzeConstEnumProperty - Great-grandparent type:',
+      greatGrandparent?.type
+    );
+  }
+
+  let variableDeclaration = greatGrandparent;
+
+  // If the great-grandparent is not VariableDeclaration, try one more level
+  // to handle ExportNamedDeclaration wrapping
+  if (greatGrandparent?.type === 'VariableDeclaration') {
+    variableDeclaration = greatGrandparent;
+  } else {
+    const greatGreatGrandparent = commentPath.getParentNode(3);
+    if (process.env.PRETTIER_TSDOC_DEBUG === '1') {
+      debugLog(
+        'analyzeConstEnumProperty - Great-great-grandparent type:',
+        greatGreatGrandparent?.type
+      );
+    }
+
+    if (greatGreatGrandparent?.type === 'ExportNamedDeclaration') {
+      // The VariableDeclaration might be in the declaration property
+      if (greatGreatGrandparent.declaration?.type === 'VariableDeclaration') {
+        variableDeclaration = greatGreatGrandparent.declaration;
+      }
+    } else if (greatGreatGrandparent?.type === 'VariableDeclaration') {
+      variableDeclaration = greatGreatGrandparent;
+    }
+  }
+
+  // Also check if there's an ExportNamedDeclaration wrapping the VariableDeclaration
+  const exportNode = commentPath.getParentNode(3);
+  if (exportNode?.type === 'ExportNamedDeclaration' && exportNode.declaration) {
+    variableDeclaration = exportNode.declaration;
+  }
+
+  if (
+    !variableDeclaration ||
+    variableDeclaration.type !== 'VariableDeclaration'
+  ) {
+    if (process.env.PRETTIER_TSDOC_DEBUG === '1') {
+      debugLog('analyzeConstEnumProperty - No VariableDeclaration found');
+    }
+    return defaultResult;
+  }
+
+  // Get the comment from the VariableDeclaration or its parent ExportNamedDeclaration
+  let parentComment = getLeadingComment(variableDeclaration);
+
+  // If no comment on VariableDeclaration, check ExportNamedDeclaration
+  if (!parentComment && exportNode?.type === 'ExportNamedDeclaration') {
+    parentComment = getLeadingComment(exportNode);
+  }
+
+  if (process.env.PRETTIER_TSDOC_DEBUG === '1') {
+    debugLog(
+      'analyzeConstEnumProperty - Parent comment:',
+      parentComment?.substring(0, 100)
+    );
+  }
+
+  if (!parentComment) {
+    return defaultResult;
+  }
+
+  // Check for @enum tag
+  const hasEnum = hasEnumTag(parentComment);
+  if (!hasEnum) {
+    return defaultResult;
+  }
+
+  // Check for release tag
+  const releaseTag = extractReleaseTag(parentComment);
+
+  const result = {
+    isConstEnumProperty: true,
+    parentHasEnumTag: true,
+    parentHasReleaseTag: !!releaseTag,
+    parentReleaseTag: releaseTag,
+  };
+
+  if (process.env.PRETTIER_TSDOC_DEBUG === '1') {
+    debugLog('analyzeConstEnumProperty - Result:', result);
+  }
+
+  return result;
 }

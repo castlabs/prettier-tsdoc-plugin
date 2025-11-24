@@ -141,7 +141,12 @@ export async function formatTSDocComment(
   options: any,
   parser: TSDocParser,
   commentPath?: AstPath<any>,
-  exportContext?: { isExported: boolean; followingCode: string }
+  exportContext?: {
+    isExported: boolean;
+    followingCode: string;
+    isConstEnumProperty?: boolean;
+    constEnumHasReleaseTag?: boolean;
+  }
 ): Promise<Doc> {
   const startTime = performance.now();
 
@@ -317,7 +322,12 @@ function applyNormalizations(
   options: TSDocPluginOptions,
   commentPath?: AstPath<any>,
   commentValue?: string,
-  exportContext?: { isExported: boolean; followingCode: string }
+  exportContext?: {
+    isExported: boolean;
+    followingCode: string;
+    isConstEnumProperty?: boolean;
+    constEnumHasReleaseTag?: boolean;
+  }
 ): TSDocCommentModel {
   const normalizedModel: TSDocCommentModel = {
     ...model,
@@ -412,19 +422,32 @@ function applyNormalizations(
     } else if (options.onlyExportedAPI && !commentPath) {
       // When onlyExportedAPI is true but no AST context, use export context if available
       if (exportContext) {
-        // Use the export context from preprocessor to determine if we should add tags
-        const isClassMember = commentValue
-          ? isLikelyClassMember(commentValue)
-          : false;
-        shouldInsertTag = exportContext.isExported && !isClassMember;
+        // Check if this is a const enum property that should inherit
+        if (
+          exportContext.isConstEnumProperty &&
+          exportContext.constEnumHasReleaseTag
+        ) {
+          shouldInsertTag = false;
+          if (process.env.PRETTIER_TSDOC_DEBUG === '1') {
+            debugLog(
+              'Const enum property inherits release tag from parent - skipping tag insertion'
+            );
+          }
+        } else {
+          // Use the export context from preprocessor to determine if we should add tags
+          const isClassMember = commentValue
+            ? isLikelyClassMember(commentValue)
+            : false;
+          shouldInsertTag = exportContext.isExported && !isClassMember;
 
-        if (process.env.PRETTIER_TSDOC_DEBUG === '1') {
-          debugLog('Using export context for release tag decision:', {
-            isExported: exportContext.isExported,
-            isLikelyClassMember: isClassMember,
-            shouldInsertTag,
-            followingCode: exportContext.followingCode.substring(0, 50),
-          });
+          if (process.env.PRETTIER_TSDOC_DEBUG === '1') {
+            debugLog('Using export context for release tag decision:', {
+              isExported: exportContext.isExported,
+              isLikelyClassMember: isClassMember,
+              shouldInsertTag,
+              followingCode: exportContext.followingCode.substring(0, 50),
+            });
+          }
         }
       } else {
         // No export context available, skip tag insertion for safety

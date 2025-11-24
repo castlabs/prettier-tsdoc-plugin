@@ -88,6 +88,8 @@ export async function prepareSourceForTSDoc(
                 Math.min(commentContext.comment.end + 200, text.length)
               )
             : '',
+          isConstEnumProperty: commentContext.isConstEnumProperty,
+          constEnumHasReleaseTag: commentContext.constEnumHasReleaseTag,
         };
 
         if (process.env.PRETTIER_TSDOC_DEBUG === '1') {
@@ -96,6 +98,8 @@ export async function prepareSourceForTSDoc(
             isClassMember: commentContext.isClassMember,
             exportType: commentContext.exportType,
             hasDeclaration: !!commentContext.declaration,
+            isConstEnumProperty: commentContext.isConstEnumProperty,
+            constEnumHasReleaseTag: commentContext.constEnumHasReleaseTag,
           });
         }
 

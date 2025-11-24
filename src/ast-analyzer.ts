@@ -12,6 +12,9 @@ export interface CommentContext {
   isClassMember: boolean;
   container: ts.ClassDeclaration | ts.InterfaceDeclaration | null;
   exportType: 'direct' | 'namespace' | 'default' | 'none';
+  isConstEnumProperty: boolean;
+  constEnumHasReleaseTag: boolean;
+  constEnumReleaseTag?: string;
 }
 
 export interface SourceAnalysis {
@@ -126,6 +129,10 @@ function analyzeCommentContext(
   let isClassMember = false;
   let container: ts.ClassDeclaration | ts.InterfaceDeclaration | null = null;
 
+  let isConstEnumProperty = false;
+  let constEnumHasReleaseTag = false;
+  let constEnumReleaseTag: string | undefined;
+
   if (declaration) {
     // Check if this declaration is exported
     const exportInfo = analyzeExportStatus(declaration, sourceFile);
@@ -136,6 +143,16 @@ function analyzeCommentContext(
     const memberInfo = analyzeClassMemberStatus(declaration);
     isClassMember = memberInfo.isClassMember;
     container = memberInfo.container;
+
+    // Check if this is a const enum property
+    const constEnumInfo = analyzeConstEnumProperty(
+      declaration,
+      comment,
+      sourceFile
+    );
+    isConstEnumProperty = constEnumInfo.isConstEnumProperty;
+    constEnumHasReleaseTag = constEnumInfo.parentHasReleaseTag;
+    constEnumReleaseTag = constEnumInfo.parentReleaseTag;
   }
 
   return {
@@ -145,6 +162,9 @@ function analyzeCommentContext(
     isClassMember,
     container,
     exportType,
+    isConstEnumProperty,
+    constEnumHasReleaseTag,
+    constEnumReleaseTag,
   };
 }
 
@@ -197,7 +217,8 @@ function isDeclaration(node: ts.Node): boolean {
     ts.isEnumDeclaration(node) ||
     ts.isModuleDeclaration(node) ||
     ts.isGetAccessorDeclaration(node) ||
-    ts.isSetAccessorDeclaration(node)
+    ts.isSetAccessorDeclaration(node) ||
+    ts.isPropertyAssignment(node) // Add support for object literal properties
   );
 }
 
@@ -230,6 +251,37 @@ function analyzeExportStatus(
           isExported: true,
           exportType: hasDefaultModifier ? 'default' : 'direct',
         };
+      }
+    }
+  }
+
+  // For VariableDeclaration, check the parent VariableStatement for export modifier
+  if (ts.isVariableDeclaration(declaration)) {
+    const parent = declaration.parent;
+    if (parent && ts.isVariableDeclarationList(parent)) {
+      const grandparent = parent.parent;
+      if (grandparent && ts.isVariableStatement(grandparent)) {
+        if (ts.canHaveModifiers(grandparent)) {
+          const modifiers = ts.getModifiers(grandparent);
+          if (modifiers) {
+            const hasExportModifier = modifiers.some(
+              (modifier: ts.Modifier) =>
+                modifier.kind === ts.SyntaxKind.ExportKeyword
+            );
+
+            if (hasExportModifier) {
+              const hasDefaultModifier = modifiers.some(
+                (modifier: ts.Modifier) =>
+                  modifier.kind === ts.SyntaxKind.DefaultKeyword
+              );
+
+              return {
+                isExported: true,
+                exportType: hasDefaultModifier ? 'default' : 'direct',
+              };
+            }
+          }
+        }
       }
     }
   }
@@ -361,4 +413,114 @@ export function replaceCommentsInSource(
   }
 
   return result;
+}
+
+/**
+ * Analyze if a declaration is a property within a const enum pattern.
+ * A const enum is a const object with `@enum` annotation and a release tag.
+ */
+function analyzeConstEnumProperty(
+  declaration: ts.Declaration,
+  _comment: ts.CommentRange,
+  sourceFile: ts.SourceFile
+): {
+  isConstEnumProperty: boolean;
+  parentHasReleaseTag: boolean;
+  parentReleaseTag?: string;
+} {
+  const defaultResult = {
+    isConstEnumProperty: false,
+    parentHasReleaseTag: false,
+  };
+
+  if (process.env.PRETTIER_TSDOC_DEBUG === '1') {
+    console.log(
+      '[TSDoc Plugin] Analyzing const enum property, declaration kind:',
+      ts.SyntaxKind[declaration.kind]
+    );
+  }
+
+  // Check if this is a property declaration
+  if (!ts.isPropertyAssignment(declaration)) {
+    if (process.env.PRETTIER_TSDOC_DEBUG === '1') {
+      console.log('[TSDoc Plugin] Not a PropertyAssignment, skipping');
+    }
+    return defaultResult;
+  }
+
+  // Try to find the parent object literal
+  let parent: ts.Node | undefined = declaration.parent;
+  if (!parent || !ts.isObjectLiteralExpression(parent)) {
+    return defaultResult;
+  }
+
+  // Move up to find the variable declarator containing this object literal
+  parent = parent.parent;
+
+  if (!parent || !ts.isVariableDeclaration(parent)) {
+    return defaultResult;
+  }
+
+  const variableDeclaration = parent;
+
+  // Find the variable declaration list
+  parent = parent.parent;
+  if (!parent || !ts.isVariableDeclarationList(parent)) {
+    return defaultResult;
+  }
+
+  const variableDeclarationList = parent;
+
+  // Check if it's a const declaration
+  if (
+    !(variableDeclarationList.flags & ts.NodeFlags.Const) &&
+    !(variableDeclarationList.flags & ts.NodeFlags.Let)
+  ) {
+    return defaultResult;
+  }
+
+  // Find the variable statement
+  parent = parent.parent;
+  let variableStatement: ts.VariableStatement | null = null;
+  if (parent && ts.isVariableStatement(parent)) {
+    variableStatement = parent;
+  }
+
+  // The comment for the const enum would be attached to the variable statement
+  // Get the source text and find comments
+  const sourceText = sourceFile.getFullText();
+
+  // Get the start position of the variable statement or the first variable declaration
+  const searchNode = variableStatement || variableDeclaration;
+  const nodeStart = searchNode.getFullStart();
+
+  // Get leading comments for this node
+  const leadingComments = ts.getLeadingCommentRanges(sourceText, nodeStart);
+
+  if (!leadingComments || leadingComments.length === 0) {
+    return defaultResult;
+  }
+
+  // Get the last leading comment (closest to the declaration)
+  const parentComment = leadingComments[leadingComments.length - 1];
+  const parentCommentText = sourceText.substring(
+    parentComment.pos,
+    parentComment.end
+  );
+
+  // Check if the parent comment has @enum tag
+  if (!/@enum\b/.test(parentCommentText)) {
+    return defaultResult;
+  }
+
+  // Check if the parent comment has a release tag
+  const releaseTagMatch = parentCommentText.match(
+    /@(public|internal|beta|alpha)\b/
+  );
+
+  return {
+    isConstEnumProperty: true,
+    parentHasReleaseTag: !!releaseTagMatch,
+    parentReleaseTag: releaseTagMatch ? `@${releaseTagMatch[1]}` : undefined,
+  };
 }

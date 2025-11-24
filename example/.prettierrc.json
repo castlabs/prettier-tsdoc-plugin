@@ -5,5 +5,9 @@
   "singleQuote": true,
   "printWidth": 80,
   "proseWrap": "always",
-  "plugins": ["../dist/index.js"]
+  "plugins": ["../dist/index.js"],
+  "tsdoc": {
+    "defaultReleaseTag": "@internal",
+    "onlyExportedAPI": true
+  }
 }
