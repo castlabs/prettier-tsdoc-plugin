@@ -79,8 +79,30 @@ Add the plugin to your Prettier configuration:
 
 ## Configuration Options
 
-All options are configured under the `tsdoc` namespace in your Prettier
-configuration:
+Options can be configured at the top level of your Prettier configuration
+(recommended) or nested under the `tsdoc` namespace (for backward
+compatibility):
+
+**Recommended (flat config):**
+
+```json
+{
+  "plugins": ["@castlabs/prettier-tsdoc-plugin"],
+  "fencedIndent": "space",
+  "normalizeTagOrder": true,
+  "dedupeReleaseTags": true,
+  "splitModifiers": true,
+  "singleSentenceSummary": false,
+  "alignParamTags": false,
+  "defaultReleaseTag": "@internal",
+  "onlyExportedAPI": true,
+  "inheritanceAware": true,
+  "closureCompilerCompat": true,
+  "releaseTagStrategy": "keep-first"
+}
+```
+
+**Alternative (nested config - backward compatible):**
 
 ```json
 {
@@ -96,15 +118,13 @@ configuration:
     "onlyExportedAPI": true,
     "inheritanceAware": true,
     "closureCompilerCompat": true,
-    "extraTags": [],
-    "normalizeTags": {
-      "@return": "@returns",
-      "@prop": "@property"
-    },
     "releaseTagStrategy": "keep-first"
   }
 }
 ```
+
+**Note:** The flat config approach is recommended as it avoids Prettier warnings
+about unknown options. Both formats are supported and work identically.
 
 ### Option Details
 
@@ -117,7 +137,7 @@ configuration:
 | `singleSentenceSummary`      | `boolean`                       | `false`        | Enforce single sentence summaries                                               |
 | `embeddedLanguageFormatting` | `"auto"` \| `"off"`             | `"auto"`       | Control embedded code block formatting (`auto` uses Prettier, `off` trims only) |
 | `alignParamTags`             | `boolean`                       | `false`        | Align parameter descriptions across @param tags                                 |
-| `defaultReleaseTag`          | `string` \| `null`              | `"@internal"`  | Default release tag when none exists (null to disable)                          |
+| `defaultReleaseTag`          | `string`                        | `"@internal"`  | Default release tag when none exists (empty string to disable)                  |
 | `onlyExportedAPI`            | `boolean`                       | `true`         | Only add release tags to exported API constructs (AST-aware)                    |
 | `inheritanceAware`           | `boolean`                       | `true`         | Respect inheritance rules - skip tagging class/interface members                |
 | `closureCompilerCompat`      | `boolean`                       | `true`         | Enable legacy Closure Compiler annotation transformations                       |
@@ -248,15 +268,27 @@ release tags, following API Extractor conventions:
 
 **Configuration Options:**
 
-```json
+```jsonc
 {
-  "tsdoc": {
-    "defaultReleaseTag": "@internal", // Default tag to add
-    "defaultReleaseTag": "@public", // Use @public instead
-    "defaultReleaseTag": null // Disable feature
-  }
+  "defaultReleaseTag": "@internal", // Default tag to add
 }
 ```
+
+```jsonc
+{
+  "defaultReleaseTag": "@public", // Use @public instead
+}
+```
+
+```jsonc
+{
+  "defaultReleaseTag": "", // Disable feature (empty string)
+}
+```
+
+**Note:** To disable automatic release tag insertion, use an empty string `""`.
+While `null` works in TypeScript/JavaScript config files, JSON configurations
+require an empty string.
 
 **Example - AST-aware insertion for exported functions:**
 
@@ -775,14 +807,34 @@ enabled by default:
   to `false` for legacy behavior.
 - **Inheritance awareness**: Enabled by default (`inheritanceAware: true`). Set
   to `false` to tag all constructs.
-- **Default release tags**: Enabled by default with `@internal`. Set to `null`
-  to disable.
+- **Default release tags**: Enabled by default with `@internal`. Set to empty
+  string `""` to disable (or `null` in TypeScript/JavaScript config files).
 - **Parameter alignment**: Disabled by default. Set `alignParamTags: true` to
   enable.
 - **Tag normalization**: Only built-in normalizations (`@return` → `@returns`)
   are applied by default.
+- **Configuration format**: Use flat config (top-level options) instead of
+  nested `tsdoc: {}` to avoid Prettier warnings about unknown options. Both
+  formats work identically.
 
 ### Common Issues
+
+#### Prettier warnings about unknown options
+
+**Symptom:** `[warn] Ignored unknown option { tsdoc: { ... } }`
+
+**Solution:** Use flat configuration (top-level options) instead of nested
+`tsdoc: {}` format:
+
+```json
+{
+  "plugins": ["@castlabs/prettier-tsdoc-plugin"],
+  "defaultReleaseTag": "@internal",
+  "onlyExportedAPI": true
+}
+```
+
+Both formats work identically, but flat config avoids Prettier warnings.
 
 #### Comments not being formatted
 
