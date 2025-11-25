@@ -100,7 +100,7 @@ const plugin: Plugin = {
       category: 'TSDoc',
       default: '@internal',
       description:
-        'Default release tag to add when no release tag is present (use null to disable)',
+        'Default release tag to add when no release tag is present (use empty string to disable)',
     },
     onlyExportedAPI: {
       type: 'boolean',
@@ -121,6 +121,19 @@ const plugin: Plugin = {
       category: 'TSDoc',
       default: true,
       description: 'Enable legacy Closure Compiler annotation transformations',
+    },
+    requireParamHyphen: {
+      type: 'boolean',
+      category: 'TSDoc',
+      default: true,
+      description: 'Require hyphen separator for @param tags even when empty',
+    },
+    requireTypeParamHyphen: {
+      type: 'boolean',
+      category: 'TSDoc',
+      default: true,
+      description:
+        'Require hyphen separator for @typeParam tags even when empty',
     },
   },
 };

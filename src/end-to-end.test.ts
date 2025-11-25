@@ -603,4 +603,111 @@ describe('Const Enum Release Tag Inheritance - End-to-End', () => {
 
     console.log('✅ Complete const enum pattern working');
   });
+
+  test('configuration options work without warnings - flat config', async () => {
+    const input = `*
+ * Exported function without release tag.
+ * @param value - Input value
+ * @returns Processed value
+ `;
+
+    // Test with flat config (top-level options) - should not produce warnings
+    const options = {
+      printWidth: 80,
+      tabWidth: 2,
+      useTabs: false,
+      defaultReleaseTag: '',
+      onlyExportedAPI: true,
+      inheritanceAware: true,
+    };
+
+    const config = createTSDocConfiguration();
+    const parser = new TSDocParser(config);
+    const formatted = await formatTSDocComment(input, options, parser);
+    expect(formatted).toBeDefined();
+
+    const result = docToString(formatted);
+    // Empty string disables default tag insertion
+    expect(result).not.toContain('@internal');
+    expect(result).toContain('@param');
+    expect(result).toContain('@returns');
+  });
+
+  test('configuration options work without warnings - nested tsdoc config', async () => {
+    const input = `*
+ * Exported function without release tag.
+ * @param value - Input value
+ * @returns Processed value
+ `;
+
+    // Test with nested tsdoc config (backward compatibility)
+    const options = {
+      printWidth: 80,
+      tabWidth: 2,
+      useTabs: false,
+      tsdoc: {
+        defaultReleaseTag: '',
+        onlyExportedAPI: true,
+        inheritanceAware: true,
+      },
+    };
+
+    const config = createTSDocConfiguration();
+    const parser = new TSDocParser(config);
+    const formatted = await formatTSDocComment(input, options, parser);
+    expect(formatted).toBeDefined();
+
+    const result = docToString(formatted);
+    // Empty string disables default tag insertion
+    expect(result).not.toContain('@internal');
+    expect(result).toContain('@param');
+    expect(result).toContain('@returns');
+  });
+
+  test('empty string defaultReleaseTag disables tag insertion', async () => {
+    const input = `*
+ * Exported function.
+ * @param value - Input
+ `;
+
+    const optionsWithEmpty = {
+      printWidth: 80,
+      tabWidth: 2,
+      useTabs: false,
+      defaultReleaseTag: '',
+      onlyExportedAPI: true,
+    };
+
+    const config = createTSDocConfiguration();
+    const parser = new TSDocParser(config);
+    const formatted = await formatTSDocComment(input, optionsWithEmpty, parser);
+    const result = docToString(formatted);
+
+    // Should NOT add any release tag
+    expect(result).not.toContain('@internal');
+    expect(result).not.toContain('@public');
+  });
+
+  test('non-empty defaultReleaseTag still adds tags', async () => {
+    const input = `*
+ * Exported function.
+ * @param value - Input
+ `;
+
+    const optionsWithTag = {
+      printWidth: 80,
+      tabWidth: 2,
+      useTabs: false,
+      defaultReleaseTag: '@public',
+      onlyExportedAPI: false, // Disable AST check so tag gets added
+    };
+
+    const config = createTSDocConfiguration();
+    const parser = new TSDocParser(config);
+    const formatted = await formatTSDocComment(input, optionsWithTag, parser);
+    const result = docToString(formatted);
+
+    // Should add the @public tag
+    expect(result).toContain('@public');
+  });
 });

@@ -244,6 +244,17 @@ export function resolveOptions(
     embeddedLanguageFormatting = 'off';
   }
 
+  // Handle defaultReleaseTag: convert empty string to null for "disabled" behavior
+  let defaultReleaseTag = DEFAULT_OPTIONS.defaultReleaseTag;
+  const userDefaultTag =
+    userOptions.defaultReleaseTag !== undefined
+      ? userOptions.defaultReleaseTag
+      : tsdocOptions.defaultReleaseTag;
+  if (userDefaultTag !== undefined) {
+    // Empty string means "disabled", convert to null
+    defaultReleaseTag = userDefaultTag === '' ? null : userDefaultTag;
+  }
+
   return {
     ...DEFAULT_OPTIONS,
     ...tsdocOptions,
@@ -269,9 +280,6 @@ export function resolveOptions(
     ...(userOptions.alignParamTags !== undefined && {
       alignParamTags: userOptions.alignParamTags,
     }),
-    ...(userOptions.defaultReleaseTag !== undefined && {
-      defaultReleaseTag: userOptions.defaultReleaseTag,
-    }),
     ...(userOptions.onlyExportedAPI !== undefined && {
       onlyExportedAPI: userOptions.onlyExportedAPI,
     }),
@@ -294,6 +302,7 @@ export function resolveOptions(
       requireTypeParamHyphen: userOptions.requireTypeParamHyphen,
     }),
     embeddedLanguageFormatting,
+    defaultReleaseTag,
   };
 }
 

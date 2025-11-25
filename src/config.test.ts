@@ -279,6 +279,26 @@ describe('Default Release Tag', () => {
     expect(resolved.defaultReleaseTag).toBeNull();
   });
 
+  test('resolveOptions handles empty string defaultReleaseTag to disable feature', () => {
+    const userOptions = {
+      defaultReleaseTag: '',
+    };
+
+    const resolved = resolveOptions(userOptions);
+    expect(resolved.defaultReleaseTag).toBeNull();
+  });
+
+  test('resolveOptions handles empty string in nested tsdoc config', () => {
+    const userOptions = {
+      tsdoc: {
+        defaultReleaseTag: '',
+      },
+    };
+
+    const resolved = resolveOptions(userOptions);
+    expect(resolved.defaultReleaseTag).toBeNull();
+  });
+
   test('hasReleaseTag detects modifier tags correctly after fix', () => {
     // Test with various release tags in otherTags (which now includes modifier tags)
     const modelWithPublic = {
