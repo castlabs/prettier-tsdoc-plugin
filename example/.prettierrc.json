@@ -6,8 +6,6 @@
   "printWidth": 80,
   "proseWrap": "always",
   "plugins": ["../dist/index.js"],
-  "tsdoc": {
-    "defaultReleaseTag": "@internal",
-    "onlyExportedAPI": true
-  }
+  "defaultReleaseTag": "@internal",
+  "onlyExportedAPI": true
 }
