@@ -1,6 +1,6 @@
 {
   "name": "@castlabs/prettier-tsdoc-plugin",
-  "version": "0.5.6",
+  "version": "0.5.7",
   "description": "A prettier plugin to handle TSDoc comments",
   "license": "MIT",
   "author": "castLabs",
