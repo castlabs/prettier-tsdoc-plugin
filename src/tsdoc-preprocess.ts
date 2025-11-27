@@ -1,4 +1,5 @@
 import { TSDocParser } from '@microsoft/tsdoc';
+import * as ts from 'typescript';
 import {
   analyzeSourceForTSDoc,
   replaceCommentsInSource,
@@ -72,11 +73,33 @@ export async function prepareSourceForTSDoc(
       };
       commentValue = applyLegacyTransformations(commentValue, legacyOptions);
 
-      if (!isTSDocCandidate({ type: 'CommentBlock', value: commentValue })) {
+      const isTSDocCandidateResult = isTSDocCandidate({
+        type: 'CommentBlock',
+        value: commentValue,
+      });
+
+      // Special case: Allow empty comments on exported APIs when defaultReleaseTag is configured
+      // This enables adding default release tags to exported declarations with empty /** */ comments
+      const shouldProcessEmptyComment =
+        !isTSDocCandidateResult &&
+        tsdocOptions.defaultReleaseTag &&
+        commentContext.isExported &&
+        commentValue.trim() === '';
+
+      if (!isTSDocCandidateResult && !shouldProcessEmptyComment) {
         if (process.env.PRETTIER_TSDOC_DEBUG === '1') {
           debugLog('Skipping non-TSDoc comment:', commentText.substring(0, 50));
         }
         continue;
+      }
+
+      if (
+        process.env.PRETTIER_TSDOC_DEBUG === '1' &&
+        shouldProcessEmptyComment
+      ) {
+        debugLog(
+          'Processing empty comment on exported API for default release tag'
+        );
       }
 
       try {
@@ -90,6 +113,19 @@ export async function prepareSourceForTSDoc(
             : '',
           isConstEnumProperty: commentContext.isConstEnumProperty,
           constEnumHasReleaseTag: commentContext.constEnumHasReleaseTag,
+          // Add AST context information for inheritance detection
+          isContainerMember:
+            commentContext.isClassMember || !!commentContext.container,
+          containerType:
+            commentContext.container?.kind ===
+            ts.SyntaxKind.InterfaceDeclaration
+              ? 'interface'
+              : commentContext.container?.kind ===
+                  ts.SyntaxKind.ClassDeclaration
+                ? 'class'
+                : undefined,
+          shouldInheritReleaseTag:
+            commentContext.isClassMember || !!commentContext.container,
         };
 
         if (process.env.PRETTIER_TSDOC_DEBUG === '1') {

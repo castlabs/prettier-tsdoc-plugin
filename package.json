@@ -1,6 +1,6 @@
 {
   "name": "@castlabs/prettier-tsdoc-plugin",
-  "version": "0.5.6",
+  "version": "0.5.7",
   "description": "A prettier plugin to handle TSDoc comments",
   "license": "MIT",
   "author": "castLabs",
@@ -19,7 +19,10 @@
     "lint:fix": "eslint --fix .",
     "check": "npm run build && npm run prettier && npm run typecheck && npm run lint:fix && npm run test",
     "example:prettier": "cd example && npm run prettier",
-    "example:typedoc": "cd example && npm run typedoc"
+    "example:typedoc": "cd example && npm run typedoc",
+    "example:tsc": "cd example && npm run tsc",
+    "example:api": "cd example && npm run api",
+    "example:check": "npm run build && npm run example:prettier && npm run example:tsc && npm run example:api"
   },
   "dependencies": {
     "@microsoft/tsdoc": "^0.15.1",
