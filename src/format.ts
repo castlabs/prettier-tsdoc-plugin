@@ -146,6 +146,9 @@ export async function formatTSDocComment(
     followingCode: string;
     isConstEnumProperty?: boolean;
     constEnumHasReleaseTag?: boolean;
+    isContainerMember?: boolean;
+    containerType?: string;
+    shouldInheritReleaseTag?: boolean;
   }
 ): Promise<Doc> {
   const startTime = performance.now();
@@ -327,6 +330,9 @@ function applyNormalizations(
     followingCode: string;
     isConstEnumProperty?: boolean;
     constEnumHasReleaseTag?: boolean;
+    isContainerMember?: boolean;
+    containerType?: string;
+    shouldInheritReleaseTag?: boolean;
   }
 ): TSDocCommentModel {
   const normalizedModel: TSDocCommentModel = {
@@ -362,10 +368,13 @@ function applyNormalizations(
   // Check if this is a standalone file-level block that shouldn't get release tags
   const isFileLevelBlock = isStandaloneFileLevelBlock(normalizedModel);
 
+  // Store original release tag status before any modifications
+  const originalHasReleaseTag = hasReleaseTag(normalizedModel);
+
   // Apply default release tag insertion using AST-aware analysis
   if (
     options.defaultReleaseTag &&
-    !hasReleaseTag(normalizedModel) &&
+    !originalHasReleaseTag &&
     !isFileLevelBlock
   ) {
     // Default to false when onlyExportedAPI is true but no AST context is available
@@ -438,12 +447,23 @@ function applyNormalizations(
           const isClassMember = commentValue
             ? isLikelyClassMember(commentValue)
             : false;
-          shouldInsertTag = exportContext.isExported && !isClassMember;
+
+          // Check if this is a container member that should inherit
+          const shouldInherit =
+            exportContext.isContainerMember &&
+            exportContext.shouldInheritReleaseTag;
+
+          // Don't add tags if it should inherit from parent container
+          shouldInsertTag =
+            exportContext.isExported && !isClassMember && !shouldInherit;
 
           if (process.env.PRETTIER_TSDOC_DEBUG === '1') {
             debugLog('Using export context for release tag decision:', {
               isExported: exportContext.isExported,
               isLikelyClassMember: isClassMember,
+              isContainerMember: exportContext.isContainerMember,
+              shouldInheritReleaseTag: exportContext.shouldInheritReleaseTag,
+              shouldInherit,
               shouldInsertTag,
               followingCode: exportContext.followingCode.substring(0, 50),
             });
@@ -486,17 +506,89 @@ function applyNormalizations(
     }
   }
 
-  // Remove release tags from class members if inheritance-aware mode is enabled
-  if (options.inheritanceAware && commentValue) {
-    const isClassMember = isLikelyClassMember(commentValue);
-    if (isClassMember) {
-      if (process.env.PRETTIER_TSDOC_DEBUG === '1') {
-        debugLog('Removing release tags from detected class member');
+  // Remove release tags from container members if inheritance-aware mode is enabled
+  // BUT ONLY if they don't have explicit release tags from the original comment
+  if (options.inheritanceAware) {
+    let shouldRemoveTags = false;
+
+    // Use the original release tag status to determine if we should preserve explicit tags
+    // This prevents removing @internal tags that were explicitly set in @public interfaces
+
+    if (process.env.PRETTIER_TSDOC_DEBUG === '1') {
+      debugLog('Tag removal check:', {
+        hasCommentPath: !!commentPath,
+        hasCommentValue: !!commentValue,
+        originalHasReleaseTag,
+        currentReleaseTags: normalizedModel.otherTags
+          .filter((tag) => isReleaseTag(tag.tagName))
+          .map((tag) => tag.tagName),
+      });
+    }
+
+    // Only remove tags from container members that DON'T have original explicit release tags
+    // This preserves intentional @internal overrides in @public interfaces
+    if (!originalHasReleaseTag) {
+      if (commentPath) {
+        // Use AST analysis when available (consistent with tag insertion logic)
+        try {
+          const analysis = analyzeCommentContext(commentPath);
+          shouldRemoveTags =
+            analysis.isContainerMember && analysis.shouldInheritReleaseTag;
+
+          if (process.env.PRETTIER_TSDOC_DEBUG === '1') {
+            debugLog('AST-based tag removal analysis:', {
+              isContainerMember: analysis.isContainerMember,
+              shouldInheritReleaseTag: analysis.shouldInheritReleaseTag,
+              containerType: analysis.containerType,
+              shouldRemoveTags,
+            });
+          }
+        } catch (error) {
+          // Fallback to heuristic analysis when AST analysis fails
+          if (process.env.PRETTIER_TSDOC_DEBUG === '1') {
+            console.warn(
+              'AST analysis failed for tag removal, falling back to heuristic:',
+              error
+            );
+          }
+          shouldRemoveTags = commentValue
+            ? isLikelyClassMember(commentValue)
+            : false;
+
+          if (process.env.PRETTIER_TSDOC_DEBUG === '1') {
+            debugLog('Heuristic fallback result:', {
+              isLikelyClassMember: shouldRemoveTags,
+            });
+          }
+        }
+      } else {
+        // Fallback to heuristic analysis when no AST context
+        shouldRemoveTags = commentValue
+          ? isLikelyClassMember(commentValue)
+          : false;
+
+        if (process.env.PRETTIER_TSDOC_DEBUG === '1') {
+          debugLog('No AST context, using heuristic:', {
+            isLikelyClassMember: shouldRemoveTags,
+          });
+        }
       }
-      // Remove all release tags from class members since they should inherit from container
-      normalizedModel.otherTags = normalizedModel.otherTags.filter(
-        (tag) => !isReleaseTag(tag.tagName)
-      );
+
+      if (shouldRemoveTags) {
+        if (process.env.PRETTIER_TSDOC_DEBUG === '1') {
+          debugLog('Removing release tags from detected container member');
+        }
+        // Remove all release tags from container members since they should inherit from container
+        normalizedModel.otherTags = normalizedModel.otherTags.filter(
+          (tag) => !isReleaseTag(tag.tagName)
+        );
+      }
+    } else {
+      if (process.env.PRETTIER_TSDOC_DEBUG === '1') {
+        debugLog(
+          'Preserving explicit release tags - not removing from container member'
+        );
+      }
     }
   }
 

@@ -1,4 +1,5 @@
 import { TSDocParser } from '@microsoft/tsdoc';
+import * as ts from 'typescript';
 import {
   analyzeSourceForTSDoc,
   replaceCommentsInSource,
@@ -90,6 +91,19 @@ export async function prepareSourceForTSDoc(
             : '',
           isConstEnumProperty: commentContext.isConstEnumProperty,
           constEnumHasReleaseTag: commentContext.constEnumHasReleaseTag,
+          // Add AST context information for inheritance detection
+          isContainerMember:
+            commentContext.isClassMember || !!commentContext.container,
+          containerType:
+            commentContext.container?.kind ===
+            ts.SyntaxKind.InterfaceDeclaration
+              ? 'interface'
+              : commentContext.container?.kind ===
+                  ts.SyntaxKind.ClassDeclaration
+                ? 'class'
+                : undefined,
+          shouldInheritReleaseTag:
+            commentContext.isClassMember || !!commentContext.container,
         };
 
         if (process.env.PRETTIER_TSDOC_DEBUG === '1') {

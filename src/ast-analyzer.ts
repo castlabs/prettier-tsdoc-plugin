@@ -218,7 +218,11 @@ function isDeclaration(node: ts.Node): boolean {
     ts.isModuleDeclaration(node) ||
     ts.isGetAccessorDeclaration(node) ||
     ts.isSetAccessorDeclaration(node) ||
-    ts.isPropertyAssignment(node) // Add support for object literal properties
+    ts.isPropertyAssignment(node) || // Add support for object literal properties
+    ts.isMethodSignature(node) || // Interface methods
+    ts.isPropertySignature(node) || // Interface properties
+    ts.isCallSignatureDeclaration(node) || // Interface call signatures
+    ts.isConstructSignatureDeclaration(node) // Interface construct signatures
   );
 }
 
@@ -232,6 +236,13 @@ function analyzeExportStatus(
   isExported: boolean;
   exportType: 'direct' | 'namespace' | 'default' | 'none';
 } {
+  // First check if this is a container member (class/interface member)
+  // If so, check the parent container's export status
+  const memberStatus = analyzeClassMemberStatus(declaration);
+  if (memberStatus.isClassMember && memberStatus.container) {
+    // Interface/class members inherit export status from their container
+    return analyzeExportStatus(memberStatus.container, sourceFile);
+  }
   // Check for direct export modifiers
   if (ts.canHaveModifiers(declaration)) {
     const modifiers = ts.getModifiers(declaration);
