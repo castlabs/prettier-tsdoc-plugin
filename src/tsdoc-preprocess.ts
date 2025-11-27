@@ -73,11 +73,33 @@ export async function prepareSourceForTSDoc(
       };
       commentValue = applyLegacyTransformations(commentValue, legacyOptions);
 
-      if (!isTSDocCandidate({ type: 'CommentBlock', value: commentValue })) {
+      const isTSDocCandidateResult = isTSDocCandidate({
+        type: 'CommentBlock',
+        value: commentValue,
+      });
+
+      // Special case: Allow empty comments on exported APIs when defaultReleaseTag is configured
+      // This enables adding default release tags to exported declarations with empty /** */ comments
+      const shouldProcessEmptyComment =
+        !isTSDocCandidateResult &&
+        tsdocOptions.defaultReleaseTag &&
+        commentContext.isExported &&
+        commentValue.trim() === '';
+
+      if (!isTSDocCandidateResult && !shouldProcessEmptyComment) {
         if (process.env.PRETTIER_TSDOC_DEBUG === '1') {
           debugLog('Skipping non-TSDoc comment:', commentText.substring(0, 50));
         }
         continue;
+      }
+
+      if (
+        process.env.PRETTIER_TSDOC_DEBUG === '1' &&
+        shouldProcessEmptyComment
+      ) {
+        debugLog(
+          'Processing empty comment on exported API for default release tag'
+        );
       }
 
       try {

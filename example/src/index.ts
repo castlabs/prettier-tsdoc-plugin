@@ -11,6 +11,8 @@
  * @packageDocumentation
  */
 
+export * from './release-annotations';
+
 /**
  * This is one of the comments we would like to have formatted and we create a
  * long line that the formatter should wrap for us.
@@ -154,7 +156,6 @@ export class Thing {
    * This class has a constructor
    *
    * @param name - The name
-   * @see {@link hello}
    * @see {@link http://example.com}
    */
   constructor(name: string) {
