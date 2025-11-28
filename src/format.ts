@@ -1505,9 +1505,12 @@ async function formatCodeBlock(
   options: ParserOptions<any>,
   embeddedPreference: 'auto' | 'off'
 ): Promise<string> {
+  // Clean up code and use as fallback
   const fallback = cleanupCodeSnippet(code);
-  if (!fallback) {
-    return fallback;
+
+  // For empty or whitespace-only code, return empty string without formatting
+  if (fallback === '') {
+    return '';
   }
 
   if (embeddedPreference === 'off') {

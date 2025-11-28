@@ -217,6 +217,33 @@ describe('Multi-Language Code Block Formatting', () => {
     expect(output).toContain('```');
   });
 
+  test('handles whitespace-only code blocks', async () => {
+    const commentValue = `*
+ * Function with whitespace-only code block.
+ * @example Whitespace example
+ * \`\`\`typescript
+ *    
+ *   
+ * \`\`\`
+ `;
+
+    const output = await formatComment(commentValue);
+
+    // Should preserve code fence markers even when content is only whitespace
+    expect(output).toContain('```typescript');
+    expect(output).toContain('```');
+    // Whitespace-only input lines are preserved as empty comment lines
+    // This is the expected behavior - empty code results in empty code lines
+    const lines = output.split('\n');
+    const tsLineIndex = lines.findIndex((l) => l.includes('```typescript'));
+    const closeLineIndex = lines.findIndex(
+      (l, i) => i > tsLineIndex && l.includes('```')
+    );
+    // Should have at least the opening and closing fences
+    expect(tsLineIndex).toBeGreaterThanOrEqual(0);
+    expect(closeLineIndex).toBeGreaterThan(tsLineIndex);
+  });
+
   test('formats CSS code blocks', async () => {
     const commentValue = `*
  * Function that generates CSS.
