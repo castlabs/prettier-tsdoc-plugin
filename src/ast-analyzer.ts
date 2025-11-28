@@ -145,11 +145,7 @@ function analyzeCommentContext(
     container = memberInfo.container;
 
     // Check if this is a const enum property
-    const constEnumInfo = analyzeConstEnumProperty(
-      declaration,
-      comment,
-      sourceFile
-    );
+    const constEnumInfo = analyzeConstEnumProperty(declaration, sourceFile);
     isConstEnumProperty = constEnumInfo.isConstEnumProperty;
     constEnumHasReleaseTag = constEnumInfo.parentHasReleaseTag;
     constEnumReleaseTag = constEnumInfo.parentReleaseTag;
@@ -432,7 +428,6 @@ export function replaceCommentsInSource(
  */
 function analyzeConstEnumProperty(
   declaration: ts.Declaration,
-  _comment: ts.CommentRange,
   sourceFile: ts.SourceFile
 ): {
   isConstEnumProperty: boolean;

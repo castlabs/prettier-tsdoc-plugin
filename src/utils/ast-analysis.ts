@@ -151,12 +151,12 @@ function analyzeExportStatus(
   }
 
   // Check for namespace exports
-  if (isWithinExportedNamespace(node, commentPath)) {
+  if (isWithinExportedNamespace(commentPath)) {
     return { isExported: true, exportType: 'namespace' };
   }
 
   // Check for ambient module declarations (declare module)
-  if (isWithinAmbientModule(node, commentPath)) {
+  if (isWithinAmbientModule(commentPath)) {
     return { isExported: true, exportType: 'namespace' };
   }
 
@@ -186,7 +186,7 @@ function analyzeContainerInheritance(
   }
 
   // Check if this is a class member
-  const classContainer = findContainerOfType(node, commentPath, [
+  const classContainer = findContainerOfType(commentPath, [
     'ClassDeclaration',
     'ClassExpression',
   ]);
@@ -205,7 +205,7 @@ function analyzeContainerInheritance(
   }
 
   // Check if this is an interface member
-  const interfaceContainer = findContainerOfType(node, commentPath, [
+  const interfaceContainer = findContainerOfType(commentPath, [
     'TSInterfaceDeclaration',
   ]);
   if (interfaceContainer) {
@@ -223,7 +223,7 @@ function analyzeContainerInheritance(
   }
 
   // Check if this is a namespace member
-  const namespaceContainer = findContainerOfType(node, commentPath, [
+  const namespaceContainer = findContainerOfType(commentPath, [
     'TSModuleDeclaration',
     'ModuleDeclaration',
   ]);
@@ -274,7 +274,6 @@ function analyzeContainerInheritance(
  * We'll check immediate parents and common patterns.
  */
 function findContainerOfType(
-  _node: any,
   commentPath: AstPath<any>,
   containerTypes: string[]
 ): any {
@@ -329,11 +328,8 @@ function findContainerOfType(
 /**
  * Check if a node is within an exported namespace.
  */
-function isWithinExportedNamespace(
-  node: any,
-  commentPath: AstPath<any>
-): boolean {
-  const namespaceContainer = findContainerOfType(node, commentPath, [
+function isWithinExportedNamespace(commentPath: AstPath<any>): boolean {
+  const namespaceContainer = findContainerOfType(commentPath, [
     'TSModuleDeclaration',
     'ModuleDeclaration',
   ]);
@@ -351,8 +347,8 @@ function isWithinExportedNamespace(
 /**
  * Check if a node is within an ambient module declaration.
  */
-function isWithinAmbientModule(node: any, commentPath: AstPath<any>): boolean {
-  const moduleContainer = findContainerOfType(node, commentPath, [
+function isWithinAmbientModule(commentPath: AstPath<any>): boolean {
+  const moduleContainer = findContainerOfType(commentPath, [
     'TSModuleDeclaration',
     'ModuleDeclaration',
   ]);
