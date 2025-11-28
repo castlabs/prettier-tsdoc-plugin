@@ -22,7 +22,7 @@
     "example:typedoc": "cd example && npm run typedoc",
     "example:tsc": "cd example && npm run tsc",
     "example:api": "cd example && npm run api",
-    "example:check": "npm run build && npm run example:prettier && npm run example:tsc && npm run example:api"
+    "example:check": "npm run build && npm run example:prettier && npm run example:tsc && npm run example:api && npm run example:typedoc"
   },
   "dependencies": {
     "@microsoft/tsdoc": "^0.15.1",
