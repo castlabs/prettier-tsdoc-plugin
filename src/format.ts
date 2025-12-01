@@ -1357,6 +1357,88 @@ async function formatExampleTag(
   return parts;
 }
 
+/**
+ * Appends a list item to the target array with proper formatting.
+ *
+ * @param target - Target array to append formatted lines to
+ * @param listItem - List item object containing marker and lines
+ */
+function appendListItem(target: any[], listItem: any): void {
+  target.push(createCommentLine(`${listItem.marker} ${listItem.lines[0]}`));
+  for (let i = 1; i < listItem.lines.length; i++) {
+    target.push(hardline);
+    target.push(` *   ${listItem.lines[i]}`);
+  }
+}
+
+/**
+ * Appends a code fence line to the target array.
+ *
+ * @param target - Target array to append formatted line to
+ * @param codeFenceLine - Code fence line object containing content
+ */
+function appendCodeFenceLine(target: any[], codeFenceLine: any): void {
+  target.push(createCommentLine(codeFenceLine.content));
+}
+
+/**
+ * Appends string lines to the target array with nested line splitting.
+ *
+ * @param target - Target array to append formatted lines to
+ * @param line - String line to process
+ */
+function appendStringLines(target: any[], line: string): void {
+  const lines = line.split('\n');
+  lines.forEach((singleLine, lineIndex) => {
+    if (singleLine.trim()) {
+      const subLines = singleLine.split('\n');
+      subLines.forEach((subLine, subIndex) => {
+        if (subLine.trim()) {
+          target.push(createCommentLine(subLine));
+          if (subIndex < subLines.length - 1) {
+            target.push(hardline);
+          }
+        }
+      });
+      if (lineIndex < lines.length - 1) {
+        target.push(hardline);
+      }
+    }
+  });
+}
+
+/**
+ * Processes a single line from markdown content and appends it to the target array.
+ *
+ * @param target - Target array to append formatted content to
+ * @param line - Line to process (can be object or string)
+ */
+function appendSingleLine(target: any[], line: any): void {
+  if (typeof line === 'object' && line.type === 'list-item') {
+    appendListItem(target, line);
+  } else if (
+    typeof line === 'object' &&
+    (line.type === 'code-fence-start' ||
+      line.type === 'code-fence-end' ||
+      line.type === 'code-line')
+  ) {
+    appendCodeFenceLine(target, line);
+  } else if (typeof line === 'string' && line.trim()) {
+    appendStringLines(target, line);
+  } else if (line === '') {
+    target.push(createEmptyCommentLine());
+  }
+}
+
+/**
+ * Appends markdown segments to the target array with proper formatting.
+ *
+ * Handles arrays of markdown content (strings, list items, code blocks) and
+ * formats them with appropriate comment line markers and separators.
+ *
+ * @param target - Target array to append formatted content to
+ * @param content - Markdown content to append (array or single value)
+ */
 function appendMarkdownSegments(target: any[], content: any): void {
   if (!content) {
     return;
@@ -1367,44 +1449,7 @@ function appendMarkdownSegments(target: any[], content: any): void {
       if (index > 0) {
         target.push(hardline);
       }
-
-      if (typeof line === 'object' && line.type === 'list-item') {
-        const listItem = line as any;
-        target.push(
-          createCommentLine(`${listItem.marker} ${listItem.lines[0]}`)
-        );
-        for (let i = 1; i < listItem.lines.length; i++) {
-          target.push(hardline);
-          target.push(` *   ${listItem.lines[i]}`);
-        }
-      } else if (
-        typeof line === 'object' &&
-        (line.type === 'code-fence-start' ||
-          line.type === 'code-fence-end' ||
-          line.type === 'code-line')
-      ) {
-        target.push(createCommentLine(line.content));
-      } else if (typeof line === 'string' && line.trim()) {
-        const lines = line.split('\n');
-        lines.forEach((singleLine, lineIndex) => {
-          if (singleLine.trim()) {
-            const subLines = singleLine.split('\n');
-            subLines.forEach((subLine, subIndex) => {
-              if (subLine.trim()) {
-                target.push(createCommentLine(subLine));
-                if (subIndex < subLines.length - 1) {
-                  target.push(hardline);
-                }
-              }
-            });
-            if (lineIndex < lines.length - 1) {
-              target.push(hardline);
-            }
-          }
-        });
-      } else if (line === '') {
-        target.push(createEmptyCommentLine());
-      }
+      appendSingleLine(target, line);
     });
   } else {
     target.push(createCommentLine(content));
