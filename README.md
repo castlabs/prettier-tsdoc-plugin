@@ -128,22 +128,23 @@ about unknown options. Both formats are supported and work identically.
 
 ### Option Details
 
-| Option                       | Type                            | Default        | Description                                                                     |
-| ---------------------------- | ------------------------------- | -------------- | ------------------------------------------------------------------------------- |
-| `fencedIndent`               | `"space"` \| `"none"`           | `"space"`      | Indentation style for fenced code blocks                                        |
-| `normalizeTagOrder`          | `boolean`                       | `true`         | Normalize tag order based on conventional patterns (see below)                  |
-| `dedupeReleaseTags`          | `boolean`                       | `true`         | Deduplicate release tags (`@public`, `@beta`, etc.)                             |
-| `splitModifiers`             | `boolean`                       | `true`         | Split modifiers to separate lines                                               |
-| `singleSentenceSummary`      | `boolean`                       | `false`        | Enforce single sentence summaries                                               |
-| `embeddedLanguageFormatting` | `"auto"` \| `"off"`             | `"auto"`       | Control embedded code block formatting (`auto` uses Prettier, `off` trims only) |
-| `alignParamTags`             | `boolean`                       | `false`        | Align parameter descriptions across @param tags                                 |
-| `defaultReleaseTag`          | `string`                        | `"@internal"`  | Default release tag when none exists (empty string to disable)                  |
-| `onlyExportedAPI`            | `boolean`                       | `true`         | Only add release tags to exported API constructs (AST-aware)                    |
-| `inheritanceAware`           | `boolean`                       | `true`         | Respect inheritance rules - skip tagging class/interface members                |
-| `closureCompilerCompat`      | `boolean`                       | `true`         | Enable legacy Closure Compiler annotation transformations                       |
-| `extraTags`                  | `string[]`                      | `[]`           | Additional custom tags to recognize                                             |
-| `normalizeTags`              | `Record<string, string>`        | `{}`           | Custom tag spelling normalizations                                              |
-| `releaseTagStrategy`         | `"keep-first"` \| `"keep-last"` | `"keep-first"` | Strategy for release tag deduplication                                          |
+| Option                       | Type                            | Default        | Description                                                                            |
+| ---------------------------- | ------------------------------- | -------------- | -------------------------------------------------------------------------------------- |
+| `fencedIndent`               | `"space"` \| `"none"`           | `"space"`      | Indentation style for fenced code blocks                                               |
+| `normalizeTagOrder`          | `boolean`                       | `true`         | Normalize tag order based on conventional patterns (see below)                         |
+| `dedupeReleaseTags`          | `boolean`                       | `true`         | Deduplicate release tags (`@public`, `@beta`, etc.)                                    |
+| `splitModifiers`             | `boolean`                       | `true`         | Split modifiers to separate lines                                                      |
+| `singleSentenceSummary`      | `boolean`                       | `false`        | Enforce single sentence summaries                                                      |
+| `embeddedLanguageFormatting` | `"auto"` \| `"off"`             | `"auto"`       | Control embedded code block formatting (`auto` uses Prettier, `off` trims only)        |
+| `alignParamTags`             | `boolean`                       | `false`        | Align parameter descriptions across @param tags                                        |
+| `defaultReleaseTag`          | `string`                        | `"@internal"`  | Default release tag when none exists (empty string to disable)                         |
+| `onlyExportedAPI`            | `boolean`                       | `true`         | Only add release tags to exported API constructs (AST-aware)                           |
+| `inheritanceAware`           | `boolean`                       | `true`         | Respect inheritance rules - skip tagging class/interface members                       |
+| `closureCompilerCompat`      | `boolean`                       | `true`         | Enable legacy Closure Compiler annotation transformations                              |
+| `extraTags`                  | `string[]`                      | `[]`           | Additional custom tags to recognize                                                    |
+| `normalizeTags`              | `Record<string, string>`        | `{}`           | Custom tag spelling normalizations                                                     |
+| `releaseTagStrategy`         | `"keep-first"` \| `"keep-last"` | `"keep-first"` | Strategy for release tag deduplication                                                 |
+| `preserveExampleNewline`     | `boolean`                       | `true`         | Preserve newlines after `@example` tags (prevents content from being treated as title) |
 
 ### Embedded Language Formatting
 
@@ -245,6 +246,60 @@ into a canonical structure for improved readability:
 **Note**: When `normalizeTagOrder` is `false`, the original tag order is
 preserved as much as possible, though TSDoc's parsing structure may still impose
 some organization.
+
+### Example Tag Newline Handling
+
+The `preserveExampleNewline` option controls how content after `@example` tags
+is formatted. This is important because TypeDoc and other documentation
+renderers treat text on the same line as `@example` as a **title**, while
+content on subsequent lines is treated as the **body**.
+
+**With `preserveExampleNewline: true` (default):**
+
+Content on a new line after `@example` stays on a new line, preserving the
+semantic distinction:
+
+```typescript
+// Input:
+/**
+ * @example
+ * This is content, not a title
+ */
+
+// Output (unchanged):
+/**
+ * @example
+ * This is content, not a title
+ */
+```
+
+**With `preserveExampleNewline: false` (legacy behavior):**
+
+The first line of content is pulled up to the same line as `@example`:
+
+```typescript
+// Input:
+/**
+ * @example
+ * This is content, not a title
+ */
+
+// Output:
+/**
+ * @example This is content, not a title
+ */
+```
+
+**Note:** When a title is intentionally placed on the same line as `@example` in
+the source, it will be preserved regardless of this setting:
+
+```typescript
+// This is always preserved:
+/**
+ * @example My Example Title
+ * This is the body content
+ */
+```
 
 ### Release Tags
 

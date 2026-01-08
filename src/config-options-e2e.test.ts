@@ -590,4 +590,172 @@ describe('Configuration Options End-to-End Tests', () => {
       expect(result).toMatch(/@param x\s+-/);
     });
   });
+
+  describe('preserveExampleNewline', () => {
+    describe('with preserveExampleNewline: true (default)', () => {
+      test('keeps content on separate line when @example has newline before content', async () => {
+        const input = `*
+ * Function description.
+ * @example
+ * This is some textual example content
+ `;
+
+        const result = await formatAndStringify(input, {
+          preserveExampleNewline: true,
+        });
+
+        // Content should remain on a separate line from @example
+        expect(result).toContain('* @example\n');
+        expect(result).toContain('* This is some textual example content');
+        // Should NOT have content on same line as @example
+        expect(result).not.toMatch(/@example\s+This is some/);
+      });
+
+      test('preserves title on same line when originally there', async () => {
+        const input = `*
+ * Function description.
+ * @example My Example Title
+ * Some content follows
+ `;
+
+        const result = await formatAndStringify(input, {
+          preserveExampleNewline: true,
+        });
+
+        // Title should stay on same line as @example
+        expect(result).toContain('@example My Example Title');
+      });
+
+      test('handles @example with code block starting on new line', async () => {
+        const input = `*
+ * Function description.
+ * @example
+ * \`\`\`ts
+ * const x = 1;
+ * \`\`\`
+ `;
+
+        const result = await formatAndStringify(input, {
+          preserveExampleNewline: true,
+        });
+
+        // @example should be on its own line with code block following
+        expect(result).toContain('* @example\n');
+        expect(result).toContain('```ts');
+      });
+
+      test('handles @example with title and code block', async () => {
+        const input = `*
+ * Function description.
+ * @example Usage Example
+ * \`\`\`ts
+ * const x = 1;
+ * \`\`\`
+ `;
+
+        const result = await formatAndStringify(input, {
+          preserveExampleNewline: true,
+        });
+
+        // Title should be on same line, code block on next lines
+        expect(result).toContain('@example Usage Example');
+        expect(result).toContain('```ts');
+      });
+    });
+
+    describe('with preserveExampleNewline: false (legacy behavior)', () => {
+      test('pulls first line content up to @example line', async () => {
+        const input = `*
+ * Function description.
+ * @example
+ * This is some textual example content
+ `;
+
+        const result = await formatAndStringify(input, {
+          preserveExampleNewline: false,
+        });
+
+        // Content should be pulled up to the same line as @example
+        expect(result).toContain(
+          '@example This is some textual example content'
+        );
+      });
+
+      test('still keeps code blocks separate', async () => {
+        const input = `*
+ * Function description.
+ * @example
+ * \`\`\`ts
+ * const x = 1;
+ * \`\`\`
+ `;
+
+        const result = await formatAndStringify(input, {
+          preserveExampleNewline: false,
+        });
+
+        // Code blocks should still be on separate lines (this is expected behavior)
+        expect(result).toContain('* @example\n');
+        expect(result).toContain('```ts');
+      });
+
+      test('pulls description up but keeps code block separate', async () => {
+        const input = `*
+ * Function description.
+ * @example
+ * Example description
+ * \`\`\`ts
+ * const x = 1;
+ * \`\`\`
+ `;
+
+        const result = await formatAndStringify(input, {
+          preserveExampleNewline: false,
+        });
+
+        // Description should be pulled up, code block stays separate
+        expect(result).toContain('@example Example description');
+        expect(result).toContain('```ts');
+      });
+    });
+
+    describe('edge cases', () => {
+      test('empty @example tag stays empty', async () => {
+        const input = `*
+ * Function description.
+ * @example
+ `;
+
+        const resultTrue = await formatAndStringify(input, {
+          preserveExampleNewline: true,
+        });
+        const resultFalse = await formatAndStringify(input, {
+          preserveExampleNewline: false,
+        });
+
+        // Both should produce just @example with no content
+        expect(resultTrue).toContain('* @example');
+        expect(resultFalse).toContain('* @example');
+      });
+
+      test('multiple @example tags each preserve their structure', async () => {
+        const input = `*
+ * Function description.
+ * @example First Title
+ * First content
+ * @example
+ * Second content without title
+ `;
+
+        const result = await formatAndStringify(input, {
+          preserveExampleNewline: true,
+        });
+
+        // First @example should have title on same line
+        expect(result).toContain('@example First Title');
+        // Second @example should keep content on separate line
+        expect(result).toMatch(/@example\n[^@]*Second content/);
+      });
+    });
+  });
 });

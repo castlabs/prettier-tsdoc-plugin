@@ -94,6 +94,12 @@ export interface OtherTag {
   tagName: string;
   content: string;
   rawNode: DocNode | null;
+  /**
+   * For @example tags, indicates whether the title/first-line content
+   * was originally on the same line as the @example tag in the source.
+   * Used to preserve the semantic distinction between title and content.
+   */
+  titleOnSameLine?: boolean;
 }
 
 /**

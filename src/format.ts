@@ -1311,31 +1311,63 @@ async function formatOtherTag(
 
 /**
  * Format @example tags with potential embedded code blocks
+ *
+ * The `preserveExampleNewline` option controls whether content after @example
+ * on a new line should be kept separate or pulled up to the same line:
+ * - When `true` (default): Content on a new line stays on a new line
+ * - When `false` (legacy): First line of content is pulled up to @example line
+ *
+ * This distinction matters because TypeDoc and other renderers treat text on
+ * the same line as @example as a "title", while content on new lines is treated
+ * as the example body.
  */
 async function formatExampleTag(
   tag: any,
   options: ParserOptions<any>
 ): Promise<any> {
   const content = tag.content.trim();
+  const resolvedOptions = resolveOptions(options);
+  const preserveNewline = resolvedOptions.preserveExampleNewline;
 
   if (!content) {
     return createCommentLine('@example');
   }
 
-  // For @example tags, we need to format as: @example [description]
-  // followed by the markdown-formatted content
   const parts: any[] = [];
-
-  // Add the @example tag with its description (first line of content)
   const lines = content.split('\n');
   const firstLine = lines[0].trim();
+
+  // Check if the first line should be treated as a title (on same line as @example)
+  // This happens when:
+  // 1. preserveExampleNewline is false (legacy behavior), OR
+  // 2. The content was originally on the same line as @example in the source
+  //    (indicated by tag.titleOnSameLine if available, otherwise we check
+  //    if there's no leading newline in the raw content)
+  const hasContentOnSameLine = tag.titleOnSameLine === true;
+
   if (firstLine && !firstLine.startsWith('```')) {
-    parts.push(createCommentLine(['@example ', firstLine]));
-    // Format the rest as markdown if there's more content
-    const remainingContent = lines.slice(1).join('\n').trim();
-    if (remainingContent) {
+    // There is text content (not starting with a code fence)
+    if (!preserveNewline || hasContentOnSameLine) {
+      // Legacy behavior or title was originally on same line: pull first line up
+      parts.push(createCommentLine(['@example ', firstLine]));
+      // Format the rest as markdown if there's more content
+      const remainingContent = lines.slice(1).join('\n').trim();
+      if (remainingContent) {
+        const formattedContent = await formatExampleWithMarkdown(
+          remainingContent,
+          options
+        );
+        if (Array.isArray(formattedContent)) {
+          parts.push(...formattedContent);
+        } else {
+          parts.push(formattedContent);
+        }
+      }
+    } else {
+      // New behavior: preserve the newline, keep @example on its own line
+      parts.push(createCommentLine('@example'));
       const formattedContent = await formatExampleWithMarkdown(
-        remainingContent,
+        content,
         options
       );
       if (Array.isArray(formattedContent)) {
@@ -1345,7 +1377,7 @@ async function formatExampleTag(
       }
     }
   } else {
-    // No description, just @example followed by content
+    // Content starts with a code fence or is empty, keep @example on its own line
     parts.push(createCommentLine('@example'));
     const formattedContent = await formatExampleWithMarkdown(content, options);
     if (Array.isArray(formattedContent)) {

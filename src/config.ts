@@ -119,6 +119,38 @@ export interface TSDocPluginOptions {
    * @defaultValue `true` (for TypeDoc compatibility)
    */
   requireTypeParamHyphen?: boolean;
+
+  /**
+   * Controls whether content following an \@example tag on a new line
+   * should be pulled up to the same line as the tag.
+   *
+   * When `true` (default), content after \@example is kept on a separate line,
+   * preserving the distinction between a title (same line) and content (new line).
+   * This prevents renderers like TypeDoc from incorrectly interpreting content
+   * as a title.
+   *
+   * When `false`, the first line of content is pulled up to the same line as
+   * \@example (legacy behavior).
+   *
+   * @example
+   * // With preserveExampleNewline: true (default)
+   * // Input:
+   * // \@example
+   * // This is content
+   * // Output:
+   * // \@example
+   * // This is content
+   *
+   * // With preserveExampleNewline: false
+   * // Input:
+   * // \@example
+   * // This is content
+   * // Output:
+   * // \@example This is content
+   *
+   * @defaultValue `true`
+   */
+  preserveExampleNewline?: boolean;
 }
 
 /**
@@ -220,6 +252,7 @@ export const DEFAULT_OPTIONS: Required<TSDocPluginOptions> = {
   closureCompilerCompat: true,
   requireParamHyphen: true,
   requireTypeParamHyphen: true,
+  preserveExampleNewline: true,
 };
 
 /**
@@ -300,6 +333,9 @@ export function resolveOptions(
     }),
     ...(userOptions.requireTypeParamHyphen !== undefined && {
       requireTypeParamHyphen: userOptions.requireTypeParamHyphen,
+    }),
+    ...(userOptions.preserveExampleNewline !== undefined && {
+      preserveExampleNewline: userOptions.preserveExampleNewline,
     }),
     embeddedLanguageFormatting,
     defaultReleaseTag,

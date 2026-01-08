@@ -232,18 +232,103 @@ export function extractTextFromNode(node: any): string {
 }
 
 /**
+ * Result of extracting @example content
+ */
+interface ExampleExtractionResult {
+  /** The extracted content */
+  content: string;
+  /** Whether the title/first content was on the same line as @example */
+  titleOnSameLine: boolean;
+}
+
+/**
  * Extract full @example content including code blocks by parsing raw comment text
  *
  * The issue we're solving: TSDoc parser sometimes doesn't capture the full content
  * of @example blocks, especially when they contain code fences. We need to extract
  * the content manually but respect the proper scope boundaries of @example tags.
+ *
+ * Also detects whether the first line of content was on the same line as the
+ * `@example` tag, which is semantically significant (same-line content is treated
+ * as a "title" by TypeDoc and other renderers).
  */
 function extractFullExampleContent(
   exampleBlock: any,
   rawComment?: string
-): string {
+): ExampleExtractionResult {
   // First, try the normal extraction - if it gives us good content, use it
   const normalExtraction = extractTextFromNode(exampleBlock.content);
+
+  // Helper to detect if title was on same line from the block's raw text
+  // This uses the block tag's excerpt to find the exact position in the source
+  const detectTitleOnSameLine = (): boolean => {
+    // Try to get the raw text from the block tag's excerpt
+    // The TSDoc parser stores the original source text in excerpts
+    try {
+      const blockTag = exampleBlock.blockTag;
+      if (blockTag && blockTag._excerpt) {
+        // Get the content after this specific @example tag
+        const excerpt = blockTag._excerpt;
+        const parcel = excerpt._parcel;
+        if (parcel && parcel._buffer) {
+          const buffer = parcel._buffer;
+          const endIndex = excerpt._endIndex || buffer.length;
+
+          // Find the @example tag end position
+          const tagEndPos = endIndex;
+
+          // Look at what comes after the tag on the same line
+          let pos = tagEndPos;
+          while (pos < buffer.length && buffer[pos] !== '\n') {
+            const char = buffer[pos];
+            // Skip whitespace
+            if (char !== ' ' && char !== '\t' && char !== '*') {
+              // Found non-whitespace content on the same line
+              return true;
+            }
+            pos++;
+          }
+        }
+      }
+    } catch {
+      // If we can't access the excerpt, fall back to content-based heuristic
+    }
+
+    // Fallback: Check if the content section starts with a SoftBreak
+    // If it does NOT start with a SoftBreak, the content was on the same line as @example
+    if (normalExtraction.trim()) {
+      // Get the first node from the content section
+      // The content is typically a DocSection which has a nodes/_nodes array
+      const contentSection = exampleBlock.content;
+      if (contentSection) {
+        const nodes = contentSection.nodes || contentSection._nodes;
+        if (nodes && nodes.length > 0) {
+          const firstNode = nodes[0];
+          // Check if first node is a Paragraph (which contains the actual content nodes)
+          if (firstNode && firstNode.kind === 'Paragraph') {
+            const paragraphNodes = firstNode.nodes || firstNode._nodes;
+            if (paragraphNodes && paragraphNodes.length > 0) {
+              const firstParagraphNode = paragraphNodes[0];
+              // If the first node in the paragraph is NOT a SoftBreak, content was on same line
+              if (
+                firstParagraphNode &&
+                firstParagraphNode.kind !== 'SoftBreak'
+              ) {
+                return true;
+              }
+            }
+          } else if (firstNode && firstNode.kind !== 'SoftBreak') {
+            // Direct content (not in a paragraph) that isn't a SoftBreak
+            return true;
+          }
+        }
+      }
+    }
+
+    return false;
+  };
+
+  const titleOnSameLine = detectTitleOnSameLine();
 
   if (!rawComment || normalExtraction.includes('```')) {
     // If we have the raw comment but normal extraction already includes code blocks,
@@ -252,7 +337,10 @@ function extractFullExampleContent(
       'Using normal extraction for @example:',
       JSON.stringify(normalExtraction)
     );
-    return normalExtraction;
+    return {
+      content: normalExtraction,
+      titleOnSameLine,
+    };
   }
 
   debugLog('Normal extraction lacks code blocks, trying raw extraction');
@@ -266,7 +354,10 @@ function extractFullExampleContent(
   const exampleTagIndex = rawComment.indexOf('@example');
   if (exampleTagIndex === -1) {
     debugLog('Could not find @example in raw comment, using normal extraction');
-    return normalExtraction;
+    return {
+      content: normalExtraction,
+      titleOnSameLine,
+    };
   }
 
   // Extract from @example to the end of comment
@@ -379,11 +470,17 @@ function extractFullExampleContent(
     cleanedContent.length > normalExtraction.length &&
     cleanedContent.includes('```')
   ) {
-    return cleanedContent;
+    return {
+      content: cleanedContent,
+      titleOnSameLine,
+    };
   }
 
   // Otherwise, stick with normal extraction
-  return normalExtraction;
+  return {
+    content: normalExtraction,
+    titleOnSameLine,
+  };
 }
 
 /**
@@ -550,8 +647,12 @@ export function buildCommentModel(
         }
 
         // For @example tags, try to get the full content including code blocks
+        // and track whether title was on the same line
+        let titleOnSameLine: boolean | undefined;
         if (block.blockTag.tagName === '@example') {
-          content = extractFullExampleContent(block, rawComment);
+          const exampleResult = extractFullExampleContent(block, rawComment);
+          content = exampleResult.content;
+          titleOnSameLine = exampleResult.titleOnSameLine;
         }
 
         debugLog(`Custom block found: ${block.blockTag.tagName}`);
@@ -560,6 +661,7 @@ export function buildCommentModel(
           tagName: block.blockTag.tagName,
           content: content.trim(),
           rawNode: block,
+          ...(titleOnSameLine !== undefined && { titleOnSameLine }),
         });
       }
     }
