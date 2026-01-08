@@ -711,3 +711,174 @@ describe('Const Enum Release Tag Inheritance - End-to-End', () => {
     expect(result).toContain('@public');
   });
 });
+
+describe('Bold Markdown Formatting', () => {
+  test('preserves **bold** markdown syntax', async () => {
+    const input = `*
+ * Some text
+ * 
+ * **Something Highlighted**:
+ `;
+
+    const config = createTSDocConfiguration();
+    const parser = new TSDocParser(config);
+    const options = { printWidth: 80, tabWidth: 2, useTabs: false };
+
+    const formatted = await formatTSDocComment(input, options, parser);
+    const result = docToString(formatted);
+
+    expect(result).toContain('**Something Highlighted**:');
+    expect(result).not.toContain('* *Something'); // Should NOT have broken bold syntax
+  });
+
+  test('preserves bold markdown at start of paragraph', async () => {
+    const input = `*
+ * **Bold at start of paragraph**
+ `;
+
+    const config = createTSDocConfiguration();
+    const parser = new TSDocParser(config);
+    const options = { printWidth: 80, tabWidth: 2, useTabs: false };
+
+    const formatted = await formatTSDocComment(input, options, parser);
+    const result = docToString(formatted);
+
+    expect(result).toContain('**Bold at start of paragraph**');
+  });
+
+  test('preserves inline bold in middle of text', async () => {
+    const input = `*
+ * Text with **bold** inline and more text
+ `;
+
+    const config = createTSDocConfiguration();
+    const parser = new TSDocParser(config);
+    const options = { printWidth: 80, tabWidth: 2, useTabs: false };
+
+    const formatted = await formatTSDocComment(input, options, parser);
+    const result = docToString(formatted);
+
+    expect(result).toContain('**bold**');
+  });
+
+  test('preserves *italic* single asterisk syntax', async () => {
+    const input = `*
+ * This has *italic* text
+ `;
+
+    const config = createTSDocConfiguration();
+    const parser = new TSDocParser(config);
+    const options = { printWidth: 80, tabWidth: 2, useTabs: false };
+
+    const formatted = await formatTSDocComment(input, options, parser);
+    const result = docToString(formatted);
+
+    expect(result).toContain('*italic*');
+  });
+
+  test('preserves ***bold and italic*** triple asterisk syntax', async () => {
+    const input = `*
+ * This is ***bold and italic***
+ `;
+
+    const config = createTSDocConfiguration();
+    const parser = new TSDocParser(config);
+    const options = { printWidth: 80, tabWidth: 2, useTabs: false };
+
+    const formatted = await formatTSDocComment(input, options, parser);
+    const result = docToString(formatted);
+
+    expect(result).toContain('***bold and italic***');
+  });
+
+  test('idempotence: formatting multiple times produces same result', async () => {
+    const input = `*
+ * Some text
+ * 
+ * **Something Highlighted**:
+ `;
+
+    const config = createTSDocConfiguration();
+    const parser = new TSDocParser(config);
+    const options = { printWidth: 80, tabWidth: 2, useTabs: false };
+
+    // Format the first time
+    const formatted1 = await formatTSDocComment(input, options, parser);
+    const result1 = docToString(formatted1);
+
+    // Format the result again
+    const formatted2 = await formatTSDocComment(result1, options, parser);
+    const result2 = docToString(formatted2);
+
+    // Format the result a third time
+    const formatted3 = await formatTSDocComment(result2, options, parser);
+    const result3 = docToString(formatted3);
+
+    // All results should be identical
+    expect(result2).toBe(result1);
+    expect(result3).toBe(result1);
+
+    // And should still contain the bold syntax
+    expect(result1).toContain('**Something Highlighted**:');
+  });
+
+  test('preserves bold after empty line in paragraph', async () => {
+    const input = `*
+ * First paragraph.
+ * 
+ * **Bold**: Some description
+ * 
+ * More text here
+ `;
+
+    const config = createTSDocConfiguration();
+    const parser = new TSDocParser(config);
+    const options = { printWidth: 80, tabWidth: 2, useTabs: false };
+
+    const formatted = await formatTSDocComment(input, options, parser);
+    const result = docToString(formatted);
+
+    expect(result).toContain('**Bold**:');
+    expect(result).not.toContain('* *Bold'); // Should NOT have broken bold syntax
+  });
+
+  test('correctly handles list items with dash marker', async () => {
+    const input = `*
+ * Some text
+ * 
+ * - List item 1
+ * - List item 2
+ `;
+
+    const config = createTSDocConfiguration();
+    const parser = new TSDocParser(config);
+    const options = { printWidth: 80, tabWidth: 2, useTabs: false };
+
+    const formatted = await formatTSDocComment(input, options, parser);
+    const result = docToString(formatted);
+
+    // List items with dash markers should be preserved
+    expect(result).toMatch(/- List item 1/);
+    expect(result).toMatch(/- List item 2/);
+  });
+
+  test('does not break asterisk list items following comment marker', async () => {
+    // When using * as list marker, after stripping the comment asterisk, the list marker remains
+    const input = `*
+ * Some text
+ * 
+ * * List item
+ `;
+
+    const config = createTSDocConfiguration();
+    const parser = new TSDocParser(config);
+    const options = { printWidth: 80, tabWidth: 2, useTabs: false };
+
+    const formatted = await formatTSDocComment(input, options, parser);
+    const result = docToString(formatted);
+
+    // The asterisk list marker should remain after stripping the comment asterisk
+    // " * * List item" becomes "* List item" (comment marker stripped, list marker preserved)
+    expect(result).toContain('* List item');
+  });
+});

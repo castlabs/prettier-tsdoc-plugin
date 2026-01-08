@@ -177,8 +177,9 @@ export async function formatTSDocComment(
       const cleanedLines: string[] = [];
 
       for (const line of lines) {
-        // Remove leading whitespace and asterisk with optional space
-        const cleaned = line.replace(/^\s*\*\s?/, '');
+        // Remove leading whitespace and comment asterisk ONLY when followed by whitespace or end of line.
+        // Using lookahead (?=\s|$) ensures we don't strip the first * from markdown bold syntax like **text**
+        const cleaned = line.replace(/^\s*\*(?=\s|$)\s?/, '');
         cleanedLines.push(cleaned);
       }
 
@@ -1596,8 +1597,9 @@ export function extractCommentContent(commentValue: string): string {
   for (let i = 0; i < lines.length; i++) {
     let line = lines[i];
 
-    // Remove leading asterisk and whitespace
-    line = line.replace(/^\s*\*\s?/, '');
+    // Remove leading comment asterisk ONLY when followed by whitespace or end of line.
+    // Using lookahead (?=\s|$) ensures we don't strip the first * from markdown bold syntax like **text**
+    line = line.replace(/^\s*\*(?=\s|$)\s?/, '');
 
     // For the first line, it might not have leading *
     if (i === 0) {

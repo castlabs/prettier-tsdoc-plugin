@@ -360,10 +360,11 @@ function extractFullExampleContent(
   // Remove the @example tag itself and clean up
   exampleContent = exampleContent.replace(/^@example\s*/, '');
 
-  // Clean up comment prefixes from each line
+  // Clean up comment prefixes from each line.
+  // Using lookahead (?=\s|$) ensures we don't strip the first * from markdown bold syntax like **text**
   const cleanedContent = exampleContent
     .split('\n')
-    .map((line: string) => line.replace(/^\s*\*\s?/, ''))
+    .map((line: string) => line.replace(/^\s*\*(?=\s|$)\s?/, ''))
     .join('\n')
     .trim();
 

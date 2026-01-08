@@ -110,8 +110,9 @@ export function stripCommentMarks(rawText: string): string {
   return rawText
     .split('\n')
     .map((line) => {
-      // Remove leading whitespace and asterisk with optional space
-      return line.replace(/^\s*\*\s?/, '');
+      // Remove leading whitespace and comment asterisk ONLY when followed by whitespace or end of line.
+      // Using lookahead (?=\s|$) ensures we don't strip the first * from markdown bold syntax like **text**
+      return line.replace(/^\s*\*(?=\s|$)\s?/, '');
     })
     .join('\n')
     .trim();

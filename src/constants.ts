@@ -152,7 +152,9 @@ export const FORMATTING = {
   PATTERNS: {
     TSDOC_COMMENT:
       /\/\*\*([\s\S]*?)\*\/(\s*(?:export\s+)?\s*(?:function|class|interface|type|const|let|var|enum|namespace|abstract\s+class|declare\s+(?:function|class|interface|type|const|let|var|enum|namespace)))/g,
-    LEADING_ASTERISK: /^\s*\*\s?/,
+    // Matches leading comment asterisk ONLY when followed by whitespace or end of line.
+    // Using lookahead (?=\s|$) ensures we don't strip the first * from markdown bold syntax like **text**
+    LEADING_ASTERISK: /^\s*\*(?=\s|$)\s?/,
     MULTIPLE_SPACES: /\s+/g,
     TRAILING_WHITESPACE: /\s+$/gm,
     BLANK_LINES: /\n{3,}/g,

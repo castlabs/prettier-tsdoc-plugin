@@ -5,6 +5,7 @@ import {
   formatMarkdown,
   applyFencedIndent,
   clearFormatCache,
+  stripCommentMarks,
 } from './markdown.js';
 
 describe('Markdown Utilities', () => {
@@ -159,5 +160,84 @@ const b: number = 2;
     expect(sections[2].type).toBe('markdown');
     expect(sections[3].type).toBe('fenced-code');
     expect(sections[3].language).toBe('ts');
+  });
+});
+
+describe('stripCommentMarks', () => {
+  test('strips basic comment markers', () => {
+    const input = ' * Some text\n * More text';
+    const result = stripCommentMarks(input);
+    expect(result).toBe('Some text\nMore text');
+  });
+
+  test('handles empty comment lines', () => {
+    const input = ' * Some text\n * \n * More text';
+    const result = stripCommentMarks(input);
+    expect(result).toBe('Some text\n\nMore text');
+  });
+
+  test('preserves bold markdown at start of line (**text**)', () => {
+    const input = ' * Some text\n * \n * **Something Highlighted**:';
+    const result = stripCommentMarks(input);
+    expect(result).toBe('Some text\n\n**Something Highlighted**:');
+  });
+
+  test('preserves bold markdown when line starts with bold', () => {
+    const input = ' * **Bold at start**';
+    const result = stripCommentMarks(input);
+    expect(result).toBe('**Bold at start**');
+  });
+
+  test('preserves italic markdown (*text*)', () => {
+    const input = ' * This has *italic* text';
+    const result = stripCommentMarks(input);
+    expect(result).toBe('This has *italic* text');
+  });
+
+  test('preserves bold and italic markdown (***text***)', () => {
+    const input = ' * ***Bold and italic***';
+    const result = stripCommentMarks(input);
+    expect(result).toBe('***Bold and italic***');
+  });
+
+  test('correctly strips list item after comment marker (* item)', () => {
+    const input = ' * * List item with asterisk';
+    const result = stripCommentMarks(input);
+    expect(result).toBe('* List item with asterisk');
+  });
+
+  test('preserves content when already processed (no comment markers)', () => {
+    const input = 'Some text\n\n**Something Highlighted**:';
+    const result = stripCommentMarks(input);
+    expect(result).toBe('Some text\n\n**Something Highlighted**:');
+  });
+
+  test('handles lines without trailing space after asterisk', () => {
+    // Note: stripCommentMarks trims the final result, so the empty first line is removed
+    const input = ' *\n * text';
+    const result = stripCommentMarks(input);
+    expect(result).toBe('text');
+  });
+
+  test('does not strip asterisks that are part of markdown bold syntax', () => {
+    // This is a key idempotence test - running stripCommentMarks multiple times
+    // should not progressively remove asterisks from bold syntax
+    const input = '**Bold text**';
+    const result1 = stripCommentMarks(input);
+    const result2 = stripCommentMarks(result1);
+    const result3 = stripCommentMarks(result2);
+
+    expect(result1).toBe('**Bold text**');
+    expect(result2).toBe('**Bold text**');
+    expect(result3).toBe('**Bold text**');
+  });
+
+  test('idempotence with mixed content', () => {
+    const input = 'Some text\n\n**Bold heading**:\n\nMore text';
+    const result1 = stripCommentMarks(input);
+    const result2 = stripCommentMarks(result1);
+
+    expect(result1).toBe(input);
+    expect(result2).toBe(input);
   });
 });
